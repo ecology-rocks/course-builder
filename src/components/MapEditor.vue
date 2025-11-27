@@ -12,61 +12,95 @@
           Layer {{ i }}
         </button>
       </div>
-<div class="stats-panel">
+
+      <div class="toolbox">
+        <h4>Tools</h4>
+        <button @click="store.setTool('bale')" :class="{ active: store.activeTool === 'bale' }">
+          📦 Bale
+        </button>
+        <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">
+          ➖ Board Edge
+        </button>
+      </div>
+
+      <div class="stats-panel">
         <h4>Bale Inventory</h4>
-        
         <div class="stat-row main-stat">
           <span>Total Bales:</span>
           <strong>{{ store.inventory.total }}</strong>
         </div>
-        
         <div class="stat-row">
           <span>Base Layer (L1):</span>
           <span>{{ store.inventory.base }}</span>
         </div>
-
         <div class="stat-row small-text">
           <span>Upper Levels:</span>
           <span>L2: {{ store.inventory.layer2 }} | L3: {{ store.inventory.layer3 }}</span>
         </div>
-
         <hr>
-
         <div class="nesting-control">
           <label>Previous Class Count:</label>
-          <input 
-            type="number" 
-            v-model.number="store.previousClassCount" 
-            placeholder="e.g. 40"
-          >
+          <input type="number" v-model.number="store.previousClassCount" placeholder="e.g. 40">
         </div>
-        
         <div class="stat-row delta" :class="{ 'positive': store.inventory.total >= store.previousClassCount }">
           <span>Nesting Delta:</span>
           <strong>{{ store.inventory.deltaString }} bales</strong>
         </div>
       </div>
-<div class="instructions">
+
+      <div class="instructions">
         <h4>Controls</h4>
         <ul>
-          <li><strong>Click Grid:</strong> Add Bale</li>
-          <li><strong>Right-Click Bale:</strong> Rotate (45°)</li>
-          <li><strong>Shift+Click Bale:</strong> Cycle Type (Flat / Tall / Pillar)</li>
-          <li><strong>Dbl-Click Bale:</strong> Delete</li>
-          <li><strong>Alt+Click (Flat Only):</strong> Toggle Leaner Arrow</li>
+          <li><strong>Click Grid:</strong> Add Item</li>
+          <li><strong>Right-Click:</strong> Rotate</li>
+          <li><strong>Shift+Click:</strong> Cycle Type</li>
+          <li><strong>Alt+Click:</strong> Leaner Arrow</li>
+          <li><strong>Drag:</strong> Move Item</li>
+          <li><strong>Dbl-Click:</strong> Delete</li>
         </ul>
       </div>
     </div>
 
     <div class="canvas-wrapper">
       <v-stage :config="stageConfig" @mousedown="handleStageClick">
-        <v-layer>
+        
+        <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
+
+          <v-text
+            v-for="n in store.ringDimensions.width + 1"
+            :key="'lx'+n"
+            :config="{
+              x: (n-1) * scale,
+              y: -20,
+              text: (n-1).toString(),
+              fontSize: 12,
+              fill: '#666',
+              align: 'center',
+              width: 10,
+              offsetX: 5
+            }"
+          />
+
+          <v-text
+            v-for="n in store.ringDimensions.height + 1"
+            :key="'ly'+n"
+            :config="{
+              x: -25,
+              y: (n-1) * scale - 6,
+              text: (n-1).toString(),
+              fontSize: 12,
+              fill: '#666',
+              align: 'right',
+              width: 20
+            }"
+          />
+
           <v-line
             v-for="n in store.ringDimensions.width + 1"
             :key="'v'+n"
             :config="{
-              points: [(n-1)*scale, 0, (n-1)*scale, stageConfig.height],
-              stroke: '#ddd',
+              points: [(n-1)*scale, 0, (n-1)*scale, store.ringDimensions.height * scale],
+              stroke: (n-1) % 5 === 0 ? '#999' : '#ddd',
               strokeWidth: 1
             }"
           />
@@ -74,19 +108,19 @@
             v-for="n in store.ringDimensions.height + 1"
             :key="'h'+n"
             :config="{
-              points: [0, (n-1)*scale, stageConfig.width, (n-1)*scale],
-              stroke: '#ddd',
+              points: [0, (n-1)*scale, store.ringDimensions.width * scale, (n-1)*scale],
+              stroke: (n-1) % 5 === 0 ? '#999' : '#ddd',
               strokeWidth: 1
             }"
           />
 
-<v-group
+          <v-group
             v-for="bale in visibleBales"
             :key="bale.id"
             :config="{
-              draggable: true, // <--- ENABLE DRAG
+              draggable: true,
+              dragBoundFunc: dragBoundFunc,
               listening: bale.layer === store.currentLayer,
-              // Existing Config...
               x: (bale.x * scale) + (1.5 * scale),
               y: (bale.y * scale) + (0.75 * scale),
               rotation: bale.rotation,
@@ -95,20 +129,16 @@
               offsetY: 0.75 * scale
             }"
             @contextmenu="handleRightClick($event, bale.id)"
-            @dblclick="store.removeBale(bale.id)"
+            @dblclick="handleDblClick($event, bale.id)"
             @click="handleLeftClick($event, bale.id)"
-            
             @dragend="handleDragEnd($event, bale.id)" 
           >
             <v-rect
               :config="{
-                // Recalculate dimensions/offset locally relative to Group center
                 ...(() => {
                    const dims = getBaleDims(bale)
                    const w = dims.width * scale
                    const h = dims.height * scale
-                   // We position top-left relative to the group's anchor (1.5, 0.75)
-                   // To center a dynamic shape in a fixed group anchor:
                    return {
                      width: w,
                      height: h,
@@ -116,46 +146,29 @@
                      y: (0.75 * scale) - (h / 2)
                    }
                 })(),
-                
-                // FILL LOGIC:
-                // If NOT supported, use Red. 
-                // If supported: Flat uses Layer Color, Tall/Pillar uses Transparent (for pattern).
                 fill: !bale.supported ? '#ef5350' : (bale.orientation === 'flat' ? getBaleColor(bale.layer) : undefined),
-
-                // PATTERN LOGIC:
-                // If Not supported (Red), we usually hide the pattern or blend it. 
-                // Let's hide the pattern so the Red error is obvious.
                 fillPatternImage: !bale.supported ? undefined : (
                   bale.orientation === 'tall' ? hatchPattern : 
                   (bale.orientation === 'pillar' ? pillarPattern : undefined)
                 ),
                 fillPatternRepeat: 'repeat',
-
-                // STROKE LOGIC:
-                // If invalid, make the border Dark Red and thick.
                 stroke: !bale.supported ? '#b71c1c' : (
                   bale.orientation === 'flat' ? 'black' : 
                   (bale.orientation === 'pillar' ? '#d32f2f' : getBaleColor(bale.layer))
                 ),
-                
                 strokeWidth: !bale.supported ? 3 : (bale.orientation === 'flat' ? 1 : 2),
               }"
             />
-            
             <v-arrow
               v-if="bale.lean"
               :config="{
                 points: (() => {
-                   // Calculate points based on the CURRENT bale dimensions
                    const dims = getBaleDims(bale)
                    const w = dims.width * scale
                    const h = dims.height * scale
-                   
-                   // Adjust for the group positioning offset
                    const pts = getArrowPoints(w, h, bale.lean)
                    const offsetX = (1.5 * scale) - (w / 2)
                    const offsetY = (0.75 * scale) - (h / 2)
-                   
                    return [pts[0]+offsetX, pts[1]+offsetY, pts[2]+offsetX, pts[3]+offsetY]
                 })(),
                 pointerLength: 10,
@@ -166,8 +179,34 @@
               }"
             />
           </v-group>
-        </v-layer>
-      </v-stage>
+
+<v-group
+            v-for="board in store.boardEdges"
+            :key="board.id"
+            :config="{
+              draggable: true,
+              dragBoundFunc: dragBoundFunc, // <--- Added Snapping
+              
+              x: board.x * scale,
+              y: board.y * scale,
+              rotation: board.rotation
+            }"
+            @contextmenu="handleRightClickBoard($event, board.id)"
+            @dblclick="handleBoardDblClick($event, board.id)" 
+          >
+            <v-rect
+              :config="{
+                width: board.length * scale,
+                height: 6,
+                offsetX: (board.length * scale) / 2,
+                offsetY: 3, 
+                fill: '#2e7d32',
+                cornerRadius: 2
+              }"
+            />
+          </v-group>
+
+        </v-layer> </v-stage>
     </div>
   </div>
 </template>
@@ -178,11 +217,53 @@ import { useMapStore } from '../stores/mapStore'
 
 const store = useMapStore()
 const scale = 40 // Pixels per foot for display
+const GRID_OFFSET = 30
 
 const stageConfig = computed(() => ({
-  width: store.ringDimensions.width * scale,
-  height: store.ringDimensions.height * scale
+  width: (store.ringDimensions.width * scale) + (GRID_OFFSET * 2),
+  height: (store.ringDimensions.height * scale) + (GRID_OFFSET * 2)
 }))
+
+function handleDblClick(e, baleId) {
+  // e.evt.button: 0 = Left, 2 = Right
+  if (e.evt.button === 0) {
+    store.removeBale(baleId)
+  }
+}
+
+// Safe delete for Board Edges (Left-click only)
+function handleBoardDblClick(e, id) {
+  if (e.evt.button === 0) {
+    store.removeBoardEdge(id)
+  }
+}
+
+// Snap the Top-Left corner to the 6-inch grid (0.5 ft)
+function dragBoundFunc(pos) {
+  // 'this' is the node being dragged
+  const node = this
+  
+  // 1. Get the offset (Pivot point) of the bale
+  const offsetX = node.offsetX()
+  const offsetY = node.offsetY()
+  
+  // 2. Calculate where the Top-Left corner is currently hovering
+  // (Absolute Position - Grid Gutter - Internal Offset)
+  const rawX = pos.x - GRID_OFFSET - offsetX
+  const rawY = pos.y - GRID_OFFSET - offsetY
+  
+  // 3. Snap that Top-Left corner to the nearest 6 inches (20 pixels)
+  const step = scale / 2 // 20px
+  const snappedX = Math.round(rawX / step) * step
+  const snappedY = Math.round(rawY / step) * step
+  
+  // 4. Return the new Center position
+  return {
+    x: snappedX + GRID_OFFSET + offsetX,
+    y: snappedY + GRID_OFFSET + offsetY
+  }
+}
+
 
 // Only show layers up to the current selected one, or ghost them
 const visibleBales = computed(() => {
@@ -209,27 +290,27 @@ const visibleBales = computed(() => {
 
 
 function handleDragEnd(e, baleId) {
-  // 1. Get the final position in pixels
-  const xPixels = e.target.x()
-  const yPixels = e.target.y()
+  // 1. Get the ABSOLUTE position (Screen pixels, ignoring layers)
+  // This prevents any confusion about "relative to what?"
+  const absPos = e.target.getAbsolutePosition()
+  
+  // 2. Subtract the Grid Offset (Gutter) manually
+  const relX = absPos.x - GRID_OFFSET
+  const relY = absPos.y - GRID_OFFSET
 
-  // 2. Convert to Grid Units (Feet)
-  // We subtract the offset (1.5, 0.75) because the drag position includes the group's anchor offset,
-  // but our store expects the top-left coordinate.
-  const rawX = (xPixels / scale) - 1.5
-  const rawY = (yPixels / scale) - 0.75
+  // 3. Convert to Grid Units and subtract the Center Offset (1.5, 0.75)
+  // We do this because the "Position" of the group is its center, 
+  // but the Store expects the Top-Left corner.
+  const rawX = (relX / scale) - 1.5
+  const rawY = (relY / scale) - 0.75
 
-  // 3. Update Store (Store handles the rounding/snapping)
+  // 4. Update Store (Store handles rounding/snapping)
   store.updateBalePosition(baleId, rawX, rawY)
   
-  // 4. Visual Reset
-  // We force the shape back to the snapped position immediately so it doesn't look "fuzzy"
-  // (Vue reactivity will eventually catch up, but this makes it snappy)
-  const snappedX = Math.round(rawX * 2) / 2
-  const snappedY = Math.round(rawY * 2) / 2
-  
-  e.target.x((snappedX * scale) + (1.5 * scale))
-  e.target.y((snappedY * scale) + (0.75 * scale))
+  // 5. Visual Snap (Optional but smooths things out)
+  // We let the store update trigger the reactivity, but we can also
+  // nudge the node here if we want instant feedback.
+  // (Usually not strictly necessary if the store update is fast)
 }
 
 
@@ -338,15 +419,30 @@ function getOpacity(layer) {
   return 0.5 // Dim lower layers
 }
 
+// NEW: Specific handler for Board rotation
+function handleRightClickBoard(e, id) {
+  e.evt.preventDefault()
+  store.rotateBoardEdge(id)
+}
+
+// UPDATED: Main Click Handler
 function handleStageClick(e) {
-  // Don't add if clicking on an existing shape (simplification)
   if (e.target !== e.target.getStage()) return
 
   const pointer = e.target.getStage().getPointerPosition()
-  const x = pointer.x / scale
-  const y = pointer.y / scale
   
-  store.addBale(x, y)
+  // Subtract the margin so 0,0 is the corner of the grid, not the corner of the canvas
+  const x = (pointer.x - GRID_OFFSET) / scale
+  const y = (pointer.y - GRID_OFFSET) / scale
+
+  // Guard: Don't allow clicking in the gutter
+  if (x < 0 || y < 0) return
+
+  if (store.activeTool === 'bale') {
+    store.addBale(x, y)
+  } else if (store.activeTool === 'board') {
+    store.addBoardEdge(x, y)
+  }
 }
 
 // NEW FUNCTION: Handles the rotation and prevents the menu
@@ -429,5 +525,23 @@ function handleRightClick(e, baleId) {
 
 .delta.positive {
   color: #388e3c; /* Green for adding bales */
+}
+
+.toolbox {
+  margin-bottom: 20px;
+  display: flex;
+  gap: 10px;
+}
+.toolbox button {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+.toolbox button.active {
+  background: #2c3e50;
+  color: white;
+  border-color: #2c3e50;
 }
 </style>

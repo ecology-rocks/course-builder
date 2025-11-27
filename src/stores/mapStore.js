@@ -18,6 +18,8 @@ export const useMapStore = defineStore('map', () => {
   const bales = ref([])
   const currentLayer = ref(1)
   const selectedBaleId = ref(null)
+  const activeTool = ref('bale') // 'bale' | 'board' | 'startbox'
+  const boardEdges = ref([]) // Separate list for board lines
 
 
   // GETTERS
@@ -38,6 +40,36 @@ export const useMapStore = defineStore('map', () => {
       isNestingValid: total > 0 // Simple check for now
     }
   })
+
+// FUNCTIONS
+  function setTool(toolName) {
+    activeTool.value = toolName
+  }
+
+
+  function addBoardEdge(x, y) {
+    // Boards sit on the grid lines, usually spanning a bale width (3ft or 1.5ft)
+    // For MVP, let's default to a 2ft line (width of a tunnel path)
+    boardEdges.value.push({
+      id: crypto.randomUUID(),
+      x: x, 
+      y: y,
+      rotation: 0, // 0 = Horizontal, 90 = Vertical
+      length: 2 // Feet
+    })
+  }
+  
+  function removeBoardEdge(id) {
+    boardEdges.value = boardEdges.value.filter(b => b.id !== id)
+  }
+
+function rotateBoardEdge(id) {
+    const board = boardEdges.value.find(b => b.id === id)
+    if (board) {
+      // Allow 45-degree increments (0 -> 45 -> 90 -> 135 -> 0)
+      board.rotation = (board.rotation + 45) % 180
+    }
+  }
 
 function cycleLean(id) {
     const bale = bales.value.find(b => b.id === id)
@@ -234,6 +266,12 @@ function hasSupport(newBale) {
     updateBalePosition,
     hasSupport,
     validateAllBales,
+    activeTool,
+    setTool,
+    boardEdges,
+    addBoardEdge,
+    removeBoardEdge,
+    rotateBoardEdge,
     previousClassCount,
     inventory,
     balesByLayer,
