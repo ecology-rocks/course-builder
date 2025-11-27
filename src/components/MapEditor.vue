@@ -1,6 +1,78 @@
 <template>
   <div class="editor-container">
     <div class="controls">
+    <div class="saas-header">
+<div v-if="userStore.user" class="user-info">
+          <span>👤 {{ userStore.user.email }}</span>
+          <button @click="userStore.logout" class="btn-small">Logout</button>
+        </div>
+<div v-else class="auth-form">
+          <input v-model="email" type="email" placeholder="Email" />
+          <input v-model="password" type="password" placeholder="Password" />
+          
+          <div class="auth-buttons">
+            <button @click="handleLogin" class="btn-primary">Login</button>
+            <button @click="handleRegister" class="btn-secondary">Register</button>
+          </div>
+
+          <a href="#" @click.prevent="handleForgotPassword" class="forgot-link">Forgot Password?</a>
+          
+          <span v-if="userStore.authError" class="error-msg">{{ userStore.authError }}</span>
+        </div>
+
+        <div class="file-actions">
+          <input v-model="store.mapName" class="map-name-input" placeholder="Map Name" />
+          
+          <div class="btn-group">
+            <button @click="store.saveToCloud" :disabled="!userStore.user">☁️ Save</button>
+            <button @click="openLoadModal" :disabled="!userStore.user">📂 Open</button>
+          </div>
+          
+          <div class="btn-group">
+            <button @click="store.exportMapToJSON">⬇️ Export</button>
+            <button @click="fileInput.click()">⬆️ Import</button>
+            <input 
+              ref="fileInput" 
+              type="file" 
+              accept=".json" 
+              style="display:none" 
+              @change="handleFileImport" 
+            />
+          </div>
+        </div>
+      </div>
+      
+      <hr />
+
+      <div v-if="showLoadModal" class="modal-overlay">
+<div v-if="showLoadModal" class="modal-overlay" @click.self="showLoadModal = false">
+        <div class="modal">
+          <div class="modal-header">
+            <h3>Your Saved Maps</h3>
+            <button class="close-btn" @click="showLoadModal = false">×</button>
+          </div>
+          
+          <ul class="map-list">
+            <li v-for="map in userMaps" :key="map.id" class="map-item">
+              <div class="map-info" @click="selectMap(map)">
+                <span class="map-title">{{ map.name }}</span>
+                <small>{{ new Date(map.updatedAt.seconds * 1000).toLocaleDateString() }}</small>
+              </div>
+
+              <div class="map-actions">
+                <button @click.stop="handleRenameMap(map)" title="Rename">✏️</button>
+                <button @click.stop="handleDeleteMap(map)" title="Delete" class="delete-btn">🗑️</button>
+              </div>
+            </li>
+          </ul>
+          
+          <div v-if="userMaps.length === 0" class="empty-state">
+            No saved maps found.
+          </div>
+        </div>
+      </div>
+
+      </div>
       <h3>Layer Control</h3>
       <div class="layer-select">
         <button 
@@ -12,6 +84,40 @@
           Layer {{ i }}
         </button>
       </div>
+
+      <h3>Course Settings</h3>
+      <div class="level-control">
+        <label>Class Level:</label>
+        <select v-model="store.classLevel">
+          <option value="Instinct">Instinct</option>
+          <option value="Novice">Novice</option>
+          <option value="Open">Open</option>
+          <option value="Senior">Senior</option>
+          <option value="Master">Master</option>
+          <option value="Crazy8s">Crazy 8s</option>
+          <option value="LineDrive">Line Drive</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="ring-controls">
+        <label>
+          Width (ft):
+          <input 
+            type="number" 
+            :value="store.ringDimensions.width" 
+            @change="store.resizeRing($event.target.value, store.ringDimensions.height)"
+          />
+        </label>
+        <label>
+          Height (ft):
+          <input 
+            type="number" 
+            :value="store.ringDimensions.height" 
+            @change="store.resizeRing(store.ringDimensions.width, $event.target.value)"
+          />
+        </label>
+      </div>
+      <hr />
 
       <div class="toolbox">
         <h4>Tools</h4>
@@ -212,12 +318,73 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useMapStore } from '../stores/mapStore'
+import { useUserStore } from '../stores/userStore'
+
+const userStore = useUserStore()
+const email = ref('')
+const password = ref('')
 
 const store = useMapStore()
 const scale = 40 // Pixels per foot for display
 const GRID_OFFSET = 30
+
+const fileInput = ref(null)
+
+async function handleLogin() {
+  if (!email.value || !password.value) return alert("Please enter email and password")
+  await userStore.login(email.value, password.value)
+}
+
+async function handleForgotPassword() {
+  if (!email.value) return alert("Please enter your email address first.")
+  await userStore.resetPassword(email.value)
+}
+
+async function handleRegister() {
+  if (!email.value || !password.value) return alert("Please enter email and password")
+  await userStore.register(email.value, password.value)
+}
+
+function handleFileImport(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (e) => store.importMapFromJSON(e.target.result)
+  reader.readAsText(file)
+}
+
+async function handleDeleteMap(map) {
+  if (confirm(`Are you sure you want to delete "${map.name}"? This cannot be undone.`)) {
+    await store.deleteMap(map.id)
+    // Refresh the list immediately
+    await openLoadModal() 
+  }
+}
+
+async function handleRenameMap(map) {
+  const newName = prompt("Enter new name:", map.name)
+  if (newName && newName.trim() !== "") {
+    await store.renameMap(map.id, newName.trim())
+    // Refresh the list
+    await openLoadModal()
+  }
+}
+
+
+const showLoadModal = ref(false)
+const userMaps = ref([])
+
+async function openLoadModal() {
+  userMaps.value = await store.loadUserMaps()
+  showLoadModal.value = true
+}
+
+function selectMap(map) {
+  store.loadMapFromData(map.id, map)
+  showLoadModal.value = false
+}
 
 const stageConfig = computed(() => ({
   width: (store.ringDimensions.width * scale) + (GRID_OFFSET * 2),
@@ -543,5 +710,192 @@ function handleRightClick(e, baleId) {
   background: #2c3e50;
   color: white;
   border-color: #2c3e50;
+}
+
+.saas-header {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.map-name-input {
+  width: 100%;
+  padding: 5px;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+.btn-group {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+.btn-group button {
+  flex: 1;
+  padding: 5px;
+  cursor: pointer;
+}
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background: white; padding: 20px; border-radius: 8px; min-width: 300px;
+}
+.modal ul { list-style: none; padding: 0; }
+.modal li {
+  padding: 10px; border-bottom: 1px solid #eee; cursor: pointer;
+}
+.modal li:hover { background: #f0f0f0; }
+
+.auth-form {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.auth-form input {
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+.auth-buttons {
+  display: flex;
+  gap: 5px;
+}
+.error-msg {
+  color: red;
+  font-size: 0.8em;
+  margin-left: 10px;
+}
+.btn-primary {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+}
+.btn-secondary {
+  background-color: #008CBA;
+  color: white;
+  border: none;
+}
+
+.password-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.btn-text {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2em;
+  padding: 0 5px;
+}
+.btn-text:hover {
+  transform: scale(1.1);
+}
+
+.forgot-link {
+  font-size: 0.85rem;
+  color: #007bff; /* Standard Link Blue */
+  text-decoration: none;
+  cursor: pointer;
+  white-space: nowrap; /* Keep it on one line */
+  margin-left: 5px;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+  color: #0056b3;
+}
+
+.ring-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ring-controls label {
+  font-size: 0.9em;
+  display: flex;
+  flex-direction: column;
+}
+.ring-controls input {
+  width: 60px;
+  padding: 4px;
+}
+
+.level-control {
+  margin-bottom: 10px;
+}
+.level-control label {
+  display: block;
+  font-size: 0.9em;
+  margin-bottom: 4px;
+}
+.level-control select {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+.close-btn {
+  background: none; border: none; font-size: 1.5rem; cursor: pointer;
+}
+.map-list {
+  list-style: none;
+  padding: 0;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.map-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+.map-item:hover {
+  background-color: #f9f9f9;
+}
+.map-info {
+  flex-grow: 1;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+.map-title {
+  font-weight: bold;
+}
+.map-actions {
+  display: flex;
+  gap: 5px;
+}
+.map-actions button {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.map-actions button:hover {
+  background: #eee;
+}
+.delete-btn:hover {
+  background: #ffebee !important;
+  border-color: #ef5350 !important;
+}
+.empty-state {
+  text-align: center;
+  color: #888;
+  padding: 20px;
 }
 </style>

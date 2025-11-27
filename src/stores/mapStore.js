@@ -1,17 +1,158 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { db } from '../firebase'
+import { useUserStore } from './userStore'
 
 export const useMapStore = defineStore('map', () => {
   // CONFIGURATION
   // Standard course size is 24'x24' [cite: 107]
-  const ringDimensions = ref({ width: 24, height: 24 }) 
+  const ringDimensions = ref({ width: 24, height: 24 })
   const gridSize = ref(20) // pixels per foot for rendering
   const previousClassCount = ref(0) // User inputs this (e.g. "Open had 40 bales")
-  
+  // STATE EXTENSION
+  const currentMapId = ref(null) // ID from Firebase if saved
+  const mapName = ref("Untitled Map")
+  // STATE
+  const classLevel = ref('Novice') // Default to Novice
+
+  // --- ACTIONS: JSON IMPORT/EXPORT ---
+
+
+  async function deleteMap(id) {
+    try {
+      await deleteDoc(doc(db, "maps", id))
+      
+      // If we just deleted the map currently open in the editor, 
+      // treat the editor content as a "new" unsaved map to prevent errors.
+      if (currentMapId.value === id) {
+        currentMapId.value = null
+      }
+    } catch (e) {
+      console.error("Delete failed", e)
+      alert("Failed to delete map.")
+    }
+  }
+
+  async function renameMap(id, newName) {
+    try {
+      const mapRef = doc(db, "maps", id)
+      await updateDoc(mapRef, { name: newName })
+      
+      // If this map is currently open, update the name in the UI too
+      if (currentMapId.value === id) {
+        mapName.value = newName
+      }
+    } catch (e) {
+      console.error("Rename failed", e)
+      alert("Failed to rename map.")
+    }
+  }
+  function exportMapToJSON() {
+    const data = {
+      version: 1,
+      name: mapName.value,
+      level: classLevel.value, // <--- Add this
+      dimensions: ringDimensions.value,
+      bales: bales.value,
+      boardEdges: boardEdges.value,
+      previousClassCount: previousClassCount.value
+    }
+
+    // Create a blob and trigger download
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `${mapName.value.replace(/\s+/g, '_')}.json`
+    link.click()
+  }
+
+  function importMapFromJSON(jsonString) {
+    try {
+      const data = JSON.parse(jsonString)
+      // Basic validation could go here
+      mapName.value = data.name || "Imported Map"
+      classLevel.value = data.level || 'Novice' // <--- Add this
+      ringDimensions.value = data.dimensions || { width: 24, height: 24 }
+      bales.value = data.bales || []
+      boardEdges.value = data.boardEdges || []
+      previousClassCount.value = data.previousClassCount || 0
+      currentMapId.value = null // Reset ID because this is a "new" copy
+      validateAllBales() // Re-check gravity
+    } catch (e) {
+      alert("Failed to parse map file.")
+      console.error(e)
+    }
+  }
+
+  // --- ACTIONS: FIREBASE CLOUD SAVE/LOAD ---
+
+  async function saveToCloud() {
+    const userStore = useUserStore()
+    if (!userStore.user) return alert("Please log in to save.")
+    // 2. Check Map Name (NEW VALIDATION)
+if (!mapName.value || 
+        mapName.value.trim() === "" || 
+        mapName.value === "Untitled Map") {
+      return alert("Please enter a custom name for your map.")
+    }
+    const mapData = {
+      uid: userStore.user.uid,
+      name: mapName.value.trim(),
+      level: classLevel.value, // <--- Add this
+      updatedAt: new Date(),
+      data: {
+        dimensions: ringDimensions.value,
+        bales: bales.value,
+        boardEdges: boardEdges.value,
+        previousClassCount: previousClassCount.value
+      }
+    }
+
+    try {
+      if (currentMapId.value) {
+        // Update existing
+        const mapRef = doc(db, "maps", currentMapId.value)
+        await updateDoc(mapRef, mapData)
+        alert("Map updated!")
+      } else {
+        // Create new
+        const docRef = await addDoc(collection(db, "maps"), {
+          ...mapData,
+          createdAt: new Date()
+        })
+        currentMapId.value = docRef.id
+        alert("Map saved to cloud!")
+      }
+    } catch (e) {
+      console.error("Save failed", e)
+      alert("Error saving map.")
+    }
+  }
+
+  async function loadUserMaps() {
+    const userStore = useUserStore()
+    if (!userStore.user) return []
+
+    const q = query(collection(db, "maps"), where("uid", "==", userStore.user.uid))
+    const querySnapshot = await getDocs(q)
+    return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  }
+
+  function loadMapFromData(id, data) {
+    currentMapId.value = id
+    mapName.value = data.name
+    classLevel.value = data.level || 'Novice' // <--- Add this
+    ringDimensions.value = data.data.dimensions
+    bales.value = data.data.bales
+    boardEdges.value = data.data.boardEdges
+    previousClassCount.value = data.data.previousClassCount
+    validateAllBales()
+  }
   // BALE CONFIG
   // Standard 2-stringer bales. 
   // Represented in feet: Approx 3' long x 1.5' wide (18")
-  const baleSize = { width: 3, height: 1.5 } 
+  const baleSize = { width: 3, height: 1.5 }
 
   // STATE
   // Bales: { id, x, y, rotation (0 or 90), layer (1, 2, 3) }
@@ -26,7 +167,7 @@ export const useMapStore = defineStore('map', () => {
   const inventory = computed(() => {
     const total = bales.value.length
     const base = bales.value.filter(b => b.layer === 1).length
-    
+
     // Calculate Delta for Nesting rules 
     const delta = total - previousClassCount.value
     const deltaString = delta > 0 ? `+${delta}` : `${delta}`
@@ -41,7 +182,7 @@ export const useMapStore = defineStore('map', () => {
     }
   })
 
-// FUNCTIONS
+  // FUNCTIONS
   function setTool(toolName) {
     activeTool.value = toolName
   }
@@ -52,18 +193,18 @@ export const useMapStore = defineStore('map', () => {
     // For MVP, let's default to a 2ft line (width of a tunnel path)
     boardEdges.value.push({
       id: crypto.randomUUID(),
-      x: x, 
+      x: x,
       y: y,
       rotation: 0, // 0 = Horizontal, 90 = Vertical
       length: 2 // Feet
     })
   }
-  
+
   function removeBoardEdge(id) {
     boardEdges.value = boardEdges.value.filter(b => b.id !== id)
   }
 
-function rotateBoardEdge(id) {
+  function rotateBoardEdge(id) {
     const board = boardEdges.value.find(b => b.id === id)
     if (board) {
       // Allow 45-degree increments (0 -> 45 -> 90 -> 135 -> 0)
@@ -71,11 +212,11 @@ function rotateBoardEdge(id) {
     }
   }
 
-function cycleLean(id) {
+  function cycleLean(id) {
     const bale = bales.value.find(b => b.id === id)
     if (bale) {
       // 1. Guard Clause: Only Flat bales can be leaners
-      if (bale.orientation !== 'flat') return 
+      if (bale.orientation !== 'flat') return
 
       // 2. Cycle Logic: Null -> Right -> Left -> Null
       // We only use Right/Left because those are parallel to the longest side (width=3)
@@ -90,12 +231,12 @@ function cycleLean(id) {
   }
 
   // ACTIONS
-function addBale(x, y) {
+  function addBale(x, y) {
     // Snap to 0.5 grid (6 inches)
     const snappedX = Math.round(x * 2) / 2
     const snappedY = Math.round(y * 2) / 2
 
-const newBale = {
+    const newBale = {
       id: crypto.randomUUID(),
       x: snappedX,
       y: snappedY,
@@ -116,7 +257,7 @@ const newBale = {
     validateAllBales()
   }
 
-function updateBalePosition(id, newX, newY) {
+  function updateBalePosition(id, newX, newY) {
     const bale = bales.value.find(b => b.id === id)
     if (bale) {
       // Snap to 0.5 grid (6 inches)
@@ -133,7 +274,7 @@ function updateBalePosition(id, newX, newY) {
     validateAllBales()
   }
 
-function cycleOrientation(id) {
+  function cycleOrientation(id) {
     const bale = bales.value.find(b => b.id === id)
     if (bale) {
       if (bale.orientation === 'flat') {
@@ -149,7 +290,7 @@ function cycleOrientation(id) {
     validateAllBales()
   }
 
-function rotateBale(id) {
+  function rotateBale(id) {
     const bale = bales.value.find(b => b.id === id)
     if (bale) {
       // Increment by 45 degrees instead of toggling
@@ -164,9 +305,9 @@ function rotateBale(id) {
     // 1. Boundary Check (Simplified for rotation)
     // We assume a max bounding box of 3.5' for safety when rotated
     const safeMargin = newBale.rotation % 90 !== 0 ? 3.5 : 3
-    
+
     if (newBale.x < 0 || newBale.x + safeMargin > ringDimensions.value.width ||
-        newBale.y < 0 || newBale.y + safeMargin > ringDimensions.value.height) {
+      newBale.y < 0 || newBale.y + safeMargin > ringDimensions.value.height) {
       return false
     }
 
@@ -177,15 +318,15 @@ function rotateBale(id) {
     // Standard collision for 0/90 degree bales
     const width = newBale.rotation === 0 ? baleSize.width : baleSize.height
     const height = newBale.rotation === 0 ? baleSize.height : baleSize.width
-    
+
     const collision = bales.value.some(existing => {
       if (existing.layer !== newBale.layer) return false
       // Skip collision check if the OTHER bale is diagonal
       if (existing.rotation % 90 !== 0) return false
-      
+
       const exW = existing.rotation === 0 ? baleSize.width : baleSize.height
       const exH = existing.rotation === 0 ? baleSize.height : baleSize.width
-      
+
       return (
         newBale.x < existing.x + exW &&
         newBale.x + width > existing.x &&
@@ -214,24 +355,47 @@ function rotateBale(id) {
     }
   })
 
-  
-function validateAllBales() {
-    // We loop through every bale in the store
+
+  function validateAllBales() {
     bales.value.forEach(bale => {
-      // Re-use our existing logic checker
-      const isSafe = hasSupport(bale)
-      bale.supported = isSafe
+      // 1. Calculate Bale Dimensions
+      const dims = bale.orientation === 'flat'
+        ? (bale.rotation % 180 === 0 ? { w: 3, h: 1.5 } : { w: 1.5, h: 3 })
+        : (bale.orientation === 'tall' ? { w: 3, h: 1 } : { w: 1.5, h: 1 }) // Simplified for check
+
+      // 2. Check Bounds
+      const outOfBounds =
+        bale.x < 0 ||
+        bale.y < 0 ||
+        bale.x + dims.w > ringDimensions.value.width ||
+        bale.y + dims.h > ringDimensions.value.height
+
+      // 3. Check Support (Only if in bounds)
+      const hasGravity = hasSupport(bale)
+
+      // 4. Update Status
+      // It is valid ONLY if it is in-bounds AND supported
+      bale.supported = !outOfBounds && hasGravity
     })
   }
 
-function hasSupport(newBale) {
+  function resizeRing(width, height) {
+    // Enforce reasonable limits (e.g., minimum 10x10)
+    const w = Math.max(10, parseInt(width))
+    const h = Math.max(10, parseInt(height))
+
+    ringDimensions.value = { width: w, height: h }
+    validateAllBales() // Mark items red if they get "cropped" out
+  }
+
+  function hasSupport(newBale) {
     // 1. Ground is always supported
     if (newBale.layer === 1) return true
 
     // 2. Find all bales on the layer directly below
     // We filter manually here to avoid "ReferenceError" issues with getters
     const lowerLayer = bales.value.filter(b => b.layer === newBale.layer - 1)
-    
+
     // Get dimensions for the new bale
     const newW = newBale.rotation % 180 === 0 ? 3 : 1.5 // Simplified for standard flat bales
     const newH = newBale.rotation % 180 === 0 ? 1.5 : 3
@@ -248,7 +412,7 @@ function hasSupport(newBale) {
       const overlapArea = x_overlap * y_overlap
 
       // Require at least 1 square foot of support
-      return overlapArea >= 1 
+      return overlapArea >= 1
     })
   }
 
@@ -266,15 +430,25 @@ function hasSupport(newBale) {
     updateBalePosition,
     hasSupport,
     validateAllBales,
+    resizeRing,
     activeTool,
     setTool,
     boardEdges,
     addBoardEdge,
     removeBoardEdge,
     rotateBoardEdge,
+    exportMapToJSON,
+    importMapFromJSON,
+    saveToCloud,
+    loadUserMaps,
+    loadMapFromData,
+    deleteMap,
+    renameMap,
+    classLevel,
     previousClassCount,
     inventory,
     balesByLayer,
-    baleCounts
+    baleCounts,
+    mapName
   }
 })
