@@ -29,17 +29,17 @@ const visibleBales = computed(() => {
 })
 
 function getBaleColor(layer) {
-  switch(layer) {
+  switch (layer) {
     case 1: return '#e6c200'
-    case 2: return '#4caf50' 
-    case 3: return '#2196f3' 
-    return '#ccc'
+    case 2: return '#4caf50'
+    case 3: return '#2196f3'
+      return '#ccc'
   }
 }
 
 function getOpacity(layer) {
   if (layer === store.currentLayer) return 1
-  return 0.5 
+  return 0.5
 }
 
 // --- PATTERN HELPERS ---
@@ -48,7 +48,7 @@ const hatchPattern = (() => {
   canvas.width = 20; canvas.height = 20
   const ctx = canvas.getContext('2d')
   ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
-  ctx.fillRect(0,0,20,20)
+  ctx.fillRect(0, 0, 20, 20)
   ctx.strokeStyle = '#333'; ctx.lineWidth = 1
   ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(20, 0); ctx.stroke()
   return canvas
@@ -59,7 +59,7 @@ const pillarPattern = (() => {
   canvas.width = 20; canvas.height = 20
   const ctx = canvas.getContext('2d')
   ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-  ctx.fillRect(0,0,20,20)
+  ctx.fillRect(0, 0, 20, 20)
   ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 2
   ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(20, 20); ctx.moveTo(20, 0); ctx.lineTo(0, 20); ctx.stroke()
   return canvas
@@ -77,10 +77,10 @@ function getArrowPoints(width, height, direction) {
   const cy = height / 2
   const size = Math.min(width, height) * 0.4
   switch (direction) {
-    case 'top':    return [cx, cy + size, cx, cy - size]
+    case 'top': return [cx, cy + size, cx, cy - size]
     case 'bottom': return [cx, cy - size, cx, cy + size]
-    case 'left':   return [cx + size, cy, cx - size, cy]
-    case 'right':  return [cx - size, cy, cx + size, cy]
+    case 'left': return [cx + size, cy, cx - size, cy]
+    case 'right': return [cx - size, cy, cx + size, cy]
     default: return []
   }
 }
@@ -94,7 +94,7 @@ function handleStageClick(e) {
 
   if (x < 0 || y < 0) return // Clicked in gutter
 
-if (store.activeTool === 'bale') {
+  if (store.activeTool === 'bale') {
     store.addBale(x, y)
   } else if (store.activeTool === 'board') {
     store.addBoardEdge(x, y)
@@ -125,6 +125,25 @@ function handleRightClickBoard(e, id) {
 }
 
 function handleLeftClick(e, baleId) {
+  // 1. Check for Mobile Action Tools
+  if (store.activeTool === 'rotate') {
+    store.rotateBale(baleId)
+    return
+  }
+  if (store.activeTool === 'type') {
+    store.cycleOrientation(baleId)
+    return
+  }
+  if (store.activeTool === 'lean') {
+    store.cycleLean(baleId)
+    return
+  }
+  if (store.activeTool === 'delete') {
+    store.removeBale(baleId)
+    return
+  }
+
+  // 2. Keep existing Desktop Modifiers (Shift/Alt) as backups
   if (e.evt.shiftKey) {
     store.cycleOrientation(baleId)
     return
@@ -143,13 +162,24 @@ function handleBoardDblClick(e, id) {
   if (e.evt.button === 0) store.removeBoardEdge(id)
 }
 
+// Example for Boards (add similar logic for DC Mats)
+function handleBoardClick(e, id) {
+  if (store.activeTool === 'rotate') store.rotateBoardEdge(id)
+  if (store.activeTool === 'delete') store.removeBoardEdge(id)
+}
+
+function handleDCClick(e, id) {
+  if (store.activeTool === 'rotate') store.rotateDCMat(id)
+  if (store.activeTool === 'delete') store.removeDCMat(id)
+}
+
 function dragBoundFunc(pos) {
   const node = this
   const offsetX = node.offsetX()
   const offsetY = node.offsetY()
   const rawX = pos.x - GRID_OFFSET - offsetX
   const rawY = pos.y - GRID_OFFSET - offsetY
-  const step = scale / 2 
+  const step = scale / 2
   const snappedX = Math.round(rawX / step) * step
   const snappedY = Math.round(rawY / step) * step
   return {
@@ -211,7 +241,7 @@ function selectMap(map) {
 async function handleDeleteMap(map) {
   if (confirm(`Delete "${map.name}"?`)) {
     await store.deleteMap(map.id)
-    await openLoadModal() 
+    await openLoadModal()
   }
 }
 
@@ -231,7 +261,7 @@ async function handlePrint() {
 
   for (let i = 1; i <= 3; i++) {
     store.currentLayer = i
-    await wait(150) 
+    await wait(150)
     const dataUrl = stageRef.value.getStage().toDataURL({ pixelRatio: 2 })
     images.push(dataUrl)
   }
@@ -306,12 +336,24 @@ async function handlePrint() {
           Layer {{ i }}
         </button>
       </div>
-<div class="toolbox">
+      <div class="toolbox">
         <h4>Tools</h4>
         <button @click="store.setTool('bale')" :class="{ active: store.activeTool === 'bale' }">📦 Bale</button>
         <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Board</button>
-        <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🔲 Start</button>
+        <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🔲
+          Start</button>
         <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟧 DC Mat</button>
+      </div>
+      <div class="toolbox action-tools">
+        <h4>Action Tools</h4>
+        <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }"
+          title="Tap item to Rotate">🔄 Rotate</button>
+        <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }"
+          title="Tap to Toggle Flat/Tall">📐 Type</button>
+        <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }"
+          title="Tap to Toggle Lean">↗️ Lean</button>
+        <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }"
+          title="Tap to Delete">🗑️ Delete</button>
       </div>
 
       <h3>Course Settings</h3>
@@ -339,14 +381,16 @@ async function handlePrint() {
         <div class="guide-note">
           {{ store.currentGuidelines.notes }}
         </div>
-        
+
         <div v-if="store.inventory.total < store.currentGuidelines.minBales" class="warning-text">
           ⚠️ Need {{ store.currentGuidelines.minBales - store.inventory.total }} more bales!
         </div>
       </div>
       <div class="ring-controls">
-        <label>Width (ft):<input type="number" :value="store.ringDimensions.width" @change="store.resizeRing($event.target.value, store.ringDimensions.height)" /></label>
-        <label>Height (ft):<input type="number" :value="store.ringDimensions.height" @change="store.resizeRing(store.ringDimensions.width, $event.target.value)" /></label>
+        <label>Width (ft):<input type="number" :value="store.ringDimensions.width"
+            @change="store.resizeRing($event.target.value, store.ringDimensions.height)" /></label>
+        <label>Height (ft):<input type="number" :value="store.ringDimensions.height"
+            @change="store.resizeRing(store.ringDimensions.width, $event.target.value)" /></label>
       </div>
 
       <div class="stats-panel">
@@ -386,161 +430,131 @@ async function handlePrint() {
     <div class="canvas-wrapper">
       <v-stage ref="stageRef" :config="stageConfig" @mousedown="handleStageClick">
         <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
-          
-          <v-text v-for="n in store.ringDimensions.width + 1" :key="'lx'+n" :config="{ x: (n-1) * scale, y: -20, text: (n-1).toString(), fontSize: 12, fill: '#666', align: 'center', width: 10, offsetX: 5 }" />
-          <v-text v-for="n in store.ringDimensions.height + 1" :key="'ly'+n" :config="{ x: -25, y: (n-1) * scale - 6, text: (n-1).toString(), fontSize: 12, fill: '#666', align: 'right', width: 20 }" />
-          <v-line v-for="n in store.ringDimensions.width + 1" :key="'v'+n" :config="{ points: [(n-1)*scale, 0, (n-1)*scale, store.ringDimensions.height * scale], stroke: (n-1) % 5 === 0 ? '#999' : '#ddd', strokeWidth: 1 }" />
-          <v-line v-for="n in store.ringDimensions.height + 1" :key="'h'+n" :config="{ points: [0, (n-1)*scale, store.ringDimensions.width * scale, (n-1)*scale], stroke: (n-1) % 5 === 0 ? '#999' : '#ddd', strokeWidth: 1 }" />
 
-          <v-group
-            v-for="bale in visibleBales"
-            :key="bale.id"
-            :config="{
-              draggable: true,
-              dragBoundFunc: dragBoundFunc,
-              listening: bale.layer === store.currentLayer,
-              x: (bale.x * scale) + (1.5 * scale),
-              y: (bale.y * scale) + (0.75 * scale),
-              rotation: bale.rotation,
-              opacity: getOpacity(bale.layer),
-              offsetX: 1.5 * scale,
-              offsetY: 0.75 * scale
-            }"
-            @contextmenu="handleRightClick($event, bale.id)"
-            @dblclick="handleDblClick($event, bale.id)"
-            @click="handleLeftClick($event, bale.id)"
-            @dragend="handleDragEnd($event, bale.id)" 
-          >
-            <v-rect
-              :config="{
-                ...(() => {
-                   const dims = getBaleDims(bale)
-                   const w = dims.width * scale
-                   const h = dims.height * scale
-                   return { width: w, height: h, x: (1.5 * scale) - (w / 2), y: (0.75 * scale) - (h / 2) }
-                })(),
-                fill: !bale.supported ? '#ef5350' : (bale.orientation === 'flat' ? getBaleColor(bale.layer) : undefined),
-                fillPatternImage: !bale.supported ? undefined : (bale.orientation === 'tall' ? hatchPattern : (bale.orientation === 'pillar' ? pillarPattern : undefined)),
-                fillPatternRepeat: 'repeat',
-                stroke: !bale.supported ? '#b71c1c' : (bale.orientation === 'flat' ? 'black' : (bale.orientation === 'pillar' ? '#d32f2f' : getBaleColor(bale.layer))),
-                strokeWidth: !bale.supported ? 3 : (bale.orientation === 'flat' ? 1 : 2),
-              }"
-            />
-            <v-arrow
-              v-if="bale.lean"
-              :config="{
-                points: (() => {
-                   const dims = getBaleDims(bale)
-                   const w = dims.width * scale
-                   const h = dims.height * scale
-                   const pts = getArrowPoints(w, h, bale.lean)
-                   const offsetX = (1.5 * scale) - (w / 2)
-                   const offsetY = (0.75 * scale) - (h / 2)
-                   return [pts[0]+offsetX, pts[1]+offsetY, pts[2]+offsetX, pts[3]+offsetY]
-                })(),
-                pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4
-              }"
-            />
+          <v-text v-for="n in store.ringDimensions.width + 1" :key="'lx' + n"
+            :config="{ x: (n - 1) * scale, y: -20, text: (n - 1).toString(), fontSize: 12, fill: '#666', align: 'center', width: 10, offsetX: 5 }" />
+          <v-text v-for="n in store.ringDimensions.height + 1" :key="'ly' + n"
+            :config="{ x: -25, y: (n - 1) * scale - 6, text: (n - 1).toString(), fontSize: 12, fill: '#666', align: 'right', width: 20 }" />
+          <v-line v-for="n in store.ringDimensions.width + 1" :key="'v' + n"
+            :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: (n - 1) % 5 === 0 ? '#999' : '#ddd', strokeWidth: 1 }" />
+          <v-line v-for="n in store.ringDimensions.height + 1" :key="'h' + n"
+            :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: (n - 1) % 5 === 0 ? '#999' : '#ddd', strokeWidth: 1 }" />
+
+          <v-group v-for="bale in visibleBales" :key="bale.id" :config="{
+            draggable: true,
+            dragBoundFunc: dragBoundFunc,
+            listening: bale.layer === store.currentLayer,
+            x: (bale.x * scale) + (1.5 * scale),
+            y: (bale.y * scale) + (0.75 * scale),
+            rotation: bale.rotation,
+            opacity: getOpacity(bale.layer),
+            offsetX: 1.5 * scale,
+            offsetY: 0.75 * scale
+          }" @contextmenu="handleRightClick($event, bale.id)" @dblclick="handleDblClick($event, bale.id)"
+            @click="handleLeftClick($event, bale.id)" @tap="handleLeftClick($event, bale.id)"
+            @dragend="handleDragEnd($event, bale.id)">
+            <v-rect :config="{
+              ...(() => {
+                const dims = getBaleDims(bale)
+                const w = dims.width * scale
+                const h = dims.height * scale
+                return { width: w, height: h, x: (1.5 * scale) - (w / 2), y: (0.75 * scale) - (h / 2) }
+              })(),
+              fill: !bale.supported ? '#ef5350' : (bale.orientation === 'flat' ? getBaleColor(bale.layer) : undefined),
+              fillPatternImage: !bale.supported ? undefined : (bale.orientation === 'tall' ? hatchPattern : (bale.orientation === 'pillar' ? pillarPattern : undefined)),
+              fillPatternRepeat: 'repeat',
+              stroke: !bale.supported ? '#b71c1c' : (bale.orientation === 'flat' ? 'black' : (bale.orientation === 'pillar' ? '#d32f2f' : getBaleColor(bale.layer))),
+              strokeWidth: !bale.supported ? 3 : (bale.orientation === 'flat' ? 1 : 2),
+            }" />
+            <v-arrow v-if="bale.lean" :config="{
+              points: (() => {
+                const dims = getBaleDims(bale)
+                const w = dims.width * scale
+                const h = dims.height * scale
+                const pts = getArrowPoints(w, h, bale.lean)
+                const offsetX = (1.5 * scale) - (w / 2)
+                const offsetY = (0.75 * scale) - (h / 2)
+                return [pts[0] + offsetX, pts[1] + offsetY, pts[2] + offsetX, pts[3] + offsetY]
+              })(),
+              pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4
+            }" />
           </v-group>
 
-          <v-group
-            v-for="board in store.boardEdges"
-            :key="board.id"
-            :config="{
-              draggable: true,
-              dragBoundFunc: dragBoundFunc,
-              x: board.x * scale,
-              y: board.y * scale,
-              rotation: board.rotation
-            }"
-            @contextmenu="handleRightClickBoard($event, board.id)"
-            @dblclick="handleBoardDblClick($event, board.id)" 
-          >
-            <v-rect :config="{ width: board.length * scale, height: 6, offsetX: (board.length * scale) / 2, offsetY: 3, fill: '#2e7d32', cornerRadius: 2 }" />
+          <v-group v-for="board in store.boardEdges" :key="board.id" :config="{
+            draggable: true,
+            dragBoundFunc: dragBoundFunc,
+            x: board.x * scale,
+            y: board.y * scale,
+            rotation: board.rotation
+          }" @contextmenu="handleRightClickBoard($event, board.id)" @dblclick="handleBoardDblClick($event, board.id)"
+            @click="handleBoardClick($event, board.id)" @tap="handleBoardClick($event, board.id)">
+            <v-rect
+              :config="{ width: board.length * scale, height: 6, offsetX: (board.length * scale) / 2, offsetY: 3, fill: '#2e7d32', cornerRadius: 2 }" />
           </v-group>
 
-<v-group
-            v-for="mat in store.dcMats"
-            :key="mat.id"
-            :config="{
-              draggable: true,
-              dragBoundFunc: dragBoundFunc,
-              x: mat.x * scale,
-              y: mat.y * scale,
-              rotation: mat.rotation,
-              // Offset is half the width/height so it rotates around its center
-              offsetX: (2 * scale) / 2, 
-              offsetY: (3 * scale) / 2
-            }"
-            @contextmenu="handleRightClickDC($event, mat.id)"
-            @dblclick="handleDblClickDC($event, mat.id)" 
-          >
-            <v-rect
-              :config="{
-                width: 2 * scale,
-                height: 3 * scale,
-                stroke: '#ff9800', // Orange
-                strokeWidth: 3,
-                fill: 'rgba(255, 152, 0, 0.2)',
-                cornerRadius: 2,
-                dash: [10, 5] // Dashed line to indicate a 'boundary' feel
-              }"
-            />
-            <v-text
-              :config="{
-                text: 'DC',
-                fontSize: 16,
-                fontStyle: 'bold',
-                fill: '#e65100', // Darker Orange
-                width: 2 * scale,
-                padding: 0,
-                align: 'center',
-                y: (3 * scale) / 2 - 8 // Center vertically
-              }"
-            />
+          <v-group v-for="mat in store.dcMats" :key="mat.id" :config="{
+            draggable: true,
+            dragBoundFunc: dragBoundFunc,
+            x: mat.x * scale,
+            y: mat.y * scale,
+            rotation: mat.rotation,
+            offsetX: (2 * scale) / 2,
+            offsetY: (3 * scale) / 2
+          }" @contextmenu="handleRightClickDC($event, mat.id)" @dblclick="handleDblClickDC($event, mat.id)"
+            @click="handleDCClick($event, mat.id)" @tap="handleDCClick($event, mat.id)">
+            <v-rect :config="{
+              width: 2 * scale,
+              height: 3 * scale,
+              stroke: '#ff9800', // Orange
+              strokeWidth: 3,
+              fill: 'rgba(255, 152, 0, 0.2)',
+              cornerRadius: 2,
+              dash: [10, 5] // Dashed line to indicate a 'boundary' feel
+            }" />
+            <v-text :config="{
+              text: 'DC',
+              fontSize: 16,
+              fontStyle: 'bold',
+              fill: '#e65100', // Darker Orange
+              width: 2 * scale,
+              padding: 0,
+              align: 'center',
+              y: (3 * scale) / 2 - 8 // Center vertically
+            }" />
           </v-group>
 
-<v-group
-            v-if="store.startBox"
-            :config="{
-              draggable: true,
-              dragBoundFunc: dragBoundFunc,
-              x: store.startBox.x * scale,
-              y: store.startBox.y * scale
-            }"
-            @dblclick="store.removeStartBox()"
-            @dragend="(e) => {
-               // Reuse the existing logic but manually update the specific ref
-               const absPos = e.target.getAbsolutePosition()
-               const relX = absPos.x - GRID_OFFSET
-               const relY = absPos.y - GRID_OFFSET
-               const rawX = relX / scale
-               const rawY = relY / scale
-               store.addStartBox(rawX, rawY) // Re-save position
-            }"
-          >
-            <v-rect
-              :config="{
-                width: 4 * scale,
-                height: 4 * scale,
-                stroke: '#9c27b0', // Purple
-                strokeWidth: 4,
-                fill: 'rgba(156, 39, 176, 0.1)',
-                cornerRadius: 2
-              }"
-            />
-            <v-text
-              :config="{
-                text: 'START',
-                fontSize: 14,
-                fontStyle: 'bold',
-                fill: '#9c27b0',
-                width: 4 * scale,
-                padding: 5,
-                align: 'center',
-                y: (4 * scale) / 2 - 7
-              }"
-            />
+          <v-group v-if="store.startBox" :config="{
+            draggable: true,
+            dragBoundFunc: dragBoundFunc,
+            x: store.startBox.x * scale,
+            y: store.startBox.y * scale
+          }" @dblclick="store.removeStartBox()" @dragend="(e) => {
+              // Reuse the existing logic but manually update the specific ref
+              const absPos = e.target.getAbsolutePosition()
+              const relX = absPos.x - GRID_OFFSET
+              const relY = absPos.y - GRID_OFFSET
+              const rawX = relX / scale
+              const rawY = relY / scale
+              store.addStartBox(rawX, rawY) // Re-save position
+            }">
+            <v-rect :config="{
+              width: 4 * scale,
+              height: 4 * scale,
+              stroke: '#9c27b0', // Purple
+              strokeWidth: 4,
+              fill: 'rgba(156, 39, 176, 0.1)',
+              cornerRadius: 2
+            }" />
+            <v-text :config="{
+              text: 'START',
+              fontSize: 14,
+              fontStyle: 'bold',
+              fill: '#9c27b0',
+              width: 4 * scale,
+              padding: 5,
+              align: 'center',
+              y: (4 * scale) / 2 - 7
+            }" />
           </v-group>
 
         </v-layer>
@@ -573,68 +587,307 @@ async function handlePrint() {
 </template>
 
 <style scoped>
-.editor-container { display: flex; gap: 20px; }
-.controls { width: 250px; background: #f5f5f5; padding: 1rem; max-height: 90vh; overflow-y: auto; }
-.canvas-wrapper { border: 2px solid #333; }
+.editor-container {
+  display: flex;
+  gap: 20px;
+}
+
+.controls {
+  width: 250px;
+  background: #f5f5f5;
+  padding: 1rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.canvas-wrapper {
+  border: 2px solid #333;
+}
 
 /* SAAS HEADER */
-.saas-header { margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
-.auth-form { display: flex; flex-direction: column; gap: 5px; }
-.auth-form input { padding: 5px; border: 1px solid #ccc; border-radius: 4px; }
-.auth-buttons { display: flex; gap: 5px; margin-top: 5px; }
-.user-info { display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; font-weight: bold; }
-.error-msg { color: red; font-size: 0.8em; }
-.forgot-link { font-size: 0.85rem; color: #007bff; text-decoration: none; cursor: pointer; margin-top: 5px; }
-.forgot-link:hover { text-decoration: underline; }
+.saas-header {
+  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.auth-form input {
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 5px;
+  margin-top: 5px;
+}
+
+.user-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9em;
+  font-weight: bold;
+}
+
+.error-msg {
+  color: red;
+  font-size: 0.8em;
+}
+
+.forgot-link {
+  font-size: 0.85rem;
+  color: #007bff;
+  text-decoration: none;
+  cursor: pointer;
+  margin-top: 5px;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
 
 /* FILE ACTIONS */
-.file-actions { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
-.map-name-input { width: 95%; padding: 5px; font-weight: bold; }
-.btn-group { display: flex; gap: 5px; }
-.btn-group button { flex: 1; padding: 5px; cursor: pointer; font-size: 0.9em; }
+.file-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.map-name-input {
+  width: 95%;
+  padding: 5px;
+  font-weight: bold;
+}
+
+.btn-group {
+  display: flex;
+  gap: 5px;
+}
+
+.btn-group button {
+  flex: 1;
+  padding: 5px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
 
 /* GENERAL BUTTONS */
-.btn-primary { background-color: #4CAF50; color: white; border: none; padding: 6px; cursor: pointer; border-radius: 4px; flex: 1; }
-.btn-secondary { background-color: #008CBA; color: white; border: none; padding: 6px; cursor: pointer; border-radius: 4px; flex: 1; }
-.btn-small { padding: 2px 6px; font-size: 0.8em; cursor: pointer; }
+.btn-primary {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 4px;
+  flex: 1;
+}
+
+.btn-secondary {
+  background-color: #008CBA;
+  color: white;
+  border: none;
+  padding: 6px;
+  cursor: pointer;
+  border-radius: 4px;
+  flex: 1;
+}
+
+.btn-small {
+  padding: 2px 6px;
+  font-size: 0.8em;
+  cursor: pointer;
+}
 
 /* CONTROLS */
-.layer-select button, .toolbox button { margin-right: 5px; padding: 5px 10px; cursor: pointer; border: 1px solid #ccc; background: white; border-radius: 3px; }
-.layer-select button.active, .toolbox button.active { background: #333; color: white; }
-.toolbox { margin-bottom: 20px; margin-top: 10px; }
+.layer-select button,
+.toolbox button {
+  margin-right: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  border: 1px solid #ccc;
+  background: white;
+  border-radius: 3px;
+}
+
+.layer-select button.active,
+.toolbox button.active {
+  background: #333;
+  color: white;
+}
+
+.toolbox {
+  margin-bottom: 20px;
+  margin-top: 10px;
+}
 
 /* SETTINGS */
-.level-control { margin-bottom: 10px; }
-.level-control select { width: 100%; padding: 5px; }
-.ring-controls { display: flex; gap: 10px; margin-bottom: 10px; }
-.ring-controls input { width: 50px; padding: 4px; }
+.level-control {
+  margin-bottom: 10px;
+}
+
+.level-control select {
+  width: 100%;
+  padding: 5px;
+}
+
+.ring-controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.ring-controls input {
+  width: 50px;
+  padding: 4px;
+}
 
 /* STATS */
-.stats-panel { background: #fff; border: 1px solid #ddd; padding: 10px; border-radius: 4px; margin-bottom: 15px; }
-.stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-.main-stat { font-size: 1.1em; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 5px; margin-bottom: 10px; }
-.small-text { font-size: 0.85em; color: #666; }
-.nesting-control { display: flex; flex-direction: column; margin-bottom: 8px; }
-.delta.positive { color: #388e3c; }
-.delta { color: #d32f2f; font-weight: bold; }
+.stats-panel {
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
 
-.instructions ul { padding-left: 20px; margin: 0; font-size: 0.9rem; line-height: 1.6; }
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.main-stat {
+  font-size: 1.1em;
+  color: #2c3e50;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 5px;
+  margin-bottom: 10px;
+}
+
+.small-text {
+  font-size: 0.85em;
+  color: #666;
+}
+
+.nesting-control {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+}
+
+.delta.positive {
+  color: #388e3c;
+}
+
+.delta {
+  color: #d32f2f;
+  font-weight: bold;
+}
+
+.instructions ul {
+  padding-left: 20px;
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
 
 /* MODAL */
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.modal { background: white; padding: 20px; border-radius: 8px; min-width: 350px; max-height: 80vh; overflow: hidden; display: flex; flex-direction: column; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
-.map-list { list-style: none; padding: 0; overflow-y: auto; }
-.map-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
-.map-item:hover { background-color: #f9f9f9; }
-.map-info { flex-grow: 1; cursor: pointer; display: flex; flex-direction: column; }
-.map-title { font-weight: bold; }
-.map-actions { display: flex; gap: 5px; }
-.delete-btn:hover { background: #ffebee; border-color: red; }
-.empty-state { text-align: center; color: #888; padding: 20px; }
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  min-width: 350px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.map-list {
+  list-style: none;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.map-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+.map-item:hover {
+  background-color: #f9f9f9;
+}
+
+.map-info {
+  flex-grow: 1;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+}
+
+.map-title {
+  font-weight: bold;
+}
+
+.map-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.delete-btn:hover {
+  background: #ffebee;
+  border-color: red;
+}
+
+.empty-state {
+  text-align: center;
+  color: #888;
+  padding: 20px;
+}
+
 .guidelines-box {
-  background: #e3f2fd; /* Light Blue */
+  background: #e3f2fd;
+  /* Light Blue */
   border: 1px solid #90caf9;
   padding: 10px;
   border-radius: 4px;
@@ -673,5 +926,56 @@ async function handlePrint() {
   background: rgba(255, 255, 255, 0.5);
   border-radius: 4px;
   padding: 2px;
+}
+
+/* MOBILE RESPONSIVENESS */
+@media (max-width: 768px) {
+  .editor-container {
+    flex-direction: column;
+    /* Stack controls on top of map */
+  }
+
+  .controls {
+    width: 100%;
+    /* Full width */
+    max-height: 250px;
+    /* Limit height so it doesn't push map off screen */
+    overflow-y: auto;
+    /* Scrollable controls */
+    box-sizing: border-box;
+    padding: 10px;
+  }
+
+  /* Make the tools grid tighter on mobile */
+  .toolbox,
+  .file-actions,
+  .saas-header {
+    display: flex;
+    flex-wrap: wrap;
+    /* Allow buttons to wrap to next line */
+    gap: 8px;
+  }
+
+  .canvas-wrapper {
+    width: 100%;
+    height: 60vh;
+    /* Use remaining screen height */
+    overflow: auto;
+    /* Allow scrolling/panning the map! */
+    -webkit-overflow-scrolling: touch;
+    /* Smooth scroll on iOS */
+    border-top: 2px solid #333;
+  }
+}
+
+.action-tools button {
+  background: #fff3e0;
+  /* Different color to distinguish Actions */
+  border-color: #ffcc80;
+}
+
+.action-tools button.active {
+  background: #e65100;
+  color: white;
 }
 </style>
