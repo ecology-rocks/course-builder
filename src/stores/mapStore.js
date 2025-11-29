@@ -12,9 +12,13 @@ export const useMapStore = defineStore('map', () => {
   const previousClassCount = ref(0) // User inputs this (e.g. "Open had 40 bales")
   const currentMapId = ref(null) // ID from Firebase if saved
   const mapName = ref("Untitled Map")
+  const isShared = ref(false)
+  // STATE
+  const isDrawingBoard = ref(false) // ID of the board currently being drawn
   const dcMats = ref([]) // List of Distance Challenge mats
   const classLevel = ref('Novice') // Default to Novice
   const startBox = ref(null) // { x, y }
+  const masterBlinds = ref([]) // Array of arrays: [[1,5,3,2,4], [2,2,1,5,3], ...]
   const CLASS_RULES = {
     Instinct: {
       minBales: 10, // Placeholder
@@ -61,6 +65,62 @@ export const useMapStore = defineStore('map', () => {
   const hides = ref([]) // { id, x, y, type: 'rat'|'litter'|'empty' }
 
   // ******** FUNCTIONS ********
+
+// START DRAWING (MouseDown)
+  function startDrawingBoard(x, y) {
+    const id = crypto.randomUUID()
+    // Snap start point
+    const snappedX = Math.round(x * 2) / 2
+    const snappedY = Math.round(y * 2) / 2
+    
+    boardEdges.value.push({
+      id: id,
+      x1: snappedX,
+      y1: snappedY,
+      x2: snappedX, // Initially, end = start
+      y2: snappedY
+    })
+    isDrawingBoard.value = id
+  }
+
+  // UPDATE DRAWING (MouseMove)
+  function updateDrawingBoard(x, y) {
+    if (!isDrawingBoard.value) return
+    
+    const board = boardEdges.value.find(b => b.id === isDrawingBoard.value)
+    if (board) {
+      // Snap end point
+      board.x2 = Math.round(x * 2) / 2
+      board.y2 = Math.round(y * 2) / 2
+    }
+  }
+
+  // FINISH DRAWING (MouseUp)
+  function stopDrawingBoard() {
+    if (!isDrawingBoard.value) return
+    
+    // Cleanup: If length is 0 (just a click), remove it
+    const board = boardEdges.value.find(b => b.id === isDrawingBoard.value)
+    if (board && board.x1 === board.x2 && board.y1 === board.y2) {
+      boardEdges.value = boardEdges.value.filter(b => b.id !== isDrawingBoard.value)
+    }
+    
+    isDrawingBoard.value = null
+  }
+
+// ACTIONS
+  function generateMasterBlinds(count) {
+    const newBlinds = []
+    for (let i = 0; i < count; i++) {
+      const set = []
+      for (let j = 0; j < 5; j++) {
+        // Generate random number 1-5
+        set.push(Math.floor(Math.random() * 5) + 1)
+      }
+      newBlinds.push(set)
+    }
+    masterBlinds.value = newBlinds
+  }
 
 
   function addHide(x, y) {
@@ -163,6 +223,8 @@ function addDCMat(x, y) {
       dimensions: ringDimensions.value,
       bales: bales.value,
       hides: hides.value,
+      isShared: isShared.value,
+      masterBlinds: masterBlinds.value,
       boardEdges: boardEdges.value,
       previousClassCount: previousClassCount.value
     }
@@ -186,6 +248,8 @@ function addDCMat(x, y) {
       dcMats.value = data.dcMats || []
       boardEdges.value = data.boardEdges || []
       hides.value = data.hides || []
+      masterBlinds.value = data.masterBlinds || []
+      isShared.value = data.isShared || false
       previousClassCount.value = data.previousClassCount || 0
       currentMapId.value = null // Reset ID because this is a "new" copy
       validateAllBales() // Re-check gravity
@@ -209,14 +273,17 @@ if (!mapName.value ||
     const mapData = {
       uid: userStore.user.uid,
       name: mapName.value.trim(),
+      isShared: isShared.value,
       level: classLevel.value, // <--- Add this
       updatedAt: new Date(),
       data: {
         dimensions: ringDimensions.value,
         bales: bales.value,
         dcMats: dcMats.value,
+        masterBlinds: masterBlinds.value,
         boardEdges: boardEdges.value,
         previousClassCount: previousClassCount.value,
+        isShared: isShared.value,
         hides: hides.value
       }
     }
@@ -255,11 +322,13 @@ if (!mapName.value ||
     currentMapId.value = id
     mapName.value = data.name
     classLevel.value = data.level || 'Novice' // <--- Add this
+    isShared.value = data.isShared || false
     ringDimensions.value = data.data.dimensions
     bales.value = data.data.bales
     dcMats.value = data.data.dcMats || []
     boardEdges.value = data.data.boardEdges
     hides.value = data.data.hides || []
+    masterBlinds.value = data.masterBlinds || []
     previousClassCount.value = data.data.previousClassCount
     validateAllBales()
   }
@@ -267,6 +336,7 @@ if (!mapName.value ||
   function reset() {
     bales.value = []
     boardEdges.value = []
+    isShared.value = false
     hides.value = []
     dcMats.value = []
     startBox.value = null
@@ -318,29 +388,11 @@ if (!mapName.value ||
   }
 
 
-  function addBoardEdge(x, y) {
-    // Boards sit on the grid lines, usually spanning a bale width (3ft or 1.5ft)
-    // For MVP, let's default to a 2ft line (width of a tunnel path)
-    boardEdges.value.push({
-      id: crypto.randomUUID(),
-      x: x,
-      y: y,
-      rotation: 0, // 0 = Horizontal, 90 = Vertical
-      length: 3 // Feet
-    })
-  }
 
   function removeBoardEdge(id) {
     boardEdges.value = boardEdges.value.filter(b => b.id !== id)
   }
 
-  function rotateBoardEdge(id) {
-    const board = boardEdges.value.find(b => b.id === id)
-    if (board) {
-      // Allow 45-degree increments (0 -> 45 -> 90 -> 135 -> 0)
-      board.rotation = (board.rotation + 45) % 180
-    }
-  }
 
   function cycleLean(id) {
     const bale = bales.value.find(b => b.id === id)
@@ -518,6 +570,53 @@ if (!mapName.value ||
     validateAllBales() // Mark items red if they get "cropped" out
   }
 
+// UPDATE ONE ENDPOINT (Drag Handle)
+  function updateBoardEndpoint(id, whichPoint, newX, newY) {
+    const board = boardEdges.value.find(b => b.id === id)
+    if (board) {
+      if (whichPoint === 'start') {
+        board.x1 = Math.round(newX * 2) / 2
+        board.y1 = Math.round(newY * 2) / 2
+      } else {
+        board.x2 = Math.round(newX * 2) / 2
+        board.y2 = Math.round(newY * 2) / 2
+      }
+    }
+  }
+
+  // ROTATE BOARD (Right Click)
+  function rotateBoard(id) {
+    const board = boardEdges.value.find(b => b.id === id)
+    if (board) {
+      // 1. Calculate Midpoint
+      const mx = (board.x1 + board.x2) / 2
+      const my = (board.y1 + board.y2) / 2
+
+      // 2. Define Rotation (45 degrees in radians)
+      const rad = (45 * Math.PI) / 180
+      const cos = Math.cos(rad)
+      const sin = Math.sin(rad)
+
+      // 3. Rotate Point 1
+      const dx1 = board.x1 - mx
+      const dy1 = board.y1 - my
+      const rx1 = (dx1 * cos - dy1 * sin) + mx
+      const ry1 = (dx1 * sin + dy1 * cos) + my
+
+      // 4. Rotate Point 2
+      const dx2 = board.x2 - mx
+      const dy2 = board.y2 - my
+      const rx2 = (dx2 * cos - dy2 * sin) + mx
+      const ry2 = (dx2 * sin + dy2 * cos) + my
+
+      // 5. Update and Snap
+      board.x1 = Math.round(rx1 * 2) / 2
+      board.y1 = Math.round(ry1 * 2) / 2
+      board.x2 = Math.round(rx2 * 2) / 2
+      board.y2 = Math.round(ry2 * 2) / 2
+    }
+  }
+
   function hasSupport(newBale) {
     // 1. Ground is always supported
     if (newBale.layer === 1) return true
@@ -564,9 +663,11 @@ if (!mapName.value ||
     activeTool,
     setTool,
     boardEdges,
-    addBoardEdge,
     removeBoardEdge,
-    rotateBoardEdge,
+    isDrawingBoard,
+    updateDrawingBoard,
+    stopDrawingBoard,
+    startDrawingBoard,
     exportMapToJSON,
     importMapFromJSON,
     saveToCloud,
@@ -592,6 +693,11 @@ if (!mapName.value ||
     addHide,
     removeHide,
     cycleHideType,
-    reset
+    reset,
+    masterBlinds,
+    generateMasterBlinds,
+    isShared,
+    updateBoardEndpoint,
+    rotateBoard,
   }
 })
