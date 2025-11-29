@@ -34,7 +34,7 @@ function editMap(map) {
   <div class="dashboard">
     <nav class="navbar">
       <div class="logo" @click="router.push('/')">
-        🐾 CourseBuilder.io
+        🐾 K9CourseBuilder.com
       </div>
       
       <div class="user-status">
