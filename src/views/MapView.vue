@@ -3,6 +3,7 @@ import { onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
+import { auth } from '../firebase' // <--- Add this
 
 const route = useRoute()
 const loading = ref(true)
@@ -113,16 +114,39 @@ onMounted(async () => {
     const docSnap = await getDoc(docRef)
     
     if (docSnap.exists()) {
-      // NOTE: We rely on Firestore Security Rules to block access if not shared.
-      // If we got the data, it means we are allowed to see it.
       const fullDoc = docSnap.data()
-      mapData.value = fullDoc.data // The inner 'data' object holding bales/grids
+      
+      // 1. OWNER CHECK (The "Gotcha" Fix)
+      // If the map is NOT shared, but we can see it, we must be the owner.
+      if (!fullDoc.isShared) {
+        const currentUid = auth.currentUser ? auth.currentUser.uid : null
+        
+        // If we are the owner, show a warning so they know it's still private
+        if (currentUid === fullDoc.uid) {
+          alert("⚠️ NOTE: This map is currently PRIVATE.\n\nYou can see this because you are the owner, but the public link will NOT work for others until you click 'Share' in the editor.")
+        } else {
+          // If we aren't the owner (and rules failed), block access manually
+          error.value = "This map is private."
+          return
+        }
+      }
+
+      // 2. SECURITY: Strip Hides (Rat/Litter)
+      // We delete this array so the dots never render for course builders
+      if (fullDoc.data.hides) {
+        fullDoc.data.hides = [] 
+      }
+      
+      // 3. Load the Map
+      mapData.value = fullDoc.data
     } else {
-      error.value = "Map not found (or it is private)."
+      error.value = "Map not found."
     }
   } catch (e) {
     console.error(e)
-    error.value = "Unable to load map. It may be private or deleted."
+    // If Firestore Security Rules block the read (because it's private and user is anon),
+    // it jumps straight here.
+    error.value = "This map is private or deleted."
   } finally {
     loading.value = false
   }
@@ -215,11 +239,6 @@ onMounted(async () => {
                   pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4
                 }"
               />
-            </v-group>
-
-            <v-group v-for="hide in mapData.hides" :key="hide.id" :config="{ x: hide.x * scale, y: hide.y * scale }">
-              <v-circle :config="{ radius: 0.3 * scale, fill: hide.type === 'rat' ? '#d32f2f' : (hide.type === 'litter' ? '#388e3c' : '#1976d2'), stroke: 'white', strokeWidth: 2 }" />
-              <v-text :config="{ text: hide.type === 'rat' ? 'R' : (hide.type === 'litter' ? 'L' : 'E'), fontSize: 14, fontStyle: 'bold', fill: 'white', align: 'center', x: -5, y: -6 }" />
             </v-group>
 
             <v-group v-for="board in mapData.boardEdges" :key="board.id" :config="{ x: board.x * scale, y: board.y * scale, rotation: board.rotation }">

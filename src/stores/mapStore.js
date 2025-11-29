@@ -699,5 +699,6 @@ if (!mapName.value ||
     isShared,
     updateBoardEndpoint,
     rotateBoard,
+    currentMapId,
   }
 })

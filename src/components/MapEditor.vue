@@ -11,6 +11,9 @@ const userStore = useUserStore()
 const scale = 40
 const GRID_OFFSET = 30 // Space for labels
 const stageRef = ref(null) // Reference for printing
+const showShareModal = ref(false)
+const shareQrUrl = ref('')
+const shareLink = ref('')
 
 const stageConfig = computed(() => ({
   width: (store.ringDimensions.width * scale) + (GRID_OFFSET * 2),
@@ -29,16 +32,19 @@ const visibleBales = computed(() => {
   })
 })
 
+
+
 async function toggleShare() {
+  // 1. Validation: Can't share unsaved maps
   if (!store.currentMapId) {
-    alert("You must save the map first before sharing.")
+    alert("Please save the map to the cloud first.")
     return
   }
   
-  // Toggle state locally
+  // 2. Toggle State
   store.isShared = !store.isShared
   
-  // Save immediately to update Firestore rules/permissions
+  // 3. Save to persist the change
   await store.saveToCloud()
 }
 
@@ -48,6 +54,43 @@ function getBaleColor(layer) {
     case 2: return '#4caf50' 
     case 3: return '#2196f3' 
     return '#ccc'
+  }
+}
+
+async function handleShareClick() {
+  if (!store.currentMapId) {
+    alert("Please save the map to the cloud first.")
+    return
+  }
+
+  // If not shared yet, share it first
+  if (!store.isShared) {
+    store.isShared = true
+    await store.saveToCloud()
+  }
+
+  // Generate Link & QR for the Modal
+  shareLink.value = `${window.location.origin}/view/${store.currentMapId}`
+  try {
+    shareQrUrl.value = await QRCode.toDataURL(shareLink.value, { width: 250, margin: 2 })
+  } catch (e) {
+    console.error(e)
+  }
+
+  // Open the UI Modal
+  showShareModal.value = true
+}
+
+function copyToClipboard() {
+  navigator.clipboard.writeText(shareLink.value)
+  alert("Link copied to clipboard!")
+}
+
+async function stopSharing() {
+  if (confirm("Are you sure? The existing link will stop working.")) {
+    store.isShared = false
+    await store.saveToCloud()
+    showShareModal.value = false
   }
 }
 
@@ -343,6 +386,13 @@ async function handleDeleteMap(map) {
   }
 }
 
+async function handleEditProfileName() {
+  const newName = prompt("Enter your official Judge Name for printouts:", userStore.judgeName)
+  if (newName && newName.trim() !== "") {
+    await userStore.updateJudgeName(newName.trim())
+  }
+}
+
 async function handleRenameMap(map) {
   const newName = prompt("Enter new name:", map.name)
   if (newName && newName.trim() !== "") {
@@ -360,7 +410,7 @@ async function handlePrint() {
   const images = []
   const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
 
-  // 1. Capture Map Layers
+  // 1. Capture Layers
   for (let i = 1; i <= 3; i++) {
     store.currentLayer = i
     await wait(150) 
@@ -369,82 +419,123 @@ async function handlePrint() {
   }
   store.currentLayer = originalLayer
 
-  // 2. Generate QR Code HTML (Only if Shared)
-  let qrHtml = ''
-  if (store.currentMapId && store.isShared) {
-    // Construct the public URL
-    const url = `${window.location.origin}/view/${store.currentMapId}`
-    
-    try {
-      // Generate the QR image data
-      const qrDataUrl = await QRCode.toDataURL(url, { width: 300, margin: 2 })
-      
-      qrHtml = `
-        <div class="page break-before" style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 90vh;">
-          <div style="border: 4px solid #4CAF50; padding: 40px; border-radius: 20px; text-align: center;">
-            <h1 style="color: #2c3e50; font-size: 2.5em; margin-bottom: 10px;">Course Builder Access</h1>
-            <p style="font-size: 1.2em; color: #666; margin-bottom: 30px;">Scan this code to view interactive map layers on your phone.</p>
-            <img src="${qrDataUrl}" style="border: 2px solid #eee; border-radius: 10px;" />
-            <p style="margin-top: 30px; font-family: monospace; background: #f5f5f5; padding: 15px; border-radius: 8px; font-size: 0.9em;">
-              ${url}
-            </p>
-          </div>
-        </div>
-      `
-    } catch (e) {
-      console.error("QR Generation failed", e)
-    }
-  }
+  // 2. Build Legend HTML (CSS Shapes)
+  const legendHtml = `
+    <div class="legend-box">
+      <h3>Map Key</h3>
+      <div class="l-grid">
+        <div class="l-item"><span class="s s-bale"></span> Bale (Flat)</div>
+        <div class="l-item"><span class="s s-tall"></span> Bale (Tall)</div>
+        <div class="l-item"><span class="s s-pillar">X</span> Pillar</div>
+        <div class="l-item"><span class="s s-board"></span> Board</div>
+        <div class="l-item"><span class="s s-start">S</span> Start Box</div>
+        <div class="l-item"><span class="s s-dc">DC</span> DC Mat</div>
+        <div class="l-item"><span class="s s-rat">R</span> Rat</div>
+        <div class="l-item"><span class="s s-lit">L</span> Litter</div>
+        <div class="l-item"><span class="s s-emp">E</span> Empty</div>
+      </div>
+    </div>
+  `
 
-  // 3. Prepare Confidential Blinds HTML (Master Only)
+  // 3. Build Confidential Page (Master Only)
   let blindsHtml = ''
   if (store.masterBlinds && store.masterBlinds.length > 0) {
     const rows = store.masterBlinds.map((blind, index) => `
       <tr><td class="blind-num">Blind ${index + 1}</td><td class="blind-seq">${blind.join(' - ')}</td></tr>
     `).join('')
-
     blindsHtml = `
       <div class="page break-before">
         <div class="confidential-header"><h1>CONFIDENTIAL - JUDGE ONLY</h1><p>Master Rat Randomization</p></div>
         <table class="blinds-table"><thead><tr><th>Blind Number</th><th>Rat Locations (1-5)</th></tr></thead><tbody>${rows}</tbody></table>
-        <div class="note"><p><strong>Instructions:</strong> Use this sequence to place rats for each blind.</p></div>
       </div>`
   }
 
-  // 4. Generate Print Window
+  // 4. Generate QR (Shared Only)
+let qrHtml = ''
+  if (store.currentMapId && store.isShared) {
+    const url = `${window.location.origin}/view/${store.currentMapId}`
+    try {
+      const qrDataUrl = await QRCode.toDataURL(url, { width: 300, margin: 2 })
+      qrHtml = `
+        <div class="page break-before" style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 90vh;">
+          <h1>Course Builder Access</h1>
+          <p>Scan to view interactive map layers on your phone.</p>
+          <img src="${qrDataUrl}" style="width: 300px; height: 300px;" />
+          <p>${url}</p>
+        </div>
+      `
+    } catch (e) { console.error(e) }
+  }
+
+  // 5. Open Window
   const win = window.open('', '_blank')
   
   win.document.write(`
     <html>
       <head>
-        <title>Print Map - ${store.mapName}</title>
+        <title>Print - ${store.mapName}</title>
         <style>
-          body { font-family: sans-serif; text-align: center; color: #333; }
-          .page { padding: 20px; box-sizing: border-box; page-break-after: always; }
+          body { font-family: sans-serif; color: #333; }
+          .page { padding: 20px; page-break-after: always; text-align: center; }
           .break-before { page-break-before: always; }
-          img { max-width: 100%; border: 1px solid #ccc; margin-bottom: 10px; }
-          .stats { margin-bottom: 20px; border: 1px solid #ddd; padding: 10px; display: inline-block; background: #f9f9f9; }
+          img { max-width: 90%; border: 1px solid #ccc; margin-bottom: 10px; }
           
-          /* Blinds Styles */
+          /* Header Stats */
+          .header-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          .header-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+          .header-label { font-weight: bold; background: #f0f0f0; width: 15%; }
+          
+          /* Legend Styles */
+          .legend-box { border: 1px solid #333; padding: 10px; margin-bottom: 20px; text-align: left; font-size: 0.9em; }
+          .legend-box h3 { margin: 0 0 10px 0; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+          .l-grid { display: flex; flex-wrap: wrap; gap: 15px; }
+          .l-item { display: flex; align-items: center; width: 140px; }
+          .s { display: inline-block; width: 20px; height: 15px; border: 1px solid black; margin-right: 8px; text-align: center; font-size: 10px; line-height: 15px; }
+          
+          /* Symbol Colors */
+          .s-bale { background: #e6c200; }
+          .s-tall { background: repeating-linear-gradient(45deg, #fff, #fff 2px, #ccc 2px, #ccc 4px); }
+          .s-pillar { background: white; color: red; font-weight: bold; }
+          .s-board { background: #2e7d32; height: 6px; border: none; }
+          .s-start { border: 2px solid #9c27b0; color: #9c27b0; font-weight: bold; background: white; }
+          .s-dc { border: 2px dashed #ff9800; color: #e65100; font-weight: bold; background: white; }
+          .s-rat { background: #d32f2f; border-radius: 50%; color: white; width: 15px; }
+          .s-lit { background: #388e3c; border-radius: 50%; color: white; width: 15px; }
+          .s-emp { background: #1976d2; border-radius: 50%; color: white; width: 15px; }
+
+          /* Keep existing Confidential/Blinds styles here */
           .confidential-header { border-bottom: 4px solid #d32f2f; margin-bottom: 30px; }
           .confidential-header h1 { color: #d32f2f; margin: 0; font-size: 24pt; }
           .blinds-table { width: 80%; margin: 0 auto; border-collapse: collapse; font-size: 14pt; }
-          .blinds-table th { background: #333; color: white; padding: 10px; text-align: left; }
-          .blinds-table td { border-bottom: 1px solid #ccc; padding: 15px 10px; text-align: left; }
-          .blind-num { font-weight: bold; width: 30%; }
-          .blind-seq { font-family: monospace; font-size: 1.2em; letter-spacing: 2px; }
+          .blinds-table td, .blinds-table th { border: 1px solid #ccc; padding: 10px; }
         </style>
       </head>
       <body>
         ${qrHtml}
 
         <div class="page">
-          <div class="stats"><strong>${store.mapName} (${store.classLevel})</strong><br>Total: ${store.inventory.total}</div>
-          <h2>Layer 1 (Base)</h2><img src="${images[0]}" />
+          <h1>${store.mapName}</h1>
+          <table class="header-table">
+            <tr>
+              <td class="header-label">Judge:</td><td>${userStore.judgeName}</td>
+              <td class="header-label">Class:</td><td>${store.classLevel}</td>
+              <td class="header-label">Date:</td><td>${new Date().toLocaleDateString()}</td>
+            </tr>
+            <tr>
+              <td class="header-label">Total Bales:</td><td>${store.inventory.total}</td>
+              <td class="header-label">Base Layer:</td><td>${store.inventory.base}</td>
+              <td class="header-label">Nesting:</td><td>${store.inventory.deltaString}</td>
+            </tr>
+          </table>
+
+          ${legendHtml}
+
+          <h2>Layer 1 (Base)</h2>
+          <img src="${images[0]}" />
         </div>
-        
-        <div class="page"><h2>Layer 2</h2><img src="${images[1]}" /></div>
-        <div class="page"><h2>Layer 3</h2><img src="${images[2]}" /></div>
+
+        <div class="page break-before"><h2>Layer 2</h2><img src="${images[1]}" /></div>
+        <div class="page break-before"><h2>Layer 3</h2><img src="${images[2]}" /></div>
         
         ${blindsHtml}
         
@@ -480,6 +571,11 @@ async function handlePrint() {
 
         <div class="file-actions">
           <input v-model="store.mapName" class="map-name-input" placeholder="Map Name" />
+          <div class="profile-link" v-if="userStore.user">
+            <span class="label">Judge:</span>
+            <span class="name">{{ userStore.judgeName || 'Not Set' }}</span>
+            <button @click="handleEditProfileName" class="btn-xs" title="Edit Profile Name">✏️</button>
+          </div>
           <div class="btn-group">
             <button 
               @click="store.saveToCloud" 
@@ -492,10 +588,10 @@ async function handlePrint() {
             <button @click="openLoadModal" :disabled="!userStore.user">📂 Open</button>
 
             <button 
-              @click="toggleShare" 
+              @click="handleShareClick" 
               :disabled="!userStore.can('save_cloud') || !store.currentMapId"
               :style="{ backgroundColor: store.isShared ? '#4CAF50' : '#f0f0f0', color: store.isShared ? 'white' : '#333' }"
-              title="Make this map public via link/QR code"
+              title="Share this map"
             >
               {{ store.isShared ? '🔗 Shared' : '🔒 Private' }}
             </button>
@@ -759,10 +855,42 @@ async function handlePrint() {
       </div>
     </div>
 
+<div v-if="showShareModal" class="modal-overlay" @click.self="showShareModal = false">
+      <div class="modal share-modal">
+        <div class="modal-header">
+          <h3>Share Map</h3>
+          <button class="close-btn" @click="showShareModal = false">×</button>
+        </div>
+        
+        <div class="share-content">
+          <p>Anyone with this link can view the map layers (Read Only).</p>
+          
+          <div class="qr-preview">
+            <img :src="shareQrUrl" v-if="shareQrUrl" />
+          </div>
+
+          <div class="link-box">
+            <input type="text" :value="shareLink" readonly />
+            <button @click="copyToClipboard">📋 Copy</button>
+          </div>
+
+          <hr />
+          
+          <button @click="stopSharing" class="btn-danger">Stop Sharing (Make Private)</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <style scoped>
+.share-modal { text-align: center; }
+.qr-preview img { border: 1px solid #ddd; border-radius: 8px; margin: 10px 0; }
+.link-box { display: flex; gap: 5px; margin-bottom: 20px; }
+.link-box input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9; }
+.btn-danger { background: #ffebee; color: #d32f2f; border: 1px solid #d32f2f; width: 100%; padding: 10px; border-radius: 4px; cursor: pointer; }
+.btn-danger:hover { background: #d32f2f; color: white; }
 .editor-container { display: flex; gap: 20px; }
 .controls { width: 250px; background: #f5f5f5; padding: 1rem; max-height: 90vh; overflow-y: auto; }
 .canvas-wrapper { border: 2px solid #333; }
@@ -830,5 +958,35 @@ async function handlePrint() {
   .controls { width: 100%; max-height: 250px; overflow-y: auto; padding: 10px; }
   .toolbox, .file-actions, .saas-header { display: flex; flex-wrap: wrap; gap: 8px; }
   .canvas-wrapper { width: 100%; height: 60vh; overflow: auto; -webkit-overflow-scrolling: touch; border-top: 2px solid #333; }
+}
+.profile-link {
+  display: flex;
+  align-items: center;
+  background: #f0f0f0;
+  padding: 5px 10px;
+  border-radius: 4px;
+  font-size: 0.9em;
+  margin-bottom: 5px;
+  border: 1px solid #ddd;
+}
+.profile-link .label {
+  color: #666;
+  margin-right: 5px;
+}
+.profile-link .name {
+  font-weight: bold;
+  color: #333;
+  margin-right: 10px;
+  flex-grow: 1;
+}
+.btn-xs {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1em;
+  padding: 0;
+}
+.btn-xs:hover {
+  transform: scale(1.1);
 }
 </style>
