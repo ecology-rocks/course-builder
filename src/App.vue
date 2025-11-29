@@ -1,12 +1,9 @@
 <script setup>
-import MapEditor from './components/MapEditor.vue'
+import { RouterView } from 'vue-router'
 </script>
 
 <template>
-  <main>
-    <h1>Barn Hunt Map Builder</h1>
-    <MapEditor />
-  </main>
+ <router-view />
 </template>
 
 <style>

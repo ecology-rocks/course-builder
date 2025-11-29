@@ -263,6 +263,22 @@ if (!mapName.value ||
     previousClassCount.value = data.data.previousClassCount
     validateAllBales()
   }
+
+  function reset() {
+    bales.value = []
+    boardEdges.value = []
+    hides.value = []
+    dcMats.value = []
+    startBox.value = null
+    
+    currentMapId.value = null
+    mapName.value = "Untitled Map"
+    classLevel.value = "Novice"
+    ringDimensions.value = { width: 24, height: 24 }
+    previousClassCount.value = 0
+    currentLayer.value = 1
+    activeTool.value = 'bale'
+  }
   // BALE CONFIG
   // Standard 2-stringer bales. 
   // Represented in feet: Approx 3' long x 1.5' wide (18")
@@ -575,6 +591,7 @@ if (!mapName.value ||
     hides,
     addHide,
     removeHide,
-    cycleHideType
+    cycleHideType,
+    reset
   }
 })

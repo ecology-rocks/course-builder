@@ -322,6 +322,9 @@ async function handlePrint() {
   <div class="editor-container">
     <div class="controls">
       <div class="saas-header">
+<div class="nav-row">
+  <button @click="$router.push('/dashboard')" class="btn-text">← Dashboard</button>
+</div>
         <div v-if="userStore.user" class="user-info">
           <span>👤 {{ userStore.user.email }}</span>
           <button @click="userStore.logout" class="btn-small">Logout</button>
@@ -340,11 +343,23 @@ async function handlePrint() {
         <div class="file-actions">
           <input v-model="store.mapName" class="map-name-input" placeholder="Map Name" />
           <div class="btn-group">
-            <button @click="store.saveToCloud" :disabled="!userStore.user">☁️ Save</button>
+<button 
+              @click="store.saveToCloud" 
+              :disabled="!userStore.user || !userStore.can('save_cloud')"
+              :title="userStore.can('save_cloud') ? 'Save' : 'Upgrade to Pro to Save'"
+            >
+              ☁️ Save {{ !userStore.can('save_cloud') ? '(Pro)' : '' }}
+            </button>
+            
             <button @click="openLoadModal" :disabled="!userStore.user">📂 Open</button>
           </div>
           <div class="btn-group">
-            <button @click="store.exportMapToJSON">⬇️ Export</button>
+            <button 
+              @click="store.exportMapToJSON"
+              :disabled="!userStore.can('export_json')"
+            >
+              ⬇️ Export {{ !userStore.can('export_json') ? '🔒' : '' }}
+            </button>
             <button @click="fileInput.click()">⬆️ Import</button>
             <button @click="handlePrint">🖨️ Print</button>
             <input ref="fileInput" type="file" accept=".json" style="display:none" @change="handleFileImport" />
@@ -366,7 +381,11 @@ async function handlePrint() {
         <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🔲
           Start</button>
         <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟧 DC Mat</button>
-        <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🔴 (Rat) Hide</button>
+        <button 
+          @click="userStore.can('mark_hides') ? store.setTool('hide') : alert('Marking hides is a Pro feature!')" 
+          :class="{ active: store.activeTool === 'hide', disabled: !userStore.can('mark_hides') }"
+        >🔴 Hide {{ !userStore.can('mark_hides') ? '🔒' : '' }}
+        </button>
       </div>
       <div class="toolbox action-tools">
         <h4>Action Tools</h4>
@@ -1039,5 +1058,21 @@ async function handlePrint() {
 .action-tools button.active {
   background: #e65100;
   color: white;
+}
+
+.nav-row {
+  margin-bottom: 5px;
+}
+.btn-text {
+  background: none; 
+  border: none; 
+  color: #666; 
+  cursor: pointer; 
+  font-weight: bold;
+  padding: 0;
+}
+.btn-text:hover {
+  text-decoration: underline;
+  color: #333;
 }
 </style>
