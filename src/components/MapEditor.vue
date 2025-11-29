@@ -85,6 +85,27 @@ function getArrowPoints(width, height, direction) {
   }
 }
 
+// 2. Add Hide Handlers
+function handleDblClickHide(e, id) {
+  if (e.evt.button === 0) store.removeHide(id)
+}
+
+function handleHideClick(e, id) {
+  // Desktop Right-Click handled by @contextmenu in template
+  
+  // Mobile/Action Tool Logic
+  if (store.activeTool === 'rotate' || store.activeTool === 'type') {
+    store.cycleHideType(id) // Reuse rotate/type tools to cycle color
+  }
+  if (store.activeTool === 'delete') {
+    store.removeHide(id)
+  }
+  // Standard Click (Cycle)
+  if (!store.activeTool || store.activeTool === 'hide') {
+    store.cycleHideType(id)
+  }
+}
+
 // --- MOUSE HANDLERS ---
 function handleStageClick(e) {
   if (e.target !== e.target.getStage()) return
@@ -98,10 +119,12 @@ function handleStageClick(e) {
     store.addBale(x, y)
   } else if (store.activeTool === 'board') {
     store.addBoardEdge(x, y)
-  } else if (store.activeTool === 'startbox') { // <--- Add this
+  } else if (store.activeTool === 'startbox') { 
     store.addStartBox(x, y)
-  } else if (store.activeTool === 'dcmat') { // <--- ADD THIS
+  } else if (store.activeTool === 'dcmat') { 
     store.addDCMat(x, y)
+  } else if (store.activeTool === 'hide') { 
+    store.addHide(x, y)
   }
 }
 
@@ -343,6 +366,7 @@ async function handlePrint() {
         <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🔲
           Start</button>
         <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟧 DC Mat</button>
+        <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🔴 (Rat) Hide</button>
       </div>
       <div class="toolbox action-tools">
         <h4>Action Tools</h4>
@@ -478,6 +502,44 @@ async function handlePrint() {
               })(),
               pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4
             }" />
+          </v-group>
+
+<v-group
+            v-for="hide in store.hides"
+            :key="hide.id"
+            :config="{
+              draggable: true,
+              dragBoundFunc: dragBoundFunc,
+              x: hide.x * scale,
+              y: hide.y * scale
+            }"
+            @contextmenu.prevent="store.cycleHideType(hide.id)"
+            @dblclick="handleDblClickHide($event, hide.id)"
+            @click="handleHideClick($event, hide.id)"
+            @tap="handleHideClick($event, hide.id)"
+          >
+            <v-circle
+              :config="{
+                radius: 0.3 * scale, // approx 4 inches radius
+                fill: hide.type === 'rat' ? '#d32f2f' : (hide.type === 'litter' ? '#388e3c' : '#1976d2'),
+                stroke: 'white',
+                strokeWidth: 2,
+                shadowColor: 'black',
+                shadowBlur: 3,
+                shadowOpacity: 0.3
+              }"
+            />
+            <v-text
+              :config="{
+                text: hide.type === 'rat' ? 'R' : (hide.type === 'litter' ? 'L' : 'E'),
+                fontSize: 14,
+                fontStyle: 'bold',
+                fill: 'white',
+                align: 'center',
+                x: -5,
+                y: -6
+              }"
+            />
           </v-group>
 
           <v-group v-for="board in store.boardEdges" :key="board.id" :config="{

@@ -58,8 +58,32 @@ export const useMapStore = defineStore('map', () => {
     }
   }
 
-  // FUNCTIONS
+  const hides = ref([]) // { id, x, y, type: 'rat'|'litter'|'empty' }
 
+  // ******** FUNCTIONS ********
+
+
+  function addHide(x, y) {
+    hides.value.push({
+      id: crypto.randomUUID(),
+      x: Math.round(x * 2) / 2,
+      y: Math.round(y * 2) / 2,
+      type: 'rat' // Default start color
+    })
+  }
+
+  function removeHide(id) {
+    hides.value = hides.value.filter(h => h.id !== id)
+  }
+
+  function cycleHideType(id) {
+    const hide = hides.value.find(h => h.id === id)
+    if (hide) {
+      if (hide.type === 'rat') hide.type = 'litter'
+      else if (hide.type === 'litter') hide.type = 'empty'
+      else hide.type = 'rat'
+    }
+  }
 function addDCMat(x, y) {
     dcMats.value.push({
       id: crypto.randomUUID(),
@@ -138,6 +162,7 @@ function addDCMat(x, y) {
       dcMats: dcMats.value,
       dimensions: ringDimensions.value,
       bales: bales.value,
+      hides: hides.value,
       boardEdges: boardEdges.value,
       previousClassCount: previousClassCount.value
     }
@@ -160,6 +185,7 @@ function addDCMat(x, y) {
       bales.value = data.bales || []
       dcMats.value = data.dcMats || []
       boardEdges.value = data.boardEdges || []
+      hides.value = data.hides || []
       previousClassCount.value = data.previousClassCount || 0
       currentMapId.value = null // Reset ID because this is a "new" copy
       validateAllBales() // Re-check gravity
@@ -190,7 +216,8 @@ if (!mapName.value ||
         bales: bales.value,
         dcMats: dcMats.value,
         boardEdges: boardEdges.value,
-        previousClassCount: previousClassCount.value
+        previousClassCount: previousClassCount.value,
+        hides: hides.value
       }
     }
 
@@ -232,6 +259,7 @@ if (!mapName.value ||
     bales.value = data.data.bales
     dcMats.value = data.data.dcMats || []
     boardEdges.value = data.data.boardEdges
+    hides.value = data.data.hides || []
     previousClassCount.value = data.data.previousClassCount
     validateAllBales()
   }
@@ -543,6 +571,10 @@ if (!mapName.value ||
     inventory,
     balesByLayer,
     baleCounts,
-    mapName
+    mapName,
+    hides,
+    addHide,
+    removeHide,
+    cycleHideType
   }
 })
