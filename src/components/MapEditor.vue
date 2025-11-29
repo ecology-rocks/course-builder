@@ -94,11 +94,24 @@ function handleStageClick(e) {
 
   if (x < 0 || y < 0) return // Clicked in gutter
 
-  if (store.activeTool === 'bale') {
+if (store.activeTool === 'bale') {
     store.addBale(x, y)
   } else if (store.activeTool === 'board') {
     store.addBoardEdge(x, y)
+  } else if (store.activeTool === 'startbox') { // <--- Add this
+    store.addStartBox(x, y)
+  } else if (store.activeTool === 'dcmat') { // <--- ADD THIS
+    store.addDCMat(x, y)
   }
+}
+
+function handleRightClickDC(e, id) {
+  e.evt.preventDefault()
+  store.rotateDCMat(id)
+}
+
+function handleDblClickDC(e, id) {
+  if (e.evt.button === 0) store.removeDCMat(id)
 }
 
 function handleRightClick(e, baleId) {
@@ -293,11 +306,12 @@ async function handlePrint() {
           Layer {{ i }}
         </button>
       </div>
-
-      <div class="toolbox">
+<div class="toolbox">
         <h4>Tools</h4>
         <button @click="store.setTool('bale')" :class="{ active: store.activeTool === 'bale' }">📦 Bale</button>
-        <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Board Edge</button>
+        <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Board</button>
+        <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🔲 Start</button>
+        <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟧 DC Mat</button>
       </div>
 
       <h3>Course Settings</h3>
@@ -313,6 +327,22 @@ async function handlePrint() {
           <option value="LineDrive">Line Drive</option>
           <option value="Other">Other</option>
         </select>
+      </div>
+      <div class="guidelines-box" v-if="store.currentGuidelines">
+        <h5>{{ store.classLevel }} Guidelines</h5>
+        <div class="guide-row">
+          <span>Min Bales:</span> <strong>{{ store.currentGuidelines.minBales }}</strong>
+        </div>
+        <div class="guide-row">
+          <span>Max Bales:</span> <strong>{{ store.currentGuidelines.maxBales }}</strong>
+        </div>
+        <div class="guide-note">
+          {{ store.currentGuidelines.notes }}
+        </div>
+        
+        <div v-if="store.inventory.total < store.currentGuidelines.minBales" class="warning-text">
+          ⚠️ Need {{ store.currentGuidelines.minBales - store.inventory.total }} more bales!
+        </div>
       </div>
       <div class="ring-controls">
         <label>Width (ft):<input type="number" :value="store.ringDimensions.width" @change="store.resizeRing($event.target.value, store.ringDimensions.height)" /></label>
@@ -429,6 +459,90 @@ async function handlePrint() {
             <v-rect :config="{ width: board.length * scale, height: 6, offsetX: (board.length * scale) / 2, offsetY: 3, fill: '#2e7d32', cornerRadius: 2 }" />
           </v-group>
 
+<v-group
+            v-for="mat in store.dcMats"
+            :key="mat.id"
+            :config="{
+              draggable: true,
+              dragBoundFunc: dragBoundFunc,
+              x: mat.x * scale,
+              y: mat.y * scale,
+              rotation: mat.rotation,
+              // Offset is half the width/height so it rotates around its center
+              offsetX: (2 * scale) / 2, 
+              offsetY: (3 * scale) / 2
+            }"
+            @contextmenu="handleRightClickDC($event, mat.id)"
+            @dblclick="handleDblClickDC($event, mat.id)" 
+          >
+            <v-rect
+              :config="{
+                width: 2 * scale,
+                height: 3 * scale,
+                stroke: '#ff9800', // Orange
+                strokeWidth: 3,
+                fill: 'rgba(255, 152, 0, 0.2)',
+                cornerRadius: 2,
+                dash: [10, 5] // Dashed line to indicate a 'boundary' feel
+              }"
+            />
+            <v-text
+              :config="{
+                text: 'DC',
+                fontSize: 16,
+                fontStyle: 'bold',
+                fill: '#e65100', // Darker Orange
+                width: 2 * scale,
+                padding: 0,
+                align: 'center',
+                y: (3 * scale) / 2 - 8 // Center vertically
+              }"
+            />
+          </v-group>
+
+<v-group
+            v-if="store.startBox"
+            :config="{
+              draggable: true,
+              dragBoundFunc: dragBoundFunc,
+              x: store.startBox.x * scale,
+              y: store.startBox.y * scale
+            }"
+            @dblclick="store.removeStartBox()"
+            @dragend="(e) => {
+               // Reuse the existing logic but manually update the specific ref
+               const absPos = e.target.getAbsolutePosition()
+               const relX = absPos.x - GRID_OFFSET
+               const relY = absPos.y - GRID_OFFSET
+               const rawX = relX / scale
+               const rawY = relY / scale
+               store.addStartBox(rawX, rawY) // Re-save position
+            }"
+          >
+            <v-rect
+              :config="{
+                width: 4 * scale,
+                height: 4 * scale,
+                stroke: '#9c27b0', // Purple
+                strokeWidth: 4,
+                fill: 'rgba(156, 39, 176, 0.1)',
+                cornerRadius: 2
+              }"
+            />
+            <v-text
+              :config="{
+                text: 'START',
+                fontSize: 14,
+                fontStyle: 'bold',
+                fill: '#9c27b0',
+                width: 4 * scale,
+                padding: 5,
+                align: 'center',
+                y: (4 * scale) / 2 - 7
+              }"
+            />
+          </v-group>
+
         </v-layer>
       </v-stage>
     </div>
@@ -519,4 +633,45 @@ async function handlePrint() {
 .map-actions { display: flex; gap: 5px; }
 .delete-btn:hover { background: #ffebee; border-color: red; }
 .empty-state { text-align: center; color: #888; padding: 20px; }
+.guidelines-box {
+  background: #e3f2fd; /* Light Blue */
+  border: 1px solid #90caf9;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  font-size: 0.9em;
+}
+
+.guidelines-box h5 {
+  margin: 0 0 5px 0;
+  color: #1565c0;
+  text-transform: uppercase;
+  font-size: 0.85em;
+}
+
+.guide-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.guide-note {
+  margin-top: 5px;
+  font-style: italic;
+  color: #555;
+  font-size: 0.85em;
+  line-height: 1.4;
+  border-top: 1px solid #bbdefb;
+  padding-top: 5px;
+}
+
+.warning-text {
+  color: #d32f2f;
+  font-weight: bold;
+  margin-top: 5px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 4px;
+  padding: 2px;
+}
 </style>

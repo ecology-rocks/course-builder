@@ -10,14 +10,96 @@ export const useMapStore = defineStore('map', () => {
   const ringDimensions = ref({ width: 24, height: 24 })
   const gridSize = ref(20) // pixels per foot for rendering
   const previousClassCount = ref(0) // User inputs this (e.g. "Open had 40 bales")
-  // STATE EXTENSION
   const currentMapId = ref(null) // ID from Firebase if saved
   const mapName = ref("Untitled Map")
-  // STATE
+  const dcMats = ref([]) // List of Distance Challenge mats
   const classLevel = ref('Novice') // Default to Novice
+  const startBox = ref(null) // { x, y }
+  const CLASS_RULES = {
+    Instinct: {
+      minBales: 10, // Placeholder
+      maxBales: 20,
+      notes: "Tunnels: Simple straight tunnels allowed."
+    },
+    Novice: {
+      minBales: 20, // Placeholder
+      maxBales: 30,
+      notes: "Required: One official Novice Tunnel (Version A/B). No high ledges."
+    },
+    Open: {
+      minBales: 25, // Placeholder
+      maxBales: 40,
+      notes: "Tunnel: Min 1 turn (90°). Dark tunnel required."
+    },
+    Senior: {
+      minBales: 35, // Based on example in rulebook
+      maxBales: 55,
+      notes: "Max Height: 3 bales. Tunnel: 2-3 turns. Jogs allowed."
+    },
+    Master: {
+      minBales: 55, // Placeholder
+      maxBales: 70,
+      notes: "Optional: Distance Challenge. Max Height: 3 bales. Random rat numbering."
+    },
+    Crazy8s: {
+      minBales: 40, 
+      maxBales: 60,
+      notes: "Tunnel: 2+ turns. Focus on speed and flow."
+    },
+    LineDrive: {
+      minBales: 7,
+      maxBales: 11,
+      notes: "Specific Line Drive rules apply."
+    },
+    Other: {
+      minBales: 0,
+      maxBales: 0,
+      notes: "Custom rules."
+    }
+  }
 
-  // --- ACTIONS: JSON IMPORT/EXPORT ---
+  // FUNCTIONS
 
+function addDCMat(x, y) {
+    dcMats.value.push({
+      id: crypto.randomUUID(),
+      x: Math.round(x * 2) / 2, // Snap to grid
+      y: Math.round(y * 2) / 2,
+      rotation: 0 
+    })
+  }
+
+  function removeDCMat(id) {
+    dcMats.value = dcMats.value.filter(m => m.id !== id)
+  }
+
+  function rotateDCMat(id) {
+    const mat = dcMats.value.find(m => m.id === id)
+    if (mat) {
+      // Rotate 90 degrees (Portrait <-> Landscape)
+      mat.rotation = (mat.rotation + 90) % 180
+    }
+  }
+
+
+  const currentGuidelines = computed(() => {
+    return CLASS_RULES[classLevel.value] || CLASS_RULES['Other']
+  })
+
+
+  function addStartBox(x, y) {
+    // Default to a 4x4 foot box (standard size)
+    // Snapped to grid
+    startBox.value = {
+      x: Math.round(x * 2) / 2,
+      y: Math.round(y * 2) / 2
+    }
+  }
+
+  function removeStartBox() {
+    startBox.value = null
+  }
+  
 
   async function deleteMap(id) {
     try {
@@ -53,6 +135,7 @@ export const useMapStore = defineStore('map', () => {
       version: 1,
       name: mapName.value,
       level: classLevel.value, // <--- Add this
+      dcMats: dcMats.value,
       dimensions: ringDimensions.value,
       bales: bales.value,
       boardEdges: boardEdges.value,
@@ -75,6 +158,7 @@ export const useMapStore = defineStore('map', () => {
       classLevel.value = data.level || 'Novice' // <--- Add this
       ringDimensions.value = data.dimensions || { width: 24, height: 24 }
       bales.value = data.bales || []
+      dcMats.value = data.dcMats || []
       boardEdges.value = data.boardEdges || []
       previousClassCount.value = data.previousClassCount || 0
       currentMapId.value = null // Reset ID because this is a "new" copy
@@ -104,6 +188,7 @@ if (!mapName.value ||
       data: {
         dimensions: ringDimensions.value,
         bales: bales.value,
+        dcMats: dcMats.value,
         boardEdges: boardEdges.value,
         previousClassCount: previousClassCount.value
       }
@@ -145,6 +230,7 @@ if (!mapName.value ||
     classLevel.value = data.level || 'Novice' // <--- Add this
     ringDimensions.value = data.data.dimensions
     bales.value = data.data.bales
+    dcMats.value = data.data.dcMats || []
     boardEdges.value = data.data.boardEdges
     previousClassCount.value = data.data.previousClassCount
     validateAllBales()
@@ -196,7 +282,7 @@ if (!mapName.value ||
       x: x,
       y: y,
       rotation: 0, // 0 = Horizontal, 90 = Vertical
-      length: 2 // Feet
+      length: 3 // Feet
     })
   }
 
@@ -444,6 +530,14 @@ if (!mapName.value ||
     loadMapFromData,
     deleteMap,
     renameMap,
+    dcMats,
+    addDCMat,
+    removeDCMat,
+    rotateDCMat,
+    startBox,
+    addStartBox,
+    removeStartBox,
+    currentGuidelines,
     classLevel,
     previousClassCount,
     inventory,
