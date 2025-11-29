@@ -88,11 +88,14 @@ function goUpLevel() {
 <template>
   <div class="dashboard">
 
-    <nav class="navbar">
+<nav class="navbar">
       <div class="logo" @click="router.push('/')">🐾 K9CourseBuilder.com</div>
       <div class="user-status">
         <span class="badge" :class="userStore.tier">{{ userStore.tier.toUpperCase() }} MEMBER</span>
-        <button @click="userStore.logout">Logout</button>
+        
+        <button @click="router.push('/settings')" class="btn-icon-nav" title="Settings">⚙️</button>
+        
+        <button @click="userStore.logout" class="btn-nav-link">Logout</button>
       </div>
     </nav>
 
@@ -554,5 +557,28 @@ function goUpLevel() {
   border: none;
   cursor: pointer;
   border-radius: 4px;
+}
+.btn-icon-nav {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  margin-right: 10px;
+  padding: 5px;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+.btn-icon-nav:hover {
+  background: #f0f0f0;
+}
+.btn-nav-link {
+  background: none;
+  border: 1px solid #ccc;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.btn-nav-link:hover {
+  background: #eee;
 }
 </style>
