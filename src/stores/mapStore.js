@@ -13,7 +13,8 @@ export const useMapStore = defineStore('map', () => {
   const currentMapId = ref(null) // ID from Firebase if saved
   const mapName = ref("Untitled Map")
   const isShared = ref(false)
-  // STATE
+  const folders = ref([]) // List of folder objects
+  const currentFolderId = ref(null) // null = Root (Unfiled)
   const isDrawingBoard = ref(false) // ID of the board currently being drawn
   const dcMats = ref([]) // List of Distance Challenge mats
   const classLevel = ref('Novice') // Default to Novice
@@ -273,8 +274,9 @@ if (!mapName.value ||
     const mapData = {
       uid: userStore.user.uid,
       name: mapName.value.trim(),
+      folderId: currentFolderId.value,
       isShared: isShared.value,
-      level: classLevel.value, // <--- Add this
+      level: classLevel.value, 
       updatedAt: new Date(),
       data: {
         dimensions: ringDimensions.value,
@@ -318,11 +320,69 @@ if (!mapName.value ||
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
   }
 
+  // --- FOLDER ACTIONS ---
+
+  async function createFolder(name) {
+    const userStore = useUserStore()
+    if (!userStore.user) return
+
+    try {
+      await addDoc(collection(db, "folders"), {
+        uid: userStore.user.uid,
+        name: name,
+        createdAt: new Date()
+      })
+      await loadUserFolders() // Refresh list immediately
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  async function loadUserFolders() {
+    const userStore = useUserStore()
+    if (!userStore.user) return
+    
+    const q = query(collection(db, "folders"), where("uid", "==", userStore.user.uid))
+    const snapshot = await getDocs(q)
+    folders.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+  }
+
+// MOVE MAP
+  async function moveMap(mapId, targetFolderId) {
+    try {
+      const mapRef = doc(db, "maps", mapId)
+      // Update Firestore
+      await updateDoc(mapRef, { folderId: targetFolderId })
+      
+      // Update Local State (if currently editing this map)
+      if (currentMapId.value === mapId) {
+        currentFolderId.value = targetFolderId
+      }
+    } catch (e) {
+      console.error("Move failed", e)
+      alert("Failed to move map.")
+    }
+  }
+
+  async function deleteFolder(folderId) {
+    // For MVP: We just delete the folder doc. 
+    // Maps inside will still exist but have a 'ghost' folderId. 
+    // They will show up in "Unfiled" if you add a check for valid folders in Dashboard,
+    // or you can manually update them here.
+    try {
+      await deleteDoc(doc(db, "folders", folderId))
+      await loadUserFolders()
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   function loadMapFromData(id, data) {
     currentMapId.value = id
     mapName.value = data.name
     classLevel.value = data.level || 'Novice' // <--- Add this
     isShared.value = data.isShared || false
+    currentFolderId.value = data.folderId || null
     ringDimensions.value = data.data.dimensions
     bales.value = data.data.bales
     dcMats.value = data.data.dcMats || []
@@ -333,12 +393,15 @@ if (!mapName.value ||
     validateAllBales()
   }
 
-  function reset() {
+function reset() {
+    // Note: We DO NOT reset currentFolderId here. 
+    // It is controlled by the Dashboard navigation.
+    
     bales.value = []
     boardEdges.value = []
-    isShared.value = false
     hides.value = []
     dcMats.value = []
+    masterBlinds.value = []
     startBox.value = null
     
     currentMapId.value = null
@@ -348,6 +411,7 @@ if (!mapName.value ||
     previousClassCount.value = 0
     currentLayer.value = 1
     activeTool.value = 'bale'
+    isShared.value = false
   }
   // BALE CONFIG
   // Standard 2-stringer bales. 
@@ -700,5 +764,11 @@ if (!mapName.value ||
     updateBoardEndpoint,
     rotateBoard,
     currentMapId,
+    folders,
+    currentFolderId,
+    createFolder,
+    loadUserFolders,
+    moveMap,
+    deleteFolder
   }
 })
