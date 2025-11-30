@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useUserStore } from './userStore'
+import { CLASS_RULES, checkSupport } from '../utils/validation'
 
 export const useMapStore = defineStore('map', () => {
   // CONFIGURATION
@@ -20,48 +21,7 @@ export const useMapStore = defineStore('map', () => {
   const classLevel = ref('Novice') // Default to Novice
   const startBox = ref(null) // { x, y }
   const masterBlinds = ref([]) // Array of arrays: [[1,5,3,2,4], [2,2,1,5,3], ...]
-  const CLASS_RULES = {
-    Instinct: {
-      minBales: 10, // Placeholder
-      maxBales: 20,
-      notes: "Tunnels: Simple straight tunnels allowed."
-    },
-    Novice: {
-      minBales: 20, // Placeholder
-      maxBales: 30,
-      notes: "Required: One official Novice Tunnel (Version A/B). No high ledges."
-    },
-    Open: {
-      minBales: 25, // Placeholder
-      maxBales: 40,
-      notes: "Tunnel: Min 1 turn (90°). Dark tunnel required."
-    },
-    Senior: {
-      minBales: 35, // Based on example in rulebook
-      maxBales: 55,
-      notes: "Max Height: 3 bales. Tunnel: 2-3 turns. Jogs allowed."
-    },
-    Master: {
-      minBales: 55, // Placeholder
-      maxBales: 70,
-      notes: "Optional: Distance Challenge. Max Height: 3 bales. Random rat numbering."
-    },
-    Crazy8s: {
-      minBales: 40, 
-      maxBales: 60,
-      notes: "Tunnel: 2+ turns. Focus on speed and flow."
-    },
-    LineDrive: {
-      minBales: 7,
-      maxBales: 11,
-      notes: "Specific Line Drive rules apply."
-    },
-    Other: {
-      minBales: 0,
-      maxBales: 0,
-      notes: "Custom rules."
-    }
-  }
+  
 
   const hides = ref([]) // { id, x, y, type: 'rat'|'litter'|'empty' }
 
@@ -167,9 +127,10 @@ function addDCMat(x, y) {
   }
 
 
-  const currentGuidelines = computed(() => {
-    return CLASS_RULES[classLevel.value] || CLASS_RULES['Other']
-  })
+// Replace the big CLASS_RULES object with just the import usage
+const currentGuidelines = computed(() => {
+  return CLASS_RULES[classLevel.value] || CLASS_RULES['Other']
+})
 
 
   function addStartBox(x, y) {
@@ -547,37 +508,53 @@ function reset() {
   }
 
   // VALIDATION LOGIC
+// VALIDATION LOGIC
   function isValidPlacement(newBale) {
-    // 1. Boundary Check (Simplified for rotation)
-    // We assume a max bounding box of 3.5' for safety when rotated
-    const safeMargin = newBale.rotation % 90 !== 0 ? 3.5 : 3
+    // 1. Calculate Exact Dimensions
+    let w, h
+    const isRotated = newBale.rotation % 180 !== 0
 
-    if (newBale.x < 0 || newBale.x + safeMargin > ringDimensions.value.width ||
-      newBale.y < 0 || newBale.y + safeMargin > ringDimensions.value.height) {
+    if (newBale.orientation === 'flat') {
+      w = isRotated ? 1.5 : 3
+      h = isRotated ? 3 : 1.5
+    } else if (newBale.orientation === 'tall') {
+      w = isRotated ? 1 : 3
+      h = isRotated ? 3 : 1
+    } else {
+      // Pillar
+      w = isRotated ? 1 : 1.5
+      h = isRotated ? 1.5 : 1
+    }
+
+    // 2. Boundary Check
+    if (newBale.x < 0 || newBale.x + w > ringDimensions.value.width ||
+        newBale.y < 0 || newBale.y + h > ringDimensions.value.height) {
       return false
     }
 
-    // 2. Collision Check
-    // If it's diagonal, we skip strict collision to allow "Leaners"
+    // 3. Collision Check (45-degree Logic skipped for MVP)
     if (newBale.rotation % 90 !== 0) return true
-
-    // Standard collision for 0/90 degree bales
-    const width = newBale.rotation === 0 ? baleSize.width : baleSize.height
-    const height = newBale.rotation === 0 ? baleSize.height : baleSize.width
 
     const collision = bales.value.some(existing => {
       if (existing.layer !== newBale.layer) return false
-      // Skip collision check if the OTHER bale is diagonal
       if (existing.rotation % 90 !== 0) return false
 
-      const exW = existing.rotation === 0 ? baleSize.width : baleSize.height
-      const exH = existing.rotation === 0 ? baleSize.height : baleSize.width
+      // Calculate existing dims
+      const exRotated = existing.rotation % 180 !== 0
+      let exW, exH
+      if (existing.orientation === 'flat') {
+        exW = exRotated ? 1.5 : 3; exH = exRotated ? 3 : 1.5
+      } else if (existing.orientation === 'tall') {
+        exW = exRotated ? 1 : 3; exH = exRotated ? 3 : 1
+      } else {
+        exW = exRotated ? 1 : 1.5; exH = exRotated ? 1.5 : 1
+      }
 
       return (
         newBale.x < existing.x + exW &&
-        newBale.x + width > existing.x &&
+        newBale.x + w > existing.x &&
         newBale.y < existing.y + exH &&
-        newBale.y + height > existing.y
+        newBale.y + h > existing.y
       )
     })
 
@@ -602,25 +579,35 @@ function reset() {
   })
 
 
-  function validateAllBales() {
+function validateAllBales() {
     bales.value.forEach(bale => {
-      // 1. Calculate Bale Dimensions
-      const dims = bale.orientation === 'flat'
-        ? (bale.rotation % 180 === 0 ? { w: 3, h: 1.5 } : { w: 1.5, h: 3 })
-        : (bale.orientation === 'tall' ? { w: 3, h: 1 } : { w: 1.5, h: 1 }) // Simplified for check
+      // 1. Calculate Exact Dimensions (Handling Rotation for ALL types)
+      let w, h
+      const isRotated = bale.rotation % 180 !== 0
+
+      if (bale.orientation === 'flat') {
+        w = isRotated ? 1.5 : 3
+        h = isRotated ? 3 : 1.5
+      } else if (bale.orientation === 'tall') {
+        w = isRotated ? 1 : 3
+        h = isRotated ? 3 : 1
+      } else {
+        // Pillar
+        w = isRotated ? 1 : 1.5
+        h = isRotated ? 1.5 : 1
+      }
 
       // 2. Check Bounds
       const outOfBounds =
         bale.x < 0 ||
         bale.y < 0 ||
-        bale.x + dims.w > ringDimensions.value.width ||
-        bale.y + dims.h > ringDimensions.value.height
+        bale.x + w > ringDimensions.value.width ||
+        bale.y + h > ringDimensions.value.height
 
       // 3. Check Support (Only if in bounds)
       const hasGravity = hasSupport(bale)
 
       // 4. Update Status
-      // It is valid ONLY if it is in-bounds AND supported
       bale.supported = !outOfBounds && hasGravity
     })
   }
