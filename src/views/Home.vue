@@ -81,7 +81,7 @@ function handleCta() {
         <div class="price-card popular">
           <div class="badge">MOST POPULAR</div>
           <h3>Solo Judge</h3>
-          <div class="price">$5<span>/mo</span></div>
+          <div class="price">$8<span>/mo</span></div>
           <ul>
             <li>✅ <strong>Everything in Free</strong></li>
             <li>✅ Unlimited Cloud Saves</li>
@@ -93,7 +93,7 @@ function handleCta() {
 
         <div class="price-card">
           <h3>Club</h3>
-          <div class="price">$10<span>/mo</span></div>
+          <div class="price">$49<span>/mo (Coming Soon)</span></div>
           <ul>
             <li>✅ <strong>Everything in Solo</strong></li>
             <li>✅ Multi-Sport Access*</li>

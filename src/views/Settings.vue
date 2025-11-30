@@ -2,7 +2,6 @@
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '../stores/userStore'
 import { useRouter } from 'vue-router'
-// NEW IMPORTS FOR STRIPE
 import { functions, auth } from '../firebase' 
 import { httpsCallable } from 'firebase/functions'
 
@@ -12,7 +11,6 @@ const router = useRouter()
 const newName = ref('')
 
 // --- STRIPE CONFIGURATION ---
-// REPLACE THESE WITH YOUR ACTUAL STRIPE PRICE IDs (from Stripe Dashboard -> Product Catalog)
 const PRICE_ID_SOLO = "price_1SZ9ymDGN0M5SptbiPWbkpTl" 
 const PRICE_ID_CLUB = "price_1SZA51DGN0M5SptbzLOyNJyR"
 
@@ -38,14 +36,21 @@ async function handlePasswordReset() {
 }
 
 // --- PAYMENT LOGIC ---
-async function handleManageBilling() {
+async function handleUpgrade(targetTier) {
   // 1. Safety Check
   if (!auth.currentUser) {
     alert("You appear to be logged out. Please refresh the page and login.")
     return
   }
 
-  // 2. FORCE TOKEN REFRESH (Fixes "Unauthenticated" errors)
+  // 2. Select Price ID based on button clicked
+  let priceId = null
+  if (targetTier === 'solo') priceId = PRICE_ID_SOLO
+  if (targetTier === 'club') priceId = PRICE_ID_CLUB
+
+  if (!priceId) return alert("Invalid tier selection.")
+
+  // 3. FORCE TOKEN REFRESH (Fixes "Unauthenticated" errors)
   try {
     await auth.currentUser.getIdToken(true)
   } catch (e) {
@@ -54,17 +59,13 @@ async function handleManageBilling() {
     return
   }
 
-  // 3. Determine Tier (Defaulting to Club for MVP)
-  const priceId = PRICE_ID_CLUB 
-  const tierName = 'club'
-
   try {
     // 4. Call Backend
     const createSession = httpsCallable(functions, 'createCheckoutSession')
     
     const response = await createSession({
       priceId: priceId,
-      tierName: tierName,
+      tierName: targetTier, // 'solo' or 'club'
       successUrl: window.location.origin + '/dashboard', 
       cancelUrl: window.location.origin + '/settings'    
     })
@@ -77,6 +78,10 @@ async function handleManageBilling() {
     console.error("Payment Error:", e)
     alert(`Failed to start payment: ${e.message}`)
   }
+}
+
+async function handlePortal() {
+  alert("Customer Portal coming soon! Please contact support to cancel or change plans.")
 }
 </script>
 
@@ -99,19 +104,33 @@ async function handleManageBilling() {
           <span class="badge" :class="userStore.tier">{{ userStore.tier.toUpperCase() }}</span>
         </div>
         <div class="card-body">
-          <p v-if="userStore.tier === 'free'">
-            You are currently on the <strong>Free</strong> plan. Upgrade to save maps to the cloud.
-          </p>
-          <p v-else>
-            You are a <strong>{{ userStore.tier === 'solo' ? 'Solo Judge' : 'Club' }}</strong> member. Thank you for your support!
-          </p>
+          <div v-if="userStore.tier === 'free'">
+            <p>You are currently on the <strong>Free</strong> plan. Upgrade to unlock Cloud Saves, Sharing, and JSON Export.</p>
+            
+            <div class="pricing-buttons">
+              <button 
+                class="btn-primary" 
+                @click="handleUpgrade('solo')"
+              >
+                Upgrade to Solo ($8/mo)
+              </button>
+              
+              <button 
+                class="btn-club" 
+                @click="handleUpgrade('club')"
+              >
+                Upgrade to Club ($49/mo)
+              </button>
+            </div>
+          </div>
+
+          <div v-else>
+            <p>
+              You are a <strong>{{ userStore.tier === 'solo' ? 'Solo Judge' : 'Club' }}</strong> member. Thank you for your support!
+            </p>
+            <button class="btn-outline" @click="handlePortal">Manage Billing</button>
+          </div>
           
-          <button 
-            class="btn-primary" 
-            @click="handleManageBilling"
-          >
-            {{ userStore.tier === 'free' ? 'Upgrade Membership' : 'Manage Billing' }}
-          </button>
         </div>
       </section>
 
@@ -169,6 +188,9 @@ async function handleManageBilling() {
 .badge.pro, .badge.solo { background: #ffd700; color: #000; }
 .badge.club { background: #9c27b0; color: white; }
 
+/* PRICING BUTTONS */
+.pricing-buttons { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+
 /* FORMS */
 .form-group { margin-bottom: 15px; }
 .form-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; }
@@ -179,7 +201,10 @@ async function handleManageBilling() {
 
 /* BUTTONS */
 .btn-primary { background-color: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-.btn-primary:disabled { background-color: #ccc; cursor: not-allowed; }
+.btn-primary:hover { background-color: #43a047; }
+.btn-club { background-color: #9c27b0; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.btn-club:hover { background-color: #7b1fa2; }
+
 .btn-outline { background: white; border: 2px solid #ccc; color: #333; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
 .btn-outline:hover { border-color: #333; }
 </style>

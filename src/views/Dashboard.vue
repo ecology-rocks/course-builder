@@ -11,8 +11,6 @@ const userMaps = ref([])
 const showMoveModal = ref(false)
 const selectedMapToMove = ref(null)
 
-
-
 // Computed: Helper for Breadcrumb title
 const currentFolderName = computed(() => {
   if (!mapStore.currentFolderId) return "All Maps"
@@ -88,7 +86,7 @@ function goUpLevel() {
 <template>
   <div class="dashboard">
 
-<nav class="navbar">
+    <nav class="navbar">
       <div class="logo" @click="router.push('/')">🐾 K9CourseBuilder.com</div>
       <div class="user-status">
         <span class="badge" :class="userStore.tier">{{ userStore.tier.toUpperCase() }} MEMBER</span>
@@ -130,8 +128,12 @@ function goUpLevel() {
         <h2 v-else>My Library</h2>
 
         <div v-if="userStore.tier === 'free'" class="upsell-banner">
-          <p>Free Tier: You cannot save maps to the cloud or export JSON.</p>
-          <button class="btn-upgrade">Upgrade to Pro ($5/mo)</button>
+          <div class="banner-text">
+            <strong>Free Tier Limit:</strong> You cannot save maps to the cloud or export JSON.
+          </div>
+          <button @click="router.push('/settings')" class="btn-upgrade">
+            Upgrade to Solo ($8/mo)
+          </button>
         </div>
 
         <div v-if="!mapStore.currentFolderId" class="folder-section">
@@ -345,15 +347,43 @@ function goUpLevel() {
   color: #ccc;
 }
 
+/* UPDATED BANNER STYLES */
 .upsell-banner {
-  background: #fff3cd;
-  color: #856404;
-  padding: 15px;
+  background: #fff8e1; /* Lighter yellow */
+  border: 1px solid #ffe0b2;
+  color: #5d4037;
+  padding: 15px 20px;
   border-radius: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 30px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 15px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.banner-text {
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+/* NEW BUTTON STYLE */
+.btn-upgrade {
+  background: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-upgrade:hover {
+  background: #43a047;
+  transform: translateY(-1px);
 }
 
 /* FOLDERS */
@@ -450,11 +480,12 @@ function goUpLevel() {
   align-items: center;
   gap: 15px;
   border: 1px solid #eee;
-  padding: 15px;
+  padding: 10px 15px;
   border-radius: 8px;
   cursor: pointer;
   background: white;
   transition: 0.2s;
+  justify-content: space-between;
 }
 
 .map-item:hover {
@@ -492,14 +523,6 @@ function goUpLevel() {
   border: 2px dashed #eee;
   border-radius: 8px;
   text-align: center;
-}
-
-/* MAP ITEM LAYOUT */
-.map-item { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  padding: 10px 15px; /* Reduced padding slightly */
 }
 
 .map-content {
@@ -580,5 +603,15 @@ function goUpLevel() {
 }
 .btn-nav-link:hover {
   background: #eee;
+}
+
+@media (max-width: 600px) {
+  .upsell-banner {
+    flex-direction: column;
+    text-align: center;
+  }
+  .btn-upgrade {
+    width: 100%;
+  }
 }
 </style>
