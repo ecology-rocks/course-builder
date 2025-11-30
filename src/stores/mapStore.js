@@ -612,6 +612,23 @@ function validateAllBales() {
     })
   }
 
+
+// Add this inside actions in mapStore.js
+
+function importMapFromData(data) {
+  // Similar to loadMapFromData but without the cloud metadata
+  ringDimensions.value = data.dimensions || { width: 24, height: 24 }
+  bales.value = data.bales || []
+  dcMats.value = data.dcMats || []
+  boardEdges.value = data.boardEdges || []
+  hides.value = data.hides || []
+  // We do NOT set currentMapId, so it remains a "new" unsaved map
+  validateAllBales()
+}
+
+// Don't forget to return it at the bottom:
+// return { ..., importMapFromData }
+
   function resizeRing(width, height) {
     // Enforce reasonable limits (e.g., minimum 10x10)
     const w = Math.max(10, parseInt(width))
@@ -735,6 +752,7 @@ function validateAllBales() {
     removeStartBox,
     currentGuidelines,
     classLevel,
+    importMapFromData,
     previousClassCount,
     inventory,
     balesByLayer,

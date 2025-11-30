@@ -1,13 +1,14 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useMapStore } from '../stores/mapStore'
 import { useUserStore } from '../stores/userStore'
 import EditorSidebar from './editor/EditorSidebar.vue'
 import QRCode from 'qrcode' // Needed for Print logic only
+import { useAutosave } from '@/composables/useAutosave' // Import the helper
 
 const store = useMapStore()
 const userStore = useUserStore()
-
+const { enableAutosave, checkAutosave, clearAutosave } = useAutosave()
 // --- CONSTANTS & CONFIG ---
 const scale = 40
 const GRID_OFFSET = 30 
@@ -17,6 +18,24 @@ const stageConfig = computed(() => ({
   width: (store.ringDimensions.width * scale) + (GRID_OFFSET * 2),
   height: (store.ringDimensions.height * scale) + (GRID_OFFSET * 2)
 }))
+
+
+onMounted(() => {
+  // 1. If we are NOT loading a cloud map (ID is null), check for local work
+  if (!store.currentMapId) {
+    const savedData = checkAutosave()
+    if (savedData) {
+      if (confirm("We found unsaved work from your last session. Would you like to restore it?")) {
+        store.importMapFromData(savedData) // We need to add this small helper to store
+      } else {
+        clearAutosave() // User declined, clear the stale data
+      }
+    }
+  }
+  
+  // 2. Turn on the watcher
+  enableAutosave()
+})
 
 // --- VISUAL HELPERS ---
 const visibleBales = computed(() => {

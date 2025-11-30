@@ -1,0 +1,4 @@
+const PRICE_ID_SOLO = "price_1SZ9ymDGN0M5SptbiPWbkpTl" 
+const PRICE_ID_CLUB = "price_1SZA51DGN0M5SptbzLOyNJyR"
+const stripe = require("stripe")("sk_test_51SZ9q9DGN0M5SptbI9niREMslz1JWkUdVoxGS2avtm7cdEcHjsN0a7WprBrG1ybmZT8dSmdo4etu2X8iwKsKGqnf00PgmJ2ySy");
+const endpointSecret = "whsec_37p020Ng5bpVpqoCX7Xb4SEYpR4NYzsA";
