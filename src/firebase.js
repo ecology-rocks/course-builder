@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app"
 import { getAuth, GoogleAuthProvider } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
+import { getFunctions } from "firebase/functions" // <--- ADD THIS
 
 // REPLACE THIS WITH YOUR ACTUAL CONFIG FROM FIREBASE CONSOLE
 const firebaseConfig = {
@@ -16,6 +17,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig)
 const auth = getAuth(app)
 const db = getFirestore(app)
+// Explicitly tell the SDK which region your backend lives in
+const functions = getFunctions(app, 'us-central1')
 const googleProvider = new GoogleAuthProvider()
 
-export { auth, db, googleProvider }
+export { auth, db, functions, googleProvider }

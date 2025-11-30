@@ -2,17 +2,25 @@
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '../stores/userStore'
 import { useRouter } from 'vue-router'
+// NEW IMPORTS FOR STRIPE
+import { functions, auth } from '../firebase' 
+import { httpsCallable } from 'firebase/functions'
 
 const userStore = useUserStore()
 const router = useRouter()
 
 const newName = ref('')
 
+// --- STRIPE CONFIGURATION ---
+// REPLACE THESE WITH YOUR ACTUAL STRIPE PRICE IDs (from Stripe Dashboard -> Product Catalog)
+const PRICE_ID_SOLO = "price_1SZ9ymDGN0M5SptbiPWbkpTl" 
+const PRICE_ID_CLUB = "price_1SZA51DGN0M5SptbzLOyNJyR"
+
 onMounted(() => {
   if (userStore.user) {
     newName.value = userStore.judgeName
   } else {
-    router.push('/') // Kick out if not logged in
+    router.push('/') 
   }
 })
 
@@ -26,6 +34,48 @@ async function handleUpdateProfile() {
 async function handlePasswordReset() {
   if (confirm(`Send a password reset email to ${userStore.user.email}?`)) {
     await userStore.resetPassword(userStore.user.email)
+  }
+}
+
+// --- PAYMENT LOGIC ---
+async function handleManageBilling() {
+  // 1. Safety Check
+  if (!auth.currentUser) {
+    alert("You appear to be logged out. Please refresh the page and login.")
+    return
+  }
+
+  // 2. FORCE TOKEN REFRESH (Fixes "Unauthenticated" errors)
+  try {
+    await auth.currentUser.getIdToken(true)
+  } catch (e) {
+    console.error("Token refresh failed", e)
+    alert("Authentication error. Please login again.")
+    return
+  }
+
+  // 3. Determine Tier (Defaulting to Club for MVP)
+  const priceId = PRICE_ID_CLUB 
+  const tierName = 'club'
+
+  try {
+    // 4. Call Backend
+    const createSession = httpsCallable(functions, 'createCheckoutSession')
+    
+    const response = await createSession({
+      priceId: priceId,
+      tierName: tierName,
+      successUrl: window.location.origin + '/dashboard', 
+      cancelUrl: window.location.origin + '/settings'    
+    })
+
+    // 5. Redirect to Stripe
+    if (response.data.url) {
+      window.location.href = response.data.url
+    }
+  } catch (e) {
+    console.error("Payment Error:", e)
+    alert(`Failed to start payment: ${e.message}`)
   }
 }
 </script>
@@ -56,7 +106,12 @@ async function handlePasswordReset() {
             You are a <strong>{{ userStore.tier === 'solo' ? 'Solo Judge' : 'Club' }}</strong> member. Thank you for your support!
           </p>
           
-          <button class="btn-primary" disabled title="Coming Soon with Stripe">Manage Billing (Coming Soon)</button>
+          <button 
+            class="btn-primary" 
+            @click="handleManageBilling"
+          >
+            {{ userStore.tier === 'free' ? 'Upgrade Membership' : 'Manage Billing' }}
+          </button>
         </div>
       </section>
 
