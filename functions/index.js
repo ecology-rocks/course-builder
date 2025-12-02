@@ -5,7 +5,8 @@ const { onCall, HttpsError, onRequest } = require("firebase-functions/v2/https")
 const { setGlobalOptions } = require("firebase-functions/v2/options");
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
-
+const functions = require("firebase-functions");
+require("dotenv").config();
 // 2. Initialize Admin SDK
 admin.initializeApp();
 const db = admin.firestore();
@@ -15,8 +16,8 @@ setGlobalOptions({ maxInstances: 10 });
 
 // 4. Setup Stripe
 // Note: In production, use process.env.STRIPE_SECRET_KEY
-const stripe = require("stripe")("sk_test_51SZ9q9DGN0M5SptbI9niREMslz1JWkUdVoxGS2avtm7cdEcHjsN0a7WprBrG1ybmZT8dSmdo4etu2X8iwKsKGqnf00PgmJ2ySy");
-const endpointSecret = "whsec_NxmYNMOogj3x7GlWRvD0Vam3kO0uAdOi";
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
 // --- 1. CREATE CHECKOUT SESSION (v2 Syntax) ---
 // v2 uses 'request' object which contains both 'auth' and 'data'

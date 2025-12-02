@@ -3,15 +3,16 @@ import { getAuth, GoogleAuthProvider } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 import { getFunctions } from "firebase/functions" // <--- ADD THIS
 
+
 // REPLACE THIS WITH YOUR ACTUAL CONFIG FROM FIREBASE CONSOLE
 const firebaseConfig = {
-  apiKey: "AIzaSyDRZl9AL0aEciLJPDBOzmWVkJnw59-l0xk",
-  authDomain: "dogmapbuilder.firebaseapp.com",
-  projectId: "dogmapbuilder",
-  storageBucket: "dogmapbuilder.firebasestorage.app",
-  messagingSenderId: "45229518982",
-  appId: "1:45229518982:web:6e708b1b2d7ef64a766107",
-  measurementId: "G-YGJDHJDVGJ"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
 const app = initializeApp(firebaseConfig)

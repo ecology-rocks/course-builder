@@ -11,8 +11,8 @@ const router = useRouter()
 const newName = ref('')
 
 // --- STRIPE CONFIGURATION ---
-const PRICE_ID_SOLO = "price_1SZ9ymDGN0M5SptbiPWbkpTl" 
-const PRICE_ID_CLUB = "price_1SZA51DGN0M5SptbzLOyNJyR"
+const PRICE_ID_SOLO = import.meta.env.VITE_STRIPE_PRICE_SOLO
+const PRICE_ID_CLUB = import.meta.env.VITE_STRIPE_PRICE_CLUB
 
 onMounted(() => {
   if (userStore.user) {
