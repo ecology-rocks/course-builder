@@ -18,6 +18,7 @@ export const useUserStore = defineStore('user', () => {
   // Profile Data
   const tier = ref('free') 
   const judgeName = ref('') 
+  const allowedSports = ref([]) // ['barnhunt', 'agility', etc]
 
   // 1. LOAD PROFILE
   async function loadUserProfile(uid) {
@@ -28,15 +29,29 @@ export const useUserStore = defineStore('user', () => {
       const data = docSnap.data()
       tier.value = data.tier || 'free'
       judgeName.value = data.judgeName || user.value.displayName || user.value.email
+    
+    // Load Allowed Sports (Default to Barn Hunt for now)
+      // In the future, 'solo' users might have a specific sport saved here
+      if (data.allowedSports) {
+        allowedSports.value = data.allowedSports
+      } else {
+        // Default logic if field is missing
+        allowedSports.value = ['barnhunt'] 
+      }
+    
+    
+    
     } else {
       // Create default profile for new user
       await setDoc(docRef, { 
         tier: 'free', 
         email: user.value.email,
-        judgeName: user.value.displayName || '' 
+        judgeName: user.value.isplayName || '' ,
+        allowedSports: ['barnhunt']
       })
       tier.value = 'free'
       judgeName.value = user.value.displayName || ''
+      allowedSports.value = ['barnhunt']
     }
   }
 
@@ -109,17 +124,31 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // 5. PERMISSIONS
-  function can(action) {
-    const currentTier = tier.value.trim().toLowerCase()
+
+  
+// Check if user can access a specific sport
+  function canAccessSport(sport) {
+    const t = tier.value
+    // Pro and Club get access to EVERYTHING automatically
+    if (t === 'pro' || t === 'club') return true
     
-    if (currentTier === 'club') return true 
+    // Free and Solo check their specific list
+    return allowedSports.value.includes(sport)
+  }
+
+  function can(action) {
+    const t = tier.value
+    
+    if (t === 'club' || t === 'pro') return true 
     
     if (action === 'save_cloud' || action === 'export_json' || action === 'mark_hides') {
-      return currentTier === 'solo' || currentTier === 'club'
+      // Solo can also do these things
+      return t === 'solo'
     }
     
     return true
   }
+
 
   function formatError(code) {
     switch (code) {
@@ -138,12 +167,14 @@ export const useUserStore = defineStore('user', () => {
     authError, 
     tier, 
     judgeName, // <--- EXPORTED STATE
+    allowedSports,
     loadUserProfile,
     updateJudgeName, // <--- EXPORTED ACTION
     register, 
     login, 
     logout, 
     resetPassword,
-    can
+    can,
+    canAccessSport
   }
 })

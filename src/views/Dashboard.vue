@@ -73,6 +73,31 @@ function openMoveModal(map) {
   showMoveModal.value = true
 }
 
+
+function createNewMap(sportType) {
+  // 1. Permission Check
+  if (!userStore.canAccessSport(sportType)) {
+    // Logic for upselling
+    if (userStore.tier === 'solo') {
+      alert(`Your Solo plan is limited to ${userStore.allowedSports.join(', ')}. Upgrade to Pro for multi-sport access!`)
+      router.push('/settings')
+    } else {
+      // Free users might just need to verify email or start paying
+      // For now, we assume free users have 'barnhunt' by default, 
+      // so hitting this for 'agility' means they need Pro
+      alert("This sport is available on the Pro plan.")
+      router.push('/settings')
+    }
+    return
+  }
+// 2. Proceed if allowed
+  mapStore.reset()
+  // In the future, we can store the 'sportType' in the map data here
+  // mapStore.sport = sportType 
+  router.push('/editor')
+}
+
+
 async function confirmMove(targetFolderId) {
   if (selectedMapToMove.value) {
     await mapStore.moveMap(selectedMapToMove.value.id, targetFolderId)
@@ -80,11 +105,6 @@ async function confirmMove(targetFolderId) {
     showMoveModal.value = false
     selectedMapToMove.value = null
   }
-}
-
-function createNewMap(sportType) {
-  mapStore.reset()
-  router.push('/editor')
 }
 
 function editMap(map) {
@@ -151,20 +171,25 @@ function goUpLevel() {
 
     <main v-else class="content">
 
-      <section class="creation-zone">
+<section class="creation-zone">
         <h2>Start a New Project</h2>
         <div class="sport-grid">
+          
           <button @click="createNewMap('barnhunt')" class="sport-card">
             <span class="emoji">🐀</span>
             <span class="label">Barn Hunt</span>
           </button>
-          <button class="sport-card disabled" title="Coming Soon">
+          
+          <button @click="createNewMap('agility')" class="sport-card" :class="{ disabled: !userStore.canAccessSport('agility') }" title="Agility">
             <span class="emoji">🐕</span>
             <span class="label">Agility</span>
+            <span v-if="!userStore.canAccessSport('agility')" class="lock-icon">🔒</span>
           </button>
-          <button class="sport-card disabled" title="Coming Soon">
+          
+          <button @click="createNewMap('scentwork')" class="sport-card" :class="{ disabled: !userStore.canAccessSport('scentwork') }" title="Scent Work">
             <span class="emoji">👃</span>
             <span class="label">Scent Work</span>
+            <span v-if="!userStore.canAccessSport('scentwork')" class="lock-icon">🔒</span>
           </button>
         </div>
       </section>
@@ -179,12 +204,12 @@ function goUpLevel() {
         </div>
         <h2 v-else>My Library</h2>
 
-        <div v-if="userStore.tier === 'free'" class="upsell-banner">
+<div v-if="userStore.tier === 'free'" class="upsell-banner">
           <div class="banner-text">
             <strong>Free Tier Limit:</strong> You cannot save maps to the cloud or export JSON.
           </div>
           <button @click="router.push('/settings')" class="btn-upgrade">
-            Upgrade to Solo ($8/mo)
+            Upgrade to Solo ($6/mo)
           </button>
         </div>
 
@@ -333,4 +358,16 @@ function goUpLevel() {
 .btn-nav-link:hover { background: #eee; }
 .btn-primary { background-color: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
 .btn-primary:hover { background-color: #43a047; }
+/* Add Lock Icon style */
+.lock-icon { font-size: 0.8em; position: absolute; top: 5px; right: 5px; }
+.sport-card { position: relative; } /* Needed for absolute lock icon */
+
+/* Modify disabled style to look clickable-but-locked instead of dead */
+.sport-card.disabled { 
+  opacity: 0.7; 
+  cursor: pointer; /* Allow clicking to trigger the upsell alert */
+  background: #f5f5f5; 
+  filter: none; /* Remove grayscale so they can see what they are missing */
+  border: 1px dashed #ccc;
+}
 </style>
