@@ -98,3 +98,42 @@ exports.stripeWebhook = onRequest(async (req, res) => {
 
   res.json({ received: true });
 });
+
+// --- 3. CUSTOMER PORTAL (Manage Billing) ---
+exports.createPortalSession = onCall(async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'You must be logged in.');
+  }
+
+  const uid = request.auth.uid;
+  const returnUrl = request.data.returnUrl; // URL to come back to (Settings page)
+
+  try {
+    // 1. Get the Stripe Customer ID from Firestore
+    // We didn't save this earlier! We need to fetch it or rely on email.
+    // BETTER APPROACH: Search Stripe by email (simplest for MVP)
+    const userEmail = request.auth.token.email;
+    
+    const customers = await stripe.customers.list({
+      email: userEmail,
+      limit: 1,
+    });
+
+    if (customers.data.length === 0) {
+      throw new HttpsError('not-found', 'No billing account found.');
+    }
+
+    const customer = customers.data[0];
+
+    // 2. Create Portal Session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: customer.id,
+      return_url: returnUrl,
+    });
+
+    return { url: session.url };
+  } catch (error) {
+    console.error("Portal Error:", error);
+    throw new HttpsError("internal", "Unable to open billing portal.");
+  }
+});

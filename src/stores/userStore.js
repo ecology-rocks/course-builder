@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { auth, db } from '../firebase' // Ensure db is imported
+import { auth, db, storage } from '../firebase' // <--- Added storage here
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
@@ -8,7 +8,23 @@ import {
   onAuthStateChanged,
   sendPasswordResetEmail
 } from 'firebase/auth'
-import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { 
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  arrayUnion, 
+  arrayRemove, 
+  collection, 
+  query, 
+  where, 
+  getDocs 
+} from 'firebase/firestore'
+import { 
+  ref as storageRef, // <--- Aliased 'ref' to 'storageRef' to avoid conflict with Vue's ref
+  uploadBytes, 
+  getDownloadURL 
+} from 'firebase/storage'
 
 export const useUserStore = defineStore('user', () => {
   const user = ref(null)
@@ -18,7 +34,14 @@ export const useUserStore = defineStore('user', () => {
   // Profile Data
   const tier = ref('free') 
   const judgeName = ref('') 
-  const allowedSports = ref([]) // ['barnhunt', 'agility', etc]
+  const allowedSports = ref([])
+  const clubLogoUrl = ref(null) // <--- NEW: Logo URL
+  const clubName = ref('') // <--- NEW
+  // Club Data (If user is a Club)
+  const sponsoredEmails = ref([]) 
+
+  // Sponsorship Data (If user is a Sponsored Judge)
+  const sponsoringClubName = ref(null)
 
   // 1. LOAD PROFILE
   async function loadUserProfile(uid) {
@@ -29,24 +52,26 @@ export const useUserStore = defineStore('user', () => {
       const data = docSnap.data()
       tier.value = data.tier || 'free'
       judgeName.value = data.judgeName || user.value.displayName || user.value.email
-    
-    // Load Allowed Sports (Default to Barn Hunt for now)
-      // In the future, 'solo' users might have a specific sport saved here
-      if (data.allowedSports) {
-        allowedSports.value = data.allowedSports
-      } else {
-        // Default logic if field is missing
-        allowedSports.value = ['barnhunt'] 
+      allowedSports.value = data.allowedSports || ['barnhunt']
+      clubLogoUrl.value = data.clubLogoUrl || null
+      clubName.value = data.clubName || '' // <--- NEW
+      
+      // If I am a CLUB, load my roster
+      if (tier.value === 'club') {
+        sponsoredEmails.value = data.sponsoredEmails || []
       }
-    
-    
-    
+
+      // If I am FREE, check if a Club sponsors me
+      if (tier.value === 'free') {
+        await checkSponsorship(user.value.email)
+      }
+
     } else {
-      // Create default profile for new user
+      // Create default profile
       await setDoc(docRef, { 
         tier: 'free', 
         email: user.value.email,
-        judgeName: user.value.isplayName || '' ,
+        judgeName: user.value.displayName || '',
         allowedSports: ['barnhunt']
       })
       tier.value = 'free'
@@ -55,19 +80,108 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  // 2. UPDATE JUDGE NAME
+  // --- SPONSORSHIP LOGIC ---
+
+async function updateClubName(newName) {
+    if (!user.value) return
+    try {
+      const docRef = doc(db, "users", user.value.uid)
+      await setDoc(docRef, { clubName: newName }, { merge: true })
+      clubName.value = newName
+    } catch (e) {
+      console.error("Failed to update club name", e)
+      alert("Could not save club name.")
+    }
+  }
+
+  async function checkSponsorship(myEmail) {
+    try {
+      const usersRef = collection(db, "users")
+      const q = query(
+        usersRef, 
+        where("tier", "==", "club"),
+        where("sponsoredEmails", "array-contains", myEmail)
+      )
+      
+      const snapshot = await getDocs(q)
+      
+      if (!snapshot.empty) {
+        const sponsorDoc = snapshot.docs[0].data()
+        tier.value = 'pro' 
+        sponsoringClubName.value = sponsorDoc.judgeName || "A Club"
+        allowedSports.value = ['barnhunt', 'agility', 'scentwork']
+      }
+    } catch (e) {
+      console.error("Sponsorship check failed", e)
+    }
+  }
+
+  async function addSponsoredJudge(targetEmail) {
+    if (tier.value !== 'club') return
+    try {
+      const docRef = doc(db, "users", user.value.uid)
+      await updateDoc(docRef, {
+        sponsoredEmails: arrayUnion(targetEmail)
+      })
+      sponsoredEmails.value.push(targetEmail)
+    } catch (e) {
+      console.error(e)
+      alert("Failed to add judge.")
+    }
+  }
+
+  async function removeSponsoredJudge(targetEmail) {
+    if (tier.value !== 'club') return
+    try {
+      const docRef = doc(db, "users", user.value.uid)
+      await updateDoc(docRef, {
+        sponsoredEmails: arrayRemove(targetEmail)
+      })
+      sponsoredEmails.value = sponsoredEmails.value.filter(e => e !== targetEmail)
+    } catch (e) {
+      console.error(e)
+      alert("Failed to remove judge.")
+    }
+  }
+
+  // 2. PROFILE ACTIONS
   async function updateJudgeName(newName) {
     if (!user.value) return
     try {
       const docRef = doc(db, "users", user.value.uid)
-      // Merge: true ensures we don't wipe out the 'tier' field
       await setDoc(docRef, { judgeName: newName }, { merge: true })
-      
-      // Update local state immediately so UI updates
       judgeName.value = newName
     } catch (e) {
       console.error("Failed to update name", e)
       alert("Could not update profile in database.")
+    }
+  }
+
+  // --- NEW: UPLOAD LOGO ---
+  async function uploadLogo(file) {
+    if (!user.value) return
+    
+    try {
+      // 1. Create a reference (logos/USER_ID)
+      // Uses the 'storageRef' we imported at the top
+      const fileRef = storageRef(storage, `logos/${user.value.uid}`)
+      
+      // 2. Upload
+      await uploadBytes(fileRef, file)
+      
+      // 3. Get URL
+      const url = await getDownloadURL(fileRef)
+      
+      // 4. Save to Firestore
+      const docRef = doc(db, "users", user.value.uid)
+      await updateDoc(docRef, { clubLogoUrl: url })
+      
+      // 5. Update Local State
+      clubLogoUrl.value = url
+      return url
+    } catch (e) {
+      console.error("Upload failed", e)
+      alert("Failed to upload logo.")
     }
   }
 
@@ -79,15 +193,29 @@ export const useUserStore = defineStore('user', () => {
     } else {
       tier.value = 'free'
       judgeName.value = ''
+      allowedSports.value = []
+      sponsoredEmails.value = []
+      sponsoringClubName.value = null
+      clubLogoUrl.value = null
     }
     isAuthReady.value = true
   })
 
   // 4. AUTH ACTIONS
-  async function register(email, password) {
+  async function register(email, password, primarySport = 'barnhunt') {
     authError.value = null
     try {
-      await createUserWithEmailAndPassword(auth, email, password)
+      const res = await createUserWithEmailAndPassword(auth, email, password)
+      
+      // Create Profile Immediately with selected sport
+      const docRef = doc(db, "users", res.user.uid)
+      await setDoc(docRef, { 
+        tier: 'free', 
+        email: email,
+        judgeName: '',
+        allowedSports: [primarySport],
+        createdAt: new Date()
+      })
     } catch (e) {
       console.error(e)
       authError.value = formatError(e.code)
@@ -107,9 +235,6 @@ export const useUserStore = defineStore('user', () => {
   async function logout() {
     authError.value = null
     await signOut(auth)
-    user.value = null
-    tier.value = 'free'
-    judgeName.value = ''
   }
 
   async function resetPassword(email) {
@@ -124,31 +249,20 @@ export const useUserStore = defineStore('user', () => {
   }
 
   // 5. PERMISSIONS
-
-  
-// Check if user can access a specific sport
   function canAccessSport(sport) {
     const t = tier.value
-    // Pro and Club get access to EVERYTHING automatically
     if (t === 'pro' || t === 'club') return true
-    
-    // Free and Solo check their specific list
     return allowedSports.value.includes(sport)
   }
 
   function can(action) {
     const t = tier.value
-    
     if (t === 'club' || t === 'pro') return true 
-    
     if (action === 'save_cloud' || action === 'export_json' || action === 'mark_hides') {
-      // Solo can also do these things
       return t === 'solo'
     }
-    
     return true
   }
-
 
   function formatError(code) {
     switch (code) {
@@ -166,15 +280,23 @@ export const useUserStore = defineStore('user', () => {
     isAuthReady, 
     authError, 
     tier, 
-    judgeName, // <--- EXPORTED STATE
-    allowedSports,
+    judgeName, 
+    allowedSports, 
+    clubLogoUrl, // <--- Exported
+    sponsoredEmails, 
+    sponsoringClubName, 
     loadUserProfile,
-    updateJudgeName, // <--- EXPORTED ACTION
+    updateJudgeName,
+    uploadLogo, // <--- Exported
     register, 
     login, 
     logout, 
     resetPassword,
     can,
-    canAccessSport
+    canAccessSport,
+    addSponsoredJudge,
+    removeSponsoredJudge,
+    clubName,
+    updateClubName,
   }
 })

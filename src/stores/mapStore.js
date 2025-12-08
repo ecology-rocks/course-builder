@@ -1,36 +1,54 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { collection, addDoc, getDocs, query, where, doc, updateDoc, deleteDoc } from 'firebase/firestore'
+import { 
+  collection, 
+  addDoc, 
+  getDocs, 
+  query, 
+  where, 
+  doc, 
+  updateDoc, 
+  deleteDoc, 
+  writeBatch
+} from 'firebase/firestore'
 import { db } from '../firebase'
 import { useUserStore } from './userStore'
-import { CLASS_RULES, checkSupport } from '../utils/validation'
+import { BH_RULES, AGILITY_RULES, checkSupport } from '../utils/validation'
 
 export const useMapStore = defineStore('map', () => {
   // CONFIGURATION
-  // Standard course size is 24'x24' [cite: 107]
   const ringDimensions = ref({ width: 24, height: 24 })
-  const gridSize = ref(20) // pixels per foot for rendering
-  const previousClassCount = ref(0) // User inputs this (e.g. "Open had 40 bales")
-  const currentMapId = ref(null) // ID from Firebase if saved
+  const gridSize = ref(20) 
+  const previousClassCount = ref(0) 
+  const currentMapId = ref(null) 
   const mapName = ref("Untitled Map")
   const isShared = ref(false)
-  const folders = ref([]) // List of folder objects
-  const currentFolderId = ref(null) // null = Root (Unfiled)
-  const isDrawingBoard = ref(false) // ID of the board currently being drawn
-  const dcMats = ref([]) // List of Distance Challenge mats
-  const classLevel = ref('Novice') // Default to Novice
-  const startBox = ref(null) // { x, y }
-  const masterBlinds = ref([]) // Array of arrays: [[1,5,3,2,4], [2,2,1,5,3], ...]
+  const folders = ref([]) 
+  const currentFolderId = ref(null) 
+  const isDrawingBoard = ref(false) 
+  const dcMats = ref([]) 
+  const classLevel = ref('Novice') 
+  const startBox = ref(null) 
+  const masterBlinds = ref([]) 
+  const boardEdges = ref([])
+  const hides = ref([])
   
+  // BALE CONFIG
+  const bales = ref([])
+  const currentLayer = ref(1)
+  const selectedBaleId = ref(null)
+  const activeTool = ref('bale')
 
-  const hides = ref([]) // { id, x, y, type: 'rat'|'litter'|'empty' }
-
+  // AGILITY CONFIG
+  const sport = ref('barnhunt') 
+  const agilityObstacles = ref([]) 
+  const nextNumber = ref(1) // <--- NEW: Counter for Renumber Tool
+  const notification = ref(null)
   // ******** FUNCTIONS ********
 
-// START DRAWING (MouseDown)
+  // START DRAWING (MouseDown)
   function startDrawingBoard(x, y) {
     const id = crypto.randomUUID()
-    // Snap start point
     const snappedX = Math.round(x * 2) / 2
     const snappedY = Math.round(y * 2) / 2
     
@@ -38,10 +56,18 @@ export const useMapStore = defineStore('map', () => {
       id: id,
       x1: snappedX,
       y1: snappedY,
-      x2: snappedX, // Initially, end = start
+      x2: snappedX, 
       y2: snappedY
     })
     isDrawingBoard.value = id
+  }
+
+function showNotification(message, type = 'info') {
+    notification.value = { message, type }
+    // Auto-clear after 3 seconds
+    setTimeout(() => {
+      notification.value = null
+    }, 3000)
   }
 
   // UPDATE DRAWING (MouseMove)
@@ -50,7 +76,6 @@ export const useMapStore = defineStore('map', () => {
     
     const board = boardEdges.value.find(b => b.id === isDrawingBoard.value)
     if (board) {
-      // Snap end point
       board.x2 = Math.round(x * 2) / 2
       board.y2 = Math.round(y * 2) / 2
     }
@@ -60,7 +85,6 @@ export const useMapStore = defineStore('map', () => {
   function stopDrawingBoard() {
     if (!isDrawingBoard.value) return
     
-    // Cleanup: If length is 0 (just a click), remove it
     const board = boardEdges.value.find(b => b.id === isDrawingBoard.value)
     if (board && board.x1 === board.x2 && board.y1 === board.y2) {
       boardEdges.value = boardEdges.value.filter(b => b.id !== isDrawingBoard.value)
@@ -69,13 +93,12 @@ export const useMapStore = defineStore('map', () => {
     isDrawingBoard.value = null
   }
 
-// ACTIONS
+  // ACTIONS
   function generateMasterBlinds(count) {
     const newBlinds = []
     for (let i = 0; i < count; i++) {
       const set = []
       for (let j = 0; j < 5; j++) {
-        // Generate random number 1-5
         set.push(Math.floor(Math.random() * 5) + 1)
       }
       newBlinds.push(set)
@@ -83,13 +106,12 @@ export const useMapStore = defineStore('map', () => {
     masterBlinds.value = newBlinds
   }
 
-
   function addHide(x, y) {
     hides.value.push({
       id: crypto.randomUUID(),
       x: Math.round(x * 2) / 2,
       y: Math.round(y * 2) / 2,
-      type: 'rat' // Default start color
+      type: 'rat' 
     })
   }
 
@@ -105,10 +127,11 @@ export const useMapStore = defineStore('map', () => {
       else hide.type = 'rat'
     }
   }
-function addDCMat(x, y) {
+
+  function addDCMat(x, y) {
     dcMats.value.push({
       id: crypto.randomUUID(),
-      x: Math.round(x * 2) / 2, // Snap to grid
+      x: Math.round(x * 2) / 2, 
       y: Math.round(y * 2) / 2,
       rotation: 0 
     })
@@ -121,21 +144,18 @@ function addDCMat(x, y) {
   function rotateDCMat(id) {
     const mat = dcMats.value.find(m => m.id === id)
     if (mat) {
-      // Rotate 90 degrees (Portrait <-> Landscape)
       mat.rotation = (mat.rotation + 90) % 180
     }
   }
 
-
-// Replace the big CLASS_RULES object with just the import usage
-const currentGuidelines = computed(() => {
-  return CLASS_RULES[classLevel.value] || CLASS_RULES['Other']
-})
-
+  const currentGuidelines = computed(() => {
+    if (sport.value === 'agility') {
+      return AGILITY_RULES[classLevel.value] || AGILITY_RULES['Other']
+    }
+    return BH_RULES[classLevel.value] || BH_RULES['Other']
+  })
 
   function addStartBox(x, y) {
-    // Default to a 4x4 foot box (standard size)
-    // Snapped to grid
     startBox.value = {
       x: Math.round(x * 2) / 2,
       y: Math.round(y * 2) / 2
@@ -146,13 +166,9 @@ const currentGuidelines = computed(() => {
     startBox.value = null
   }
   
-
   async function deleteMap(id) {
     try {
       await deleteDoc(doc(db, "maps", id))
-      
-      // If we just deleted the map currently open in the editor, 
-      // treat the editor content as a "new" unsaved map to prevent errors.
       if (currentMapId.value === id) {
         currentMapId.value = null
       }
@@ -166,8 +182,6 @@ const currentGuidelines = computed(() => {
     try {
       const mapRef = doc(db, "maps", id)
       await updateDoc(mapRef, { name: newName })
-      
-      // If this map is currently open, update the name in the UI too
       if (currentMapId.value === id) {
         mapName.value = newName
       }
@@ -176,14 +190,17 @@ const currentGuidelines = computed(() => {
       alert("Failed to rename map.")
     }
   }
+
   function exportMapToJSON() {
     const data = {
       version: 1,
       name: mapName.value,
-      level: classLevel.value, // <--- Add this
+      level: classLevel.value,
+      sport: sport.value,
       dcMats: dcMats.value,
       dimensions: ringDimensions.value,
       bales: bales.value,
+      agilityObstacles: agilityObstacles.value,
       hides: hides.value,
       isShared: isShared.value,
       masterBlinds: masterBlinds.value,
@@ -191,7 +208,6 @@ const currentGuidelines = computed(() => {
       previousClassCount: previousClassCount.value
     }
 
-    // Create a blob and trigger download
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
@@ -202,46 +218,50 @@ const currentGuidelines = computed(() => {
   function importMapFromJSON(jsonString) {
     try {
       const data = JSON.parse(jsonString)
-      // Basic validation could go here
-      mapName.value = data.name || "Imported Map"
-      classLevel.value = data.level || 'Novice' // <--- Add this
-      ringDimensions.value = data.dimensions || { width: 24, height: 24 }
-      bales.value = data.bales || []
-      dcMats.value = data.dcMats || []
-      boardEdges.value = data.boardEdges || []
-      hides.value = data.hides || []
-      masterBlinds.value = data.masterBlinds || []
-      isShared.value = data.isShared || false
-      previousClassCount.value = data.previousClassCount || 0
-      currentMapId.value = null // Reset ID because this is a "new" copy
-      validateAllBales() // Re-check gravity
+      importMapFromData(data) 
     } catch (e) {
       alert("Failed to parse map file.")
       console.error(e)
     }
   }
 
-  // --- ACTIONS: FIREBASE CLOUD SAVE/LOAD ---
+  function importMapFromData(data) {
+    mapName.value = data.name || "Imported Map"
+    classLevel.value = data.level || 'Novice'
+    sport.value = data.sport || 'barnhunt'
+    ringDimensions.value = data.data.dimensions || { width: 24, height: 24 }
+    bales.value = data.data.bales || []
+    agilityObstacles.value = data.data.agilityObstacles || [] 
+    dcMats.value = data.data.dcMats || []
+    boardEdges.value = data.data.boardEdges || []
+    hides.value = data.data.hides || []
+    masterBlinds.value = data.masterBlinds || []
+    isShared.value = data.isShared || false
+    previousClassCount.value = data.data.previousClassCount || 0
+    currentMapId.value = null 
+    validateAllBales()
+  }
 
   async function saveToCloud() {
     const userStore = useUserStore()
     if (!userStore.user) return alert("Please log in to save.")
-    // 2. Check Map Name (NEW VALIDATION)
-if (!mapName.value || 
-        mapName.value.trim() === "" || 
-        mapName.value === "Untitled Map") {
+    
+    if (!mapName.value || mapName.value.trim() === "" || mapName.value === "Untitled Map") {
       return alert("Please enter a custom name for your map.")
     }
+
     const mapData = {
       uid: userStore.user.uid,
       name: mapName.value.trim(),
       folderId: currentFolderId.value,
       isShared: isShared.value,
       level: classLevel.value, 
+      sport: sport.value,
       updatedAt: new Date(),
       data: {
         dimensions: ringDimensions.value,
         bales: bales.value,
+        agilityObstacles: agilityObstacles.value,
         dcMats: dcMats.value,
         masterBlinds: masterBlinds.value,
         boardEdges: boardEdges.value,
@@ -253,12 +273,10 @@ if (!mapName.value ||
 
     try {
       if (currentMapId.value) {
-        // Update existing
         const mapRef = doc(db, "maps", currentMapId.value)
         await updateDoc(mapRef, mapData)
         alert("Map updated!")
       } else {
-        // Create new
         const docRef = await addDoc(collection(db, "maps"), {
           ...mapData,
           createdAt: new Date()
@@ -281,8 +299,6 @@ if (!mapName.value ||
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
   }
 
-  // --- FOLDER ACTIONS ---
-
   async function createFolder(name) {
     const userStore = useUserStore()
     if (!userStore.user) return
@@ -293,7 +309,7 @@ if (!mapName.value ||
         name: name,
         createdAt: new Date()
       })
-      await loadUserFolders() // Refresh list immediately
+      await loadUserFolders()
     } catch (e) {
       console.error(e)
     }
@@ -308,14 +324,11 @@ if (!mapName.value ||
     folders.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
   }
 
-// MOVE MAP
   async function moveMap(mapId, targetFolderId) {
     try {
       const mapRef = doc(db, "maps", mapId)
-      // Update Firestore
       await updateDoc(mapRef, { folderId: targetFolderId })
       
-      // Update Local State (if currently editing this map)
       if (currentMapId.value === mapId) {
         currentFolderId.value = targetFolderId
       }
@@ -326,26 +339,45 @@ if (!mapName.value ||
   }
 
   async function deleteFolder(folderId) {
-    // For MVP: We just delete the folder doc. 
-    // Maps inside will still exist but have a 'ghost' folderId. 
-    // They will show up in "Unfiled" if you add a check for valid folders in Dashboard,
-    // or you can manually update them here.
+    if (!confirm("Delete this folder? Maps inside will be moved to 'Unfiled'.")) return
+
     try {
-      await deleteDoc(doc(db, "folders", folderId))
-      await loadUserFolders()
+      const batch = writeBatch(db)
+      const mapsRef = collection(db, "maps")
+      const q = query(mapsRef, where("folderId", "==", folderId))
+      const snapshot = await getDocs(q)
+
+      snapshot.docs.forEach((mapDoc) => {
+        batch.update(mapDoc.ref, { folderId: null })
+      })
+
+      const folderRef = doc(db, "folders", folderId)
+      batch.delete(folderRef)
+
+      await batch.commit()
+      await loadUserFolders() 
+      await loadUserMaps() 
+      
+      if (currentFolderId.value === folderId) {
+        currentFolderId.value = null
+      }
+
     } catch (e) {
-      console.error(e)
+      console.error("Folder delete failed", e)
+      alert("Failed to delete folder.")
     }
   }
 
   function loadMapFromData(id, data) {
     currentMapId.value = id
     mapName.value = data.name
-    classLevel.value = data.level || 'Novice' // <--- Add this
+    classLevel.value = data.level || 'Novice'
+    sport.value = data.sport || 'barnhunt'
     isShared.value = data.isShared || false
     currentFolderId.value = data.folderId || null
     ringDimensions.value = data.data.dimensions
     bales.value = data.data.bales
+    agilityObstacles.value = data.data.agilityObstacles || []
     dcMats.value = data.data.dcMats || []
     boardEdges.value = data.data.boardEdges
     hides.value = data.data.hides || []
@@ -354,10 +386,7 @@ if (!mapName.value ||
     validateAllBales()
   }
 
-function reset() {
-    // Note: We DO NOT reset currentFolderId here. 
-    // It is controlled by the Dashboard navigation.
-    
+  function reset() {
     bales.value = []
     boardEdges.value = []
     hides.value = []
@@ -365,35 +394,25 @@ function reset() {
     masterBlinds.value = []
     startBox.value = null
     
+    // Clear Agility
+    agilityObstacles.value = []
+    nextNumber.value = 1 // Reset counter
+    
     currentMapId.value = null
     mapName.value = "Untitled Map"
     classLevel.value = "Novice"
+    sport.value = 'barnhunt'
     ringDimensions.value = { width: 24, height: 24 }
     previousClassCount.value = 0
     currentLayer.value = 1
     activeTool.value = 'bale'
     isShared.value = false
   }
-  // BALE CONFIG
-  // Standard 2-stringer bales. 
-  // Represented in feet: Approx 3' long x 1.5' wide (18")
-  const baleSize = { width: 3, height: 1.5 }
-
-  // STATE
-  // Bales: { id, x, y, rotation (0 or 90), layer (1, 2, 3) }
-  const bales = ref([])
-  const currentLayer = ref(1)
-  const selectedBaleId = ref(null)
-  const activeTool = ref('bale') // 'bale' | 'board' | 'startbox'
-  const boardEdges = ref([]) // Separate list for board lines
-
 
   // GETTERS
   const inventory = computed(() => {
     const total = bales.value.length
     const base = bales.value.filter(b => b.layer === 1).length
-
-    // Calculate Delta for Nesting rules 
     const delta = total - previousClassCount.value
     const deltaString = delta > 0 ? `+${delta}` : `${delta}`
 
@@ -403,30 +422,22 @@ function reset() {
       layer2: bales.value.filter(b => b.layer === 2).length,
       layer3: bales.value.filter(b => b.layer === 3).length,
       deltaString,
-      isNestingValid: total > 0 // Simple check for now
+      isNestingValid: total > 0 
     }
   })
 
-  // FUNCTIONS
   function setTool(toolName) {
     activeTool.value = toolName
   }
-
-
 
   function removeBoardEdge(id) {
     boardEdges.value = boardEdges.value.filter(b => b.id !== id)
   }
 
-
   function cycleLean(id) {
     const bale = bales.value.find(b => b.id === id)
     if (bale) {
-      // 1. Guard Clause: Only Flat bales can be leaners
       if (bale.orientation !== 'flat') return
-
-      // 2. Cycle Logic: Null -> Right -> Left -> Null
-      // We only use Right/Left because those are parallel to the longest side (width=3)
       if (bale.lean === null) {
         bale.lean = 'right'
       } else if (bale.lean === 'right') {
@@ -437,9 +448,7 @@ function reset() {
     }
   }
 
-  // ACTIONS
   function addBale(x, y) {
-    // Snap to 0.5 grid (6 inches)
     const snappedX = Math.round(x * 2) / 2
     const snappedY = Math.round(y * 2) / 2
 
@@ -451,12 +460,13 @@ function reset() {
       layer: currentLayer.value,
       orientation: 'flat',
       lean: null,
-      supported: true // <--- New Property
+      supported: true 
     }
 
-    // 1. Check Boundary/Collision
-    if (!isValidPlacement(newBale)) {
-      alert("Cannot place here: Obstruction or Out of Bounds")
+if (!isValidPlacement(newBale)) {
+      // OLD: alert("Cannot place here...")
+      // NEW:
+      showNotification("Cannot place here: Obstruction or Out of Bounds", 'error')
       return
     }
 
@@ -467,13 +477,11 @@ function reset() {
   function updateBalePosition(id, newX, newY) {
     const bale = bales.value.find(b => b.id === id)
     if (bale) {
-      // Snap to 0.5 grid (6 inches)
       bale.x = Math.round(newX * 2) / 2
       bale.y = Math.round(newY * 2) / 2
     }
     validateAllBales()
   }
-
 
   function removeBale(id) {
     bales.value = bales.value.filter(b => b.id !== id)
@@ -486,10 +494,10 @@ function reset() {
     if (bale) {
       if (bale.orientation === 'flat') {
         bale.orientation = 'tall'
-        bale.lean = null // <--- RESET LEAN (Tall bales can't lean)
+        bale.lean = null 
       } else if (bale.orientation === 'tall') {
         bale.orientation = 'pillar'
-        bale.lean = null // <--- RESET LEAN
+        bale.lean = null 
       } else {
         bale.orientation = 'flat'
       }
@@ -500,17 +508,12 @@ function reset() {
   function rotateBale(id) {
     const bale = bales.value.find(b => b.id === id)
     if (bale) {
-      // Increment by 45 degrees instead of toggling
-      // We use modulo 180 because a 180-degree bale is the same as 0
       bale.rotation = (bale.rotation + 45) % 180
     }
     validateAllBales()
   }
 
-  // VALIDATION LOGIC
-// VALIDATION LOGIC
   function isValidPlacement(newBale) {
-    // 1. Calculate Exact Dimensions
     let w, h
     const isRotated = newBale.rotation % 180 !== 0
 
@@ -521,25 +524,21 @@ function reset() {
       w = isRotated ? 1 : 3
       h = isRotated ? 3 : 1
     } else {
-      // Pillar
       w = isRotated ? 1 : 1.5
       h = isRotated ? 1.5 : 1
     }
 
-    // 2. Boundary Check
     if (newBale.x < 0 || newBale.x + w > ringDimensions.value.width ||
         newBale.y < 0 || newBale.y + h > ringDimensions.value.height) {
       return false
     }
 
-    // 3. Collision Check (45-degree Logic skipped for MVP)
     if (newBale.rotation % 90 !== 0) return true
 
     const collision = bales.value.some(existing => {
       if (existing.layer !== newBale.layer) return false
       if (existing.rotation % 90 !== 0) return false
 
-      // Calculate existing dims
       const exRotated = existing.rotation % 180 !== 0
       let exW, exH
       if (existing.orientation === 'flat') {
@@ -561,7 +560,6 @@ function reset() {
     return !collision
   }
 
-  // GETTERS
   const balesByLayer = computed(() => {
     return {
       1: bales.value.filter(b => b.layer === 1),
@@ -570,7 +568,6 @@ function reset() {
     }
   })
 
-  // Count logic for map key [cite: 481]
   const baleCounts = computed(() => {
     return {
       total: bales.value.length,
@@ -578,10 +575,8 @@ function reset() {
     }
   })
 
-
-function validateAllBales() {
+  function validateAllBales() {
     bales.value.forEach(bale => {
-      // 1. Calculate Exact Dimensions (Handling Rotation for ALL types)
       let w, h
       const isRotated = bale.rotation % 180 !== 0
 
@@ -592,53 +587,53 @@ function validateAllBales() {
         w = isRotated ? 1 : 3
         h = isRotated ? 3 : 1
       } else {
-        // Pillar
         w = isRotated ? 1 : 1.5
         h = isRotated ? 1.5 : 1
       }
 
-      // 2. Check Bounds
       const outOfBounds =
         bale.x < 0 ||
         bale.y < 0 ||
         bale.x + w > ringDimensions.value.width ||
         bale.y + h > ringDimensions.value.height
 
-      // 3. Check Support (Only if in bounds)
       const hasGravity = hasSupport(bale)
 
-      // 4. Update Status
       bale.supported = !outOfBounds && hasGravity
     })
   }
 
-
-// Add this inside actions in mapStore.js
-
-function importMapFromData(data) {
-  // Similar to loadMapFromData but without the cloud metadata
-  ringDimensions.value = data.dimensions || { width: 24, height: 24 }
-  bales.value = data.bales || []
-  dcMats.value = data.dcMats || []
-  boardEdges.value = data.boardEdges || []
-  hides.value = data.hides || []
-  // We do NOT set currentMapId, so it remains a "new" unsaved map
-  validateAllBales()
-}
-
-// Don't forget to return it at the bottom:
-// return { ..., importMapFromData }
-
-  function resizeRing(width, height) {
-    // Enforce reasonable limits (e.g., minimum 10x10)
+function resizeRing(width, height) {
     const w = Math.max(10, parseInt(width))
     const h = Math.max(10, parseInt(height))
 
     ringDimensions.value = { width: w, height: h }
-    validateAllBales() // Mark items red if they get "cropped" out
+    
+    // --- SAFETY CHECK: Pull stranded items back inside ---
+    
+    // 1. Barn Hunt Bales (Approx 3ft buffer)
+    bales.value.forEach(b => {
+       if (b.x >= w) b.x = w - 3.5 
+       if (b.y >= h) b.y = h - 3.5
+    })
+    
+    // 2. Agility Obstacles (Approx 2ft buffer)
+    agilityObstacles.value.forEach(o => {
+       if (o.x >= w) o.x = w - 5
+       if (o.y >= h) o.y = h - 5
+    })
+
+    // 3. Boards
+    boardEdges.value.forEach(b => {
+      if (b.x1 > w) b.x1 = w
+      if (b.x2 > w) b.x2 = w
+      if (b.y1 > h) b.y1 = h
+      if (b.y2 > h) b.y2 = h
+    })
+
+    validateAllBales() 
   }
 
-// UPDATE ONE ENDPOINT (Drag Handle)
   function updateBoardEndpoint(id, whichPoint, newX, newY) {
     const board = boardEdges.value.find(b => b.id === id)
     if (board) {
@@ -652,32 +647,26 @@ function importMapFromData(data) {
     }
   }
 
-  // ROTATE BOARD (Right Click)
   function rotateBoard(id) {
     const board = boardEdges.value.find(b => b.id === id)
     if (board) {
-      // 1. Calculate Midpoint
       const mx = (board.x1 + board.x2) / 2
       const my = (board.y1 + board.y2) / 2
 
-      // 2. Define Rotation (45 degrees in radians)
       const rad = (45 * Math.PI) / 180
       const cos = Math.cos(rad)
       const sin = Math.sin(rad)
 
-      // 3. Rotate Point 1
       const dx1 = board.x1 - mx
       const dy1 = board.y1 - my
       const rx1 = (dx1 * cos - dy1 * sin) + mx
       const ry1 = (dx1 * sin + dy1 * cos) + my
 
-      // 4. Rotate Point 2
       const dx2 = board.x2 - mx
       const dy2 = board.y2 - my
       const rx2 = (dx2 * cos - dy2 * sin) + mx
       const ry2 = (dx2 * sin + dy2 * cos) + my
 
-      // 5. Update and Snap
       board.x1 = Math.round(rx1 * 2) / 2
       board.y1 = Math.round(ry1 * 2) / 2
       board.x2 = Math.round(rx2 * 2) / 2
@@ -686,31 +675,76 @@ function importMapFromData(data) {
   }
 
   function hasSupport(newBale) {
-    // 1. Ground is always supported
     if (newBale.layer === 1) return true
 
-    // 2. Find all bales on the layer directly below
-    // We filter manually here to avoid "ReferenceError" issues with getters
     const lowerLayer = bales.value.filter(b => b.layer === newBale.layer - 1)
-
-    // Get dimensions for the new bale
-    const newW = newBale.rotation % 180 === 0 ? 3 : 1.5 // Simplified for standard flat bales
+    const newW = newBale.rotation % 180 === 0 ? 3 : 1.5 
     const newH = newBale.rotation % 180 === 0 ? 1.5 : 3
 
-    // Check against every bale in the lower layer
     return lowerLayer.some(baseBale => {
-      // Determine base bale dimensions (handle rotation)
       const baseW = baseBale.rotation % 180 === 0 ? 3 : 1.5
       const baseH = baseBale.rotation % 180 === 0 ? 1.5 : 3
 
-      // Calculate overlap rectangle
       const x_overlap = Math.max(0, Math.min(newBale.x + newW, baseBale.x + baseW) - Math.max(newBale.x, baseBale.x))
       const y_overlap = Math.max(0, Math.min(newBale.y + newH, baseBale.y + baseH) - Math.max(newBale.y, baseBale.y))
       const overlapArea = x_overlap * y_overlap
 
-      // Require at least 1 square foot of support
       return overlapArea >= 1
     })
+  }
+
+  // --- AGILITY ACTIONS ---
+  function addAgilityObstacle(type, x, y) {
+    agilityObstacles.value.push({
+      id: crypto.randomUUID(),
+      type: type, 
+      x: Math.round(x * 2) / 2,
+      y: Math.round(y * 2) / 2,
+      rotation: 0,
+      number: null, // <--- No Default Number
+      shape: 'straight',
+      poleCount: 12,
+      properties: {} 
+    })
+  }
+
+  function removeAgilityObstacle(id) {
+    agilityObstacles.value = agilityObstacles.value.filter(o => o.id !== id)
+  }
+
+  function rotateAgilityObstacle(id) {
+    const obs = agilityObstacles.value.find(o => o.id === id)
+    if (obs) {
+      obs.rotation = (obs.rotation + 45) % 360
+    }
+  }
+
+  function cycleAgilityShape(id) {
+    const obs = agilityObstacles.value.find(o => o.id === id)
+    if (obs && obs.type === 'tunnel') {
+      const shapes = ['straight', 'L', 'U']
+      const current = obs.shape || 'straight'
+      const nextIndex = (shapes.indexOf(current) + 1) % shapes.length
+      obs.shape = shapes[nextIndex]
+    }
+  }
+
+  function cycleAgilityPoles(id) {
+    const obs = agilityObstacles.value.find(o => o.id === id)
+    if (obs && obs.type === 'weave') {
+      const options = [12, 6, 2, 4, 8, 10]
+      const current = obs.poleCount || 12
+      const nextIndex = (options.indexOf(current) + 1) % options.length
+      obs.poleCount = options[nextIndex]
+    }
+  }
+
+  // NEW: Renumber Action
+  function renumberObstacle(id, number) {
+    const obs = agilityObstacles.value.find(o => o.id === id)
+    if (obs) {
+      obs.number = number
+    }
   }
 
   return {
@@ -738,6 +772,7 @@ function importMapFromData(data) {
     startDrawingBoard,
     exportMapToJSON,
     importMapFromJSON,
+    importMapFromData,
     saveToCloud,
     loadUserMaps,
     loadMapFromData,
@@ -752,7 +787,6 @@ function importMapFromData(data) {
     removeStartBox,
     currentGuidelines,
     classLevel,
-    importMapFromData,
     previousClassCount,
     inventory,
     balesByLayer,
@@ -774,6 +808,17 @@ function importMapFromData(data) {
     createFolder,
     loadUserFolders,
     moveMap,
-    deleteFolder
+    deleteFolder,
+    sport,
+    agilityObstacles,
+    nextNumber, // <--- Export
+    addAgilityObstacle,
+    removeAgilityObstacle,
+    rotateAgilityObstacle,
+    cycleAgilityShape,
+    cycleAgilityPoles,
+    renumberObstacle, // <--- Export
+    notification,
+    showNotification
   }
 })

@@ -9,19 +9,41 @@ const userStore = useUserStore()
 const router = useRouter()
 
 const newName = ref('')
-
+const newJudgeEmail = ref('') // Input for the email to add
+const localClubName = ref('')
 // --- STRIPE CONFIGURATION ---
 const PRICE_ID_SOLO = import.meta.env.VITE_STRIPE_PRICE_SOLO
 const PRICE_ID_PRO = import.meta.env.VITE_STRIPE_PRICE_PRO
 const PRICE_ID_CLUB = import.meta.env.VITE_STRIPE_PRICE_CLUB
 
+// In <script setup>
+async function handleLogoUpload(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  
+  // Basic validation
+  if (file.size > 1024 * 1024) { // 1MB limit
+    return alert("File is too large. Please use an image under 1MB.")
+  }
+
+  await userStore.uploadLogo(file)
+}
+
 onMounted(() => {
+  if (userStore.clubName) {
+    localClubName.value = userStore.clubName
+  }
   if (userStore.user) {
     newName.value = userStore.judgeName
   } else {
     router.push('/') 
   }
 })
+
+async function saveClubName() {
+  await userStore.updateClubName(localClubName.value)
+  alert("Club Name Saved!")
+}
 
 async function handleUpdateProfile() {
   if (newName.value && newName.value.trim() !== "") {
@@ -82,8 +104,46 @@ async function handleUpgrade(targetTier) {
   }
 }
 
-async function handlePortal() {
-  alert("Customer Portal coming soon! Please contact support to cancel or change plans.")
+// Inside <script setup> in Settings.vue
+
+async function handleManageBilling() {
+  if (!userStore.user) return
+
+  // 1. Loading State (Optional: add a loading ref)
+  // isLoading.value = true
+
+  try {
+    const createPortal = httpsCallable(functions, 'createPortalSession')
+    
+    // 2. Call Backend
+    const response = await createPortal({
+      returnUrl: window.location.href // Come back to this exact page
+    })
+
+    // 3. Redirect
+    if (response.data.url) {
+      window.location.href = response.data.url
+    }
+  } catch (e) {
+    console.error(e)
+    alert("Could not open billing portal. Please contact support.")
+  } finally {
+    // isLoading.value = false
+  }
+}
+
+async function handleAddJudge() {
+  if (!newJudgeEmail.value || !newJudgeEmail.value.includes('@')) {
+    return alert("Please enter a valid email.")
+  }
+  await userStore.addSponsoredJudge(newJudgeEmail.value.trim())
+  newJudgeEmail.value = '' // Clear input
+}
+
+async function handleRemoveJudge(email) {
+  if (confirm(`Remove access for ${email}?`)) {
+    await userStore.removeSponsoredJudge(email)
+  }
 }
 </script>
 
@@ -106,6 +166,9 @@ async function handlePortal() {
           <span class="badge" :class="userStore.tier">{{ userStore.tier.toUpperCase() }}</span>
         </div>
         <div class="card-body">
+          <div v-if="userStore.sponsoringClubName" class="sponsor-msg">
+            🎉 You have <strong>Pro Access</strong> courtesy of <strong>{{ userStore.sponsoringClubName }}</strong>.
+          </div>
           
           <div v-if="userStore.tier === 'free'">
             <p>Upgrade to unlock Cloud Saves, Sharing, and Export.</p>
@@ -148,7 +211,51 @@ async function handlePortal() {
           
         </div>
       </section>
+     <section v-if="userStore.tier === 'club'" class="card">
+<h2>Club Branding</h2>
+        <p class="hint">Customize your printouts with your Club Name and Logo.</p>
+        
+        <div class="form-row">
+          <label>Official Club Name:</label>
+          <div class="input-group">
+            <input v-model="localClubName" placeholder="e.g. Buckeye United Dog Sports" />
+            <button @click="saveClubName" class="btn-primary small">Save</button>
+          </div>
+        </div>
+        <div class="logo-upload-area">
+          <div class="logo-preview">
+            <img v-if="userStore.clubLogoUrl" :src="userStore.clubLogoUrl" alt="Club Logo" />
+            <div v-else class="placeholder">No Logo</div>
+          </div>
+          
+          <div class="upload-controls">
+            <input type="file" accept="image/png, image/jpeg" @change="handleLogoUpload" />
+            <small>Recommended: Transparent PNG, 300px wide.</small>
+          </div>
+        </div>
+      </section> 
+<section v-if="userStore.tier === 'club'" class="card">
+        <h2>Club Roster</h2>
+        <p class="hint">
+          Add email addresses of judges you want to sponsor. They will get <strong>Pro</strong> access instantly when they log in.
+        </p>
 
+        <div class="roster-add-row">
+          <input v-model="newJudgeEmail" placeholder="judge@example.com" @keyup.enter="handleAddJudge" />
+          <button @click="handleAddJudge" class="btn-primary">Add Judge</button>
+        </div>
+
+        <ul class="roster-list">
+          <li v-for="email in userStore.sponsoredEmails" :key="email">
+            <span>👤 {{ email }}</span>
+            <button @click="handleRemoveJudge(email)" class="btn-xs delete">Remove</button>
+          </li>
+        </ul>
+        
+        <div v-if="userStore.sponsoredEmails.length === 0" class="empty-roster">
+          No judges added yet. You have 5 seats available.
+        </div>
+      </section>
       <section class="card">
         <h2>Judge Profile</h2>
         <p class="hint">This name will appear on all your printed maps.</p>
@@ -238,4 +345,29 @@ async function handlePortal() {
 @media (max-width: 600px) {
   .pricing-grid { grid-template-columns: 1fr; }
 }
+
+.roster-add-row { display: flex; gap: 10px; margin-bottom: 20px; }
+.roster-add-row input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+
+.roster-list { list-style: none; padding: 0; margin: 0; }
+.roster-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; background: #f9f9f9; border-radius: 4px; margin-bottom: 5px; }
+.roster-list li:last-child { border-bottom: none; }
+
+.empty-roster { text-align: center; color: #999; padding: 20px; font-style: italic; border: 2px dashed #eee; border-radius: 8px; }
+
+.sponsor-msg { background: #e8f5e9; color: #2e7d32; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #c8e6c9; }
+
+.btn-xs.delete { background: white; color: #d32f2f; border: 1px solid #ffcdd2; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+.btn-xs.delete:hover { background: #ffebee; }
+
+.logo-upload-area { display: flex; gap: 20px; align-items: center; margin-top: 15px; }
+.logo-preview { width: 100px; height: 100px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; background: #f9f9f9; border-radius: 8px; overflow: hidden; }
+.logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.logo-preview .placeholder { color: #999; font-size: 0.8rem; }
+.upload-controls { display: flex; flex-direction: column; gap: 5px; }
+.form-row { margin-bottom: 20px; }
+.form-row label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
+.input-group { display: flex; gap: 10px; }
+.input-group input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+.btn-primary.small { padding: 0 20px; }
 </style>

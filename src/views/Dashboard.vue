@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useUserStore } from '../stores/userStore'
 import { useMapStore } from '../stores/mapStore'
 import { useRouter } from 'vue-router'
@@ -7,367 +7,359 @@ import { useRouter } from 'vue-router'
 const userStore = useUserStore()
 const mapStore = useMapStore()
 const router = useRouter()
-const userMaps = ref([])
-const showMoveModal = ref(false)
-const selectedMapToMove = ref(null)
 
-// --- AUTH STATE (For Login Form) ---
+// Auth State
 const email = ref('')
 const password = ref('')
-const isRegistering = ref(false) // Toggle between Login/Register text
+const registerSport = ref('barnhunt')
+const isRegistering = ref(false) // <--- NEW: Toggle between modes
 
-// --- COMPUTED ---
-const currentFolderName = computed(() => {
-  if (!mapStore.currentFolderId) return "All Maps"
-  const f = mapStore.folders.find(f => f.id === mapStore.currentFolderId)
-  return f ? f.name : "Unknown Folder"
-})
+// Dashboard State
+const isLoading = ref(false)
+const newFolderName = ref('')
+const isDragOver = ref(false)
+const localMaps = ref([])
 
-const filteredMaps = computed(() => {
-  if (!mapStore.currentFolderId) {
-    return userMaps.value.filter(m => !m.folderId)
-  } else {
-    return userMaps.value.filter(m => m.folderId === mapStore.currentFolderId)
-  }
-})
-
-// --- LIFECYCLE ---
-onMounted(async () => {
-  // Only load data if user is actually logged in
-  if (userStore.user) {
-    mapStore.currentFolderId = null
-    userMaps.value = await mapStore.loadUserMaps()
-    await mapStore.loadUserFolders()
-  }
-})
-
-// --- AUTH ACTIONS ---
 async function handleLogin() {
   if (!email.value || !password.value) return alert("Please enter email and password")
   await userStore.login(email.value, password.value)
-  // After login, load their data immediately
-  if (userStore.user) {
-    userMaps.value = await mapStore.loadUserMaps()
-    await mapStore.loadUserFolders()
-  }
 }
 
 async function handleRegister() {
   if (!email.value || !password.value) return alert("Please enter email and password")
-  await userStore.register(email.value, password.value)
+  await userStore.register(email.value, password.value, registerSport.value)
 }
 
-async function handleForgotPassword() {
-  if (!email.value) return alert("Please enter your email address first.")
-  await userStore.resetPassword(email.value)
+function handleLogout() {
+  userStore.logout()
+  router.push('/')
 }
 
-async function handleLogout() {
-  await userStore.logout()
-  router.push('/') 
+function formatDate(timestamp) {
+  if (!timestamp) return ''
+  return new Date(timestamp.seconds * 1000).toLocaleDateString()
 }
-
-// --- DASHBOARD ACTIONS ---
-function openMoveModal(map) {
-  selectedMapToMove.value = map
-  showMoveModal.value = true
-}
-
 
 function createNewMap(sportType) {
-  // 1. Permission Check
   if (!userStore.canAccessSport(sportType)) {
-    // Logic for upselling
-    if (userStore.tier === 'solo') {
-      alert(`Your Solo plan is limited to ${userStore.allowedSports.join(', ')}. Upgrade to Pro for multi-sport access!`)
-      router.push('/settings')
-    } else {
-      // Free users might just need to verify email or start paying
-      // For now, we assume free users have 'barnhunt' by default, 
-      // so hitting this for 'agility' means they need Pro
-      alert("This sport is available on the Pro plan.")
+    if (confirm("This sport requires a Pro subscription. Go to Settings?")) {
       router.push('/settings')
     }
     return
   }
-// 2. Proceed if allowed
+
   mapStore.reset()
-  // In the future, we can store the 'sportType' in the map data here
-  // mapStore.sport = sportType 
+  mapStore.sport = sportType 
+  
+  if (sportType === 'agility') {
+    mapStore.ringDimensions = { width: 80, height: 100 }
+  } else {
+    mapStore.ringDimensions = { width: 24, height: 24 }
+  }
+
   router.push('/editor')
 }
 
-
-async function confirmMove(targetFolderId) {
-  if (selectedMapToMove.value) {
-    await mapStore.moveMap(selectedMapToMove.value.id, targetFolderId)
-    userMaps.value = await mapStore.loadUserMaps()
-    showMoveModal.value = false
-    selectedMapToMove.value = null
-  }
-}
-
-function editMap(map) {
+async function openMap(map) {
   mapStore.loadMapFromData(map.id, map)
   router.push('/editor')
 }
 
-function handleCreateFolder() {
-  const name = prompt("Enter Trial/Event Name (e.g. 'May 2025 GCDOC'):")
-  if (name) mapStore.createFolder(name)
+async function handleDelete(id) {
+  if(confirm("Are you sure you want to delete this map?")) {
+    await mapStore.deleteMap(id)
+    localMaps.value = await mapStore.loadUserMaps() 
+  }
 }
 
-function openFolder(folderId) {
-  mapStore.currentFolderId = folderId
+// === FOLDER LOGIC ===
+async function handleCreateFolder() {
+  const name = prompt("Folder Name:")
+  if (name) await mapStore.createFolder(name)
 }
 
-function goUpLevel() {
-  mapStore.currentFolderId = null
+async function handleDeleteFolder(id) {
+  await mapStore.deleteFolder(id)
 }
+
+function onDragStart(event, mapId) {
+  event.dataTransfer.dropEffect = 'move'
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('mapId', mapId)
+}
+
+async function onDrop(event, folderId) {
+  const mapId = event.dataTransfer.getData('mapId')
+  if (mapId) {
+    await mapStore.moveMap(mapId, folderId)
+    localMaps.value = await mapStore.loadUserMaps()
+  }
+  isDragOver.value = false
+}
+
+const filteredMaps = computed(() => {
+  return localMaps.value.filter(m => m.folderId === mapStore.currentFolderId)
+})
+
+// Lifecycle & Watchers
+async function loadData() {
+  if (userStore.user) {
+    isLoading.value = true
+    await mapStore.loadUserFolders()
+    localMaps.value = await mapStore.loadUserMaps()
+    isLoading.value = false
+  }
+}
+
+onMounted(loadData)
+
+watch(() => userStore.user, async (newUser) => {
+  if (newUser) {
+    await loadData()
+  } else {
+    localMaps.value = []
+  }
+})
 </script>
 
 <template>
   <div class="dashboard">
-
     <nav class="navbar">
-      <div class="logo" @click="router.push('/')">🐾 K9CourseBuilder.com</div>
-      
-      <div v-if="userStore.user" class="user-status">
-        <span class="badge" :class="userStore.tier">{{ userStore.tier.toUpperCase() }} MEMBER</span>
-        <button @click="router.push('/settings')" class="btn-icon-nav" title="Settings">⚙️</button>
-        <button @click="handleLogout" class="btn-nav-link">Logout</button>
+      <div class="logo">🐾 K9CourseBuilder</div>
+      <div class="nav-links">
+        <button v-if="userStore.user" @click="router.push('/settings')" class="btn-outline">⚙️ Settings</button>
+        <button v-if="userStore.user" @click="handleLogout" class="btn-outline">Logout</button>
       </div>
     </nav>
 
-    <div v-if="!userStore.user" class="auth-wrapper">
+    <div v-if="!userStore.user" class="auth-container">
       <div class="auth-card">
-        <h1>{{ isRegistering ? 'Create Account' : 'Welcome Back' }}</h1>
-        <p class="subtitle">{{ isRegistering ? 'Start building maps for free.' : 'Login to manage your maps.' }}</p>
         
-        <div class="form-stack">
-          <input v-model="email" type="email" placeholder="Email Address" @keyup.enter="isRegistering ? handleRegister() : handleLogin()" />
-          <input v-model="password" type="password" placeholder="Password" @keyup.enter="isRegistering ? handleRegister() : handleLogin()" />
-          
-          <div v-if="userStore.authError" class="error-box">
-            {{ userStore.authError }}
-          </div>
+        <h2>{{ isRegistering ? 'Create Account' : 'Welcome Back' }}</h2>
+        <p>{{ isRegistering ? 'Start building your maps today' : 'Login to access your maps' }}</p>
+        
+        <div class="form-group">
+          <input v-model="email" type="email" placeholder="Email Address" />
+          <input v-model="password" type="password" placeholder="Password" />
+        </div>
 
-          <button v-if="!isRegistering" @click="handleLogin" class="btn-primary full-width">Login</button>
-          <button v-else @click="handleRegister" class="btn-primary full-width">Sign Up</button>
-          
-          <div class="auth-footer">
-            <span v-if="!isRegistering">
-              Need an account? <a @click="isRegistering = true">Register</a>
-            </span>
-            <span v-else>
-              Have an account? <a @click="isRegistering = false">Login</a>
-            </span>
-            <br>
-            <a v-if="!isRegistering" @click="handleForgotPassword" class="forgot-link">Forgot Password?</a>
+        <div v-if="isRegistering">
+          <div class="sport-select-label">Choose your Primary Sport:</div>
+          <div class="sport-selector">
+            <label :class="{ active: registerSport === 'barnhunt' }">
+              <input type="radio" v-model="registerSport" value="barnhunt">
+              📦 Barn Hunt
+            </label>
+            <label :class="{ active: registerSport === 'agility' }">
+              <input type="radio" v-model="registerSport" value="agility">
+              🐕 Agility
+            </label>
           </div>
         </div>
+
+        <div class="auth-actions">
+          <button v-if="!isRegistering" @click="handleLogin" class="btn-primary">Login</button>
+          <button v-else @click="handleRegister" class="btn-secondary">Register New Account</button>
+        </div>
+
+        <div class="auth-toggle">
+          <span v-if="!isRegistering">
+            New here? <a href="#" @click.prevent="isRegistering = true">Create an Account</a>
+          </span>
+          <span v-else>
+            Already have an account? <a href="#" @click.prevent="isRegistering = false">Back to Login</a>
+          </span>
+        </div>
+
+        <div v-if="userStore.authError" class="error">{{ userStore.authError }}</div>
       </div>
     </div>
 
-    <main v-else class="content">
-
-<section class="creation-zone">
-        <h2>Start a New Project</h2>
-        <div class="sport-grid">
-          
-          <button @click="createNewMap('barnhunt')" class="sport-card">
-            <span class="emoji">🐀</span>
-            <span class="label">Barn Hunt</span>
-          </button>
-          
-          <button @click="createNewMap('agility')" class="sport-card" :class="{ disabled: !userStore.canAccessSport('agility') }" title="Agility">
-            <span class="emoji">🐕</span>
-            <span class="label">Agility</span>
-            <span v-if="!userStore.canAccessSport('agility')" class="lock-icon">🔒</span>
-          </button>
-          
-          <button @click="createNewMap('scentwork')" class="sport-card" :class="{ disabled: !userStore.canAccessSport('scentwork') }" title="Scent Work">
-            <span class="emoji">👃</span>
-            <span class="label">Scent Work</span>
-            <span v-if="!userStore.canAccessSport('scentwork')" class="lock-icon">🔒</span>
-          </button>
+    <div v-else class="dashboard-content">
+      
+      <aside class="sidebar">
+        <div class="sidebar-header">
+          <h3>Folders</h3>
+          <button @click="handleCreateFolder" class="btn-icon">+</button>
         </div>
-      </section>
+        <ul>
+          <li 
+            :class="{ active: mapStore.currentFolderId === null }"
+            @click="mapStore.currentFolderId = null"
+            @dragover.prevent
+            @drop="onDrop($event, null)"
+          >
+            📂 All / Unfiled
+          </li>
+          <li 
+            v-for="folder in mapStore.folders" 
+            :key="folder.id"
+            :class="{ active: mapStore.currentFolderId === folder.id }"
+            @click="mapStore.currentFolderId = folder.id"
+            @dragover.prevent
+            @drop="onDrop($event, folder.id)"
+          >
+            📁 {{ folder.name }}
+            <button @click.stop="handleDeleteFolder(folder.id)" class="btn-xs">×</button>
+          </li>
+        </ul>
+      </aside>
 
-      <hr class="divider" />
+      <main class="main-area">
+        
+        <section class="create-section">
+          <h2>Create New Map</h2>
+          <div class="sport-grid">
+            
+            <button 
+              @click="createNewMap('barnhunt')" 
+              class="sport-card" 
+              :class="{ disabled: !userStore.canAccessSport('barnhunt') }"
+            >
+              <span class="emoji">📦</span>
+              <span class="label">Barn Hunt</span>
+              <span v-if="!userStore.canAccessSport('barnhunt')" class="lock-icon">🔒</span>
+            </button>
 
-      <section class="explorer-zone">
-        <div class="breadcrumb" v-if="mapStore.currentFolderId">
-          <button @click="goUpLevel">📁 My Maps</button>
-          <span class="separator">/</span>
-          <span class="current">{{ currentFolderName }}</span>
-        </div>
-        <h2 v-else>My Library</h2>
+            <button 
+              @click="createNewMap('agility')" 
+              class="sport-card"
+              :class="{ disabled: !userStore.canAccessSport('agility') }"
+            >
+              <span class="emoji">🐕</span>
+              <span class="label">Agility</span>
+              <span v-if="!userStore.canAccessSport('agility')" class="lock-icon">🔒</span>
+            </button>
 
-<div v-if="userStore.tier === 'free'" class="upsell-banner">
-          <div class="banner-text">
-            <strong>Free Tier Limit:</strong> You cannot save maps to the cloud or export JSON.
+            <button class="sport-card disabled" title="Coming Soon">
+              <span class="emoji">👃</span>
+              <span class="label">Scent Work</span>
+              <span class="lock-icon">🔒</span>
+            </button>
+
           </div>
-          <button @click="router.push('/settings')" class="btn-upgrade">
-            Upgrade to Solo ($6/mo)
-          </button>
-        </div>
+        </section>
 
-        <div v-if="!mapStore.currentFolderId" class="folder-section">
-          <h3>Trials & Folders</h3>
-          <div class="folder-grid">
-            <div class="folder-card new-folder" @click="handleCreateFolder">
-              <span class="icon">➕</span>
-              <span class="name">New Folder</span>
-            </div>
+        <hr />
 
-            <div v-for="folder in mapStore.folders" :key="folder.id" class="folder-card" @click="openFolder(folder.id)">
-              <span class="icon">📁</span>
-              <span class="name">{{ folder.name }}</span>
-              <button @click.stop="mapStore.deleteFolder(folder.id)" class="btn-xs delete"
-                title="Delete Folder">×</button>
-            </div>
+        <section class="maps-list">
+          <h2>Your Maps</h2>
+          <div v-if="isLoading">Loading...</div>
+          <div v-else-if="filteredMaps.length === 0" class="empty-state">
+            No maps found in this folder.
           </div>
-        </div>
-
-        <div class="map-section">
-          <h3>{{ mapStore.currentFolderId ? 'Maps in this Trial' : 'Unfiled Maps' }}</h3>
-
-          <div v-if="filteredMaps.length === 0" class="empty-msg">
-            No maps found here.
-          </div>
-
-          <div class="map-list-grid">
-            <div v-for="map in filteredMaps" :key="map.id" class="map-item">
-              <div class="map-content" @click="editMap(map)">
-                <div class="map-icon">📄</div>
-                <div class="map-details">
-                  <div class="map-name">{{ map.name }}</div>
-                  <div class="map-meta">
-                    {{ map.level }} • {{ new Date(map.updatedAt.seconds * 1000).toLocaleDateString() }}
-                  </div>
+          
+          <div v-else class="grid">
+            <div 
+              v-for="map in filteredMaps" 
+              :key="map.id" 
+              class="map-card"
+              draggable="true"
+              @dragstart="onDragStart($event, map.id)"
+            >
+              <div class="map-preview" @click="openMap(map)">
+                <div class="preview-placeholder">{{ map.sport === 'agility' ? '🐕' : '📦' }}</div>
+              </div>
+              <div class="map-info">
+                <h4>{{ map.name }}</h4>
+                <div class="meta">
+                  <span>{{ map.level }}</span>
+                  <span>{{ formatDate(map.updatedAt) }}</span>
+                </div>
+                <div class="actions">
+                  <button @click="openMap(map)">Edit</button>
+                  <button @click="handleDelete(map.id)" class="btn-danger">Delete</button>
                 </div>
               </div>
-
-              <div class="map-actions">
-                <button @click.stop="openMoveModal(map)" class="btn-icon" title="Move Folder">📂</button>
-              </div>
             </div>
           </div>
-        </div>
+        </section>
 
-      </section>
-    </main>
-
-    <div v-if="showMoveModal" class="modal-overlay" @click.self="showMoveModal = false">
-      <div class="modal">
-        <h3>Move Map</h3>
-        <p>Select destination for "<strong>{{ selectedMapToMove?.name }}</strong>":</p>
-        
-        <div class="folder-list">
-          <div class="folder-option" @click="confirmMove(null)">
-            <span>🚫 Unfiled (Root)</span>
-          </div>
-          
-          <div 
-            v-for="folder in mapStore.folders" 
-            :key="folder.id" 
-            class="folder-option"
-            @click="confirmMove(folder.id)"
-          >
-            <span>📁 {{ folder.name }}</span>
-          </div>
-        </div>
-        
-        <button @click="showMoveModal = false" class="btn-cancel">Cancel</button>
-      </div>
+      </main>
     </div>
   </div>
 </template>
 
 <style scoped>
-.dashboard { max-width: 900px; margin: 0 auto; padding: 0; padding-bottom: 50px; }
+/* (Existing Styles...) */
+.dashboard { font-family: 'Inter', sans-serif; min-height: 100vh; background: #f4f6f8; }
+.navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
+.logo { font-weight: 800; font-size: 1.2rem; color: #2c3e50; }
+.btn-outline { background: none; border: 1px solid #ccc; padding: 5px 15px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
 
-/* NAVBAR */
-.navbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #eee; margin-bottom: 30px; background: white; }
-.logo { font-weight: 800; font-size: 1.2rem; color: #2c3e50; cursor: pointer; }
-.user-status { display: flex; align-items: center; }
+/* AUTH STYLES */
+.auth-container { display: flex; justify-content: center; align-items: center; height: 80vh; }
+.auth-card { background: white; padding: 40px; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); width: 100%; max-width: 400px; text-align: center; }
+.form-group { display: flex; flex-direction: column; gap: 10px; margin: 20px 0; }
+.form-group input { padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
+.auth-actions { display: flex; flex-direction: column; gap: 10px; }
+.btn-primary { background: #2c3e50; color: white; padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.btn-secondary { background: #4CAF50; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.error { color: red; margin-top: 10px; font-size: 0.9em; }
+.auth-toggle { margin-top: 15px; font-size: 0.9em; }
+.auth-toggle a { color: #2196f3; cursor: pointer; text-decoration: none; }
+.auth-toggle a:hover { text-decoration: underline; }
 
-/* AUTH CARD STYLES */
-.auth-wrapper { display: flex; justify-content: center; padding-top: 50px; }
-.auth-card { background: white; border: 1px solid #ddd; padding: 40px; border-radius: 12px; width: 100%; max-width: 400px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
-.auth-card h1 { margin-bottom: 10px; color: #2c3e50; }
-.subtitle { color: #666; margin-bottom: 30px; }
-.form-stack { display: flex; flex-direction: column; gap: 15px; }
-.form-stack input { padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 1rem; }
-.full-width { width: 100%; padding: 12px; font-size: 1.1rem; }
-.auth-footer { margin-top: 20px; font-size: 0.9rem; color: #666; }
-.auth-footer a { color: #4CAF50; cursor: pointer; font-weight: bold; text-decoration: underline; }
-.forgot-link { display: inline-block; margin-top: 10px; color: #999; text-decoration: none; cursor: pointer; }
-.error-box { color: #d32f2f; background: #ffebee; padding: 10px; border-radius: 6px; font-size: 0.9rem; }
-
-/* EXISTING DASHBOARD STYLES */
-.content { padding: 0 20px; }
-.badge { background: #eee; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8em; margin-right: 10px; }
-.badge.pro { background: #ffd700; color: #000; }
-.badge.club { background: #9c27b0; color: white; }
-.creation-zone { margin-bottom: 30px; }
-.sport-grid { display: flex; gap: 15px; margin-top: 15px; }
-.sport-card { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 120px; height: 100px; border: 2px solid #eee; border-radius: 12px; cursor: pointer; background: white; transition: 0.2s; }
-.sport-card:hover:not(.disabled) { transform: translateY(-3px); border-color: #4CAF50; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); }
-.sport-card .emoji { font-size: 2rem; margin-bottom: 5px; }
-.sport-card .label { font-weight: bold; color: #444; }
-.sport-card.disabled { opacity: 0.5; cursor: not-allowed; background: #f9f9f9; filter: grayscale(1); }
-.divider { border: 0; border-top: 1px solid #eee; margin: 30px 0; }
-.breadcrumb { font-size: 1.2rem; display: flex; gap: 10px; align-items: center; margin-bottom: 20px; }
-.breadcrumb button { background: none; border: none; color: #007bff; cursor: pointer; font-size: inherit; font-weight: bold; padding: 0; }
-.upsell-banner { background: #fff8e1; border: 1px solid #ffe0b2; color: #5d4037; padding: 15px 20px; border-radius: 8px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; gap: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-.btn-upgrade { background: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
-.btn-upgrade:hover { background: #43a047; }
-.folder-section { margin-bottom: 40px; }
-.folder-section h3, .map-section h3 { font-size: 0.9rem; text-transform: uppercase; color: #888; margin-bottom: 15px; letter-spacing: 1px; }
-.folder-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 15px; }
-.folder-card { background: #fdfdfd; border: 1px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; cursor: pointer; transition: 0.2s; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100px; }
-.folder-card:hover { background: #fff; border-color: #bbb; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05); }
-.folder-card .icon { font-size: 2rem; margin-bottom: 5px; display: block; }
-.folder-card .name { font-weight: bold; color: #333; font-size: 0.95rem; }
-.folder-card.new-folder { border: 2px dashed #ccc; color: #666; background: transparent; }
-.folder-card.new-folder:hover { border-color: #4CAF50; color: #4CAF50; background: #f0fdf4; }
-.btn-xs.delete { position: absolute; top: 5px; right: 5px; background: none; border: none; color: #ddd; font-size: 1.2rem; cursor: pointer; }
-.btn-xs.delete:hover { color: red; }
-.map-list-grid { display: flex; flex-direction: column; gap: 10px; }
-.map-item { display: flex; align-items: center; gap: 15px; border: 1px solid #eee; padding: 10px 15px; border-radius: 8px; cursor: pointer; background: white; transition: 0.2s; justify-content: space-between; }
-.map-item:hover { border-color: #4CAF50; transform: translateX(5px); }
-.map-icon { font-size: 1.5rem; background: #e8f5e9; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
-.map-name { font-weight: bold; font-size: 1.1rem; color: #2c3e50; }
-.map-meta { color: #888; font-size: 0.9rem; margin-top: 3px; }
-.empty-msg { color: #999; font-style: italic; padding: 20px; border: 2px dashed #eee; border-radius: 8px; text-align: center; }
-.map-content { display: flex; align-items: center; gap: 15px; flex-grow: 1; cursor: pointer; }
-.map-actions { display: flex; gap: 5px; }
-.btn-icon { background: white; border: 1px solid #ddd; padding: 8px; border-radius: 4px; cursor: pointer; font-size: 1.1rem; }
-.btn-icon:hover { background: #f0f0f0; border-color: #bbb; }
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
-.modal { background: white; padding: 20px; border-radius: 8px; min-width: 350px; }
-.folder-list { display: flex; flex-direction: column; gap: 5px; margin: 15px 0; max-height: 300px; overflow-y: auto; }
-.folder-option { padding: 12px; border: 1px solid #eee; border-radius: 6px; cursor: pointer; background: #fdfdfd; }
-.folder-option:hover { background: #e3f2fd; border-color: #2196f3; }
-.btn-cancel { width: 100%; padding: 10px; background: #eee; border: none; cursor: pointer; border-radius: 4px; }
-.btn-icon-nav { background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-right: 10px; padding: 5px; border-radius: 50%; transition: background 0.2s; }
-.btn-icon-nav:hover { background: #f0f0f0; }
-.btn-nav-link { background: none; border: 1px solid #ccc; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-.btn-nav-link:hover { background: #eee; }
-.btn-primary { background-color: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-.btn-primary:hover { background-color: #43a047; }
-/* Add Lock Icon style */
-.lock-icon { font-size: 0.8em; position: absolute; top: 5px; right: 5px; }
-.sport-card { position: relative; } /* Needed for absolute lock icon */
-
-/* Modify disabled style to look clickable-but-locked instead of dead */
-.sport-card.disabled { 
-  opacity: 0.7; 
-  cursor: pointer; /* Allow clicking to trigger the upsell alert */
-  background: #f5f5f5; 
-  filter: none; /* Remove grayscale so they can see what they are missing */
-  border: 1px dashed #ccc;
+/* SPORT SELECTOR STYLES */
+.sport-select-label { font-size: 0.85em; color: #666; margin-top: 15px; margin-bottom: 5px; text-align: left; }
+.sport-selector { display: flex; gap: 10px; margin-bottom: 20px; }
+.sport-selector label { 
+  flex: 1; 
+  border: 1px solid #ddd; 
+  border-radius: 4px; 
+  padding: 10px; 
+  font-size: 0.9em; 
+  cursor: pointer; 
+  background: #fafafa;
+  transition: all 0.2s;
 }
+.sport-selector label:hover { background: #f0f0f0; }
+.sport-selector label.active { 
+  background: #e3f2fd; 
+  border-color: #2196f3; 
+  color: #1565c0; 
+  font-weight: bold; 
+  box-shadow: 0 2px 5px rgba(33, 150, 243, 0.2);
+}
+.sport-selector input { display: none; }
+
+/* DASHBOARD LAYOUT */
+.dashboard-content { display: flex; height: calc(100vh - 60px); }
+.sidebar { width: 250px; background: white; border-right: 1px solid #ddd; padding: 20px; overflow-y: auto; }
+.sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.sidebar ul { list-style: none; padding: 0; }
+.sidebar li { padding: 10px; cursor: pointer; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+.sidebar li:hover { background: #f9f9f9; }
+.sidebar li.active { background: #e3f2fd; color: #1565c0; font-weight: bold; }
+.btn-icon { background: none; border: 1px solid #ddd; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.btn-xs { background: none; border: none; color: #999; cursor: pointer; font-size: 1.2em; line-height: 1; }
+.btn-xs:hover { color: red; }
+
+.main-area { flex: 1; padding: 40px; overflow-y: auto; }
+.create-section { margin-bottom: 40px; }
+.sport-grid { display: flex; gap: 20px; margin-top: 20px; }
+.sport-card { 
+  flex: 1; max-width: 200px; height: 120px; 
+  background: white; border: 2px solid #eee; border-radius: 12px; 
+  display: flex; flex-direction: column; align-items: center; justify-content: center; 
+  cursor: pointer; transition: transform 0.2s; position: relative;
+}
+.sport-card:hover:not(.disabled) { transform: translateY(-3px); border-color: #4CAF50; }
+.sport-card.disabled { opacity: 0.7; cursor: not-allowed; background: #f9f9f9; }
+.sport-card .emoji { font-size: 2.5rem; margin-bottom: 10px; }
+.sport-card .label { font-weight: bold; color: #333; }
+.lock-icon { position: absolute; top: 10px; right: 10px; font-size: 1.2rem; }
+
+.grid { display: flex; flex-wrap: wrap; gap: 20px; margin-top: 20px; }
+.map-card { width: 220px; background: white; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+.map-preview { height: 120px; background: #eee; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.preview-placeholder { font-size: 3rem; opacity: 0.3; }
+.map-info { padding: 15px; }
+.map-info h4 { margin: 0 0 5px 0; font-size: 1rem; }
+.meta { font-size: 0.8rem; color: #666; display: flex; justify-content: space-between; margin-bottom: 10px; }
+.actions { display: flex; gap: 10px; }
+.actions button { flex: 1; padding: 5px; cursor: pointer; background: white; border: 1px solid #ccc; border-radius: 4px; font-size: 0.8rem; }
+.actions .btn-danger { color: #d32f2f; border-color: #ef9a9a; }
+.actions .btn-danger:hover { background: #ffebee; }
+.empty-state { text-align: center; color: #999; margin-top: 40px; font-style: italic; }
 </style>

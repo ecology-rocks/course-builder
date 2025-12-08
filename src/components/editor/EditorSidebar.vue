@@ -18,6 +18,7 @@ const router = useRouter()
 const email = ref('')
 const password = ref('')
 const fileInput = ref(null)
+const registerSport = ref('barnhunt')
 
 // Modal State
 const showLoadModal = ref(false)
@@ -34,7 +35,8 @@ async function handleLogin() {
 
 async function handleRegister() {
   if (!email.value || !password.value) return alert("Please enter email and password")
-  await userStore.register(email.value, password.value)
+  // Pass the selected sport to the store
+  await userStore.register(email.value, password.value, registerSport.value)
 }
 
 async function handleForgotPassword() {
@@ -94,6 +96,17 @@ onMounted(async () => {
       <div v-else class="auth-form">
         <input v-model="email" type="email" placeholder="Email" />
         <input v-model="password" type="password" placeholder="Password" />
+        <div class="sport-select-label">Choose your Primary Sport:</div>
+        <div class="sport-selector">
+          <label :class="{ active: registerSport === 'barnhunt' }">
+            <input type="radio" v-model="registerSport" value="barnhunt">
+            📦 Barn Hunt
+          </label>
+          <label :class="{ active: registerSport === 'agility' }">
+            <input type="radio" v-model="registerSport" value="agility">
+            🐕 Agility
+          </label>
+        </div>
         <div class="auth-buttons">
           <button @click="handleLogin" class="btn-primary">Login</button>
           <button @click="handleRegister" class="btn-secondary">Register</button>
@@ -138,7 +151,13 @@ onMounted(async () => {
         <div class="btn-group">
           <button @click="store.exportMapToJSON" :disabled="!userStore.can('export_json')">⬇️ Export {{ !userStore.can('export_json') ? '🔒' : '' }}</button>
           <button @click="fileInput.click()">⬆️ Import</button>
-          <button @click="emit('print')">🖨️ Print</button>
+          <div class="print-actions">
+          <label>Print:</label>
+          <div class="btn-group-sm">
+            <button @click="emit('print', true)" title="Print with Hides/Answers">👨‍⚖️ Judge</button>
+            <button @click="emit('print', false)" title="Print Clean Map">🏃 Exhibitor</button>
+          </div>
+        </div>
           <button v-if="store.classLevel === 'Master'" @click="showRandomizerModal = true" style="background-color: #673ab7; color: white; border: none;">🎲 Randomizer</button>
           <input ref="fileInput" type="file" accept=".json" style="display:none" @change="handleFileImport" />
         </div>
@@ -146,49 +165,93 @@ onMounted(async () => {
     </div>
     <hr />
 
-    <h3>Layer Control</h3>
-    <div class="layer-select">
-      <button v-for="i in 3" :key="i" @click="store.currentLayer = i" :class="{ active: store.currentLayer === i }">Layer {{ i }}</button>
+    <div v-if="store.sport === 'barnhunt'">
+      <h3>Layer Control</h3>
+      <div class="layer-select">
+        <button v-for="i in 3" :key="i" @click="store.currentLayer = i" :class="{ active: store.currentLayer === i }">Layer {{ i }}</button>
+      </div>
+
+      <div class="toolbox">
+        <h4>Placement Tools</h4>
+        <button @click="store.setTool('bale')" :class="{ active: store.activeTool === 'bale' }">📦 Bale</button>
+        <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Board</button>
+        <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🔲 Start</button>
+        <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟧 DC Mat</button>
+        <button @click="userStore.can('mark_hides') ? store.setTool('hide') : alert('Pro Feature')" :class="{ active: store.activeTool === 'hide', disabled: !userStore.can('mark_hides') }">🔴 Hide {{ !userStore.can('mark_hides') ? '🔒' : '' }}</button>
+      </div>
+
+      <div class="toolbox action-tools">
+        <h4>Action Tools</h4>
+        <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">🔄 Rotate</button>
+        <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">📐 Type</button>
+        <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">↗️ Lean</button>
+        <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">🗑️ Delete</button>
+      </div>
+
+      <div class="guidelines-box" v-if="store.currentGuidelines">
+        <h5>{{ store.classLevel }} Guidelines</h5>
+        <div class="guide-row"><span>Min Bales:</span> <strong>{{ store.currentGuidelines.minBales }}</strong></div>
+        <div class="guide-row"><span>Max Bales:</span> <strong>{{ store.currentGuidelines.maxBales }}</strong></div>
+        <div class="guide-note">{{ store.currentGuidelines.notes }}</div>
+        <div v-if="store.inventory.total < store.currentGuidelines.minBales" class="warning-text">⚠️ Need {{ store.currentGuidelines.minBales - store.inventory.total }} more bales!</div>
+      </div>
     </div>
 
-    <div class="toolbox">
-      <h4>Placement Tools</h4>
-      <button @click="store.setTool('bale')" :class="{ active: store.activeTool === 'bale' }">📦 Bale</button>
-      <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Board</button>
-      <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🔲 Start</button>
-      <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟧 DC Mat</button>
-      <button @click="userStore.can('mark_hides') ? store.setTool('hide') : alert('Pro Feature')" :class="{ active: store.activeTool === 'hide', disabled: !userStore.can('mark_hides') }">🔴 Hide {{ !userStore.can('mark_hides') ? '🔒' : '' }}</button>
+<div v-else-if="store.sport === 'agility'">
+      <h3>Agility Tools</h3>
+      <div class="toolbox">
+        <button @click="store.setTool('jump')" :class="{ active: store.activeTool === 'jump' }">🚧 Jump</button>
+        <button @click="store.setTool('tunnel')" :class="{ active: store.activeTool === 'tunnel' }">🚇 Tunnel</button>
+        <button @click="store.setTool('weave')" :class="{ active: store.activeTool === 'weave' }">💈 Weaves</button>
+        <button @click="store.setTool('table')" :class="{ active: store.activeTool === 'table' }">🔲 Table</button>
+        
+        <button @click="store.setTool('dogwalk')" :class="{ active: store.activeTool === 'dogwalk' }">🪜 Dog Walk</button>
+        <button @click="store.setTool('aframe')" :class="{ active: store.activeTool === 'aframe' }">🔺 A-Frame</button>
+        <button @click="store.setTool('teeter')" :class="{ active: store.activeTool === 'teeter' }">⚖️ Teeter</button>
+      </div>
+      
+<div class="toolbox action-tools">
+        <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">🔄 Rotate</button>
+        <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">📐 Type</button>
+        
+        <div class="renumber-group">
+          <button @click="store.setTool('renumber')" :class="{ active: store.activeTool === 'renumber' }">
+            🔢 123
+          </button>
+          <input 
+            v-if="store.activeTool === 'renumber'" 
+            type="number" 
+            v-model="store.nextNumber" 
+            class="num-input" 
+            title="Next Number"
+          />
+        </div>
+
+        <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">🗑️ Delete</button>
+      </div>
+
+      <div class="guidelines-box" v-if="store.currentGuidelines">
+        <h5>{{ store.classLevel }} Guidelines</h5>
+        <div class="guide-row"><span>Min Obstacles:</span> <strong>{{ store.currentGuidelines.minObstacles }}</strong></div>
+        <div class="guide-row"><span>Max Obstacles:</span> <strong>{{ store.currentGuidelines.maxObstacles }}</strong></div>
+        <div class="guide-note">{{ store.currentGuidelines.notes }}</div>
+      </div>
     </div>
 
-    <div class="toolbox action-tools">
-      <h4>Action Tools</h4>
-      <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">🔄 Rotate</button>
-      <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">📐 Type</button>
-      <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">↗️ Lean</button>
-      <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">🗑️ Delete</button>
-    </div>
-
+    <hr />
     <h3>Course Settings</h3>
     <div class="level-control">
       <label>Class Level:</label>
       <select v-model="store.classLevel">
-        <option value="Instinct">Instinct</option>
         <option value="Novice">Novice</option>
         <option value="Open">Open</option>
-        <option value="Senior">Senior</option>
         <option value="Master">Master</option>
-        <option value="Crazy8s">Crazy 8s</option>
-        <option value="LineDrive">Line Drive</option>
+        <option v-if="store.sport === 'barnhunt'" value="Senior">Senior</option>
+        <option v-if="store.sport === 'barnhunt'" value="Crazy8s">Crazy 8s</option>
+        <option v-if="store.sport === 'barnhunt'" value="LineDrive">Line Drive</option>
+        <option v-if="store.sport === 'agility'" value="Excellent">Excellent</option>
         <option value="Other">Other</option>
       </select>
-    </div>
-
-    <div class="guidelines-box" v-if="store.currentGuidelines">
-      <h5>{{ store.classLevel }} Guidelines</h5>
-      <div class="guide-row"><span>Min Bales:</span> <strong>{{ store.currentGuidelines.minBales }}</strong></div>
-      <div class="guide-row"><span>Max Bales:</span> <strong>{{ store.currentGuidelines.maxBales }}</strong></div>
-      <div class="guide-note">{{ store.currentGuidelines.notes }}</div>
-      <div v-if="store.inventory.total < store.currentGuidelines.minBales" class="warning-text">⚠️ Need {{ store.currentGuidelines.minBales - store.inventory.total }} more bales!</div>
     </div>
 
     <div class="ring-controls">
@@ -196,7 +259,7 @@ onMounted(async () => {
       <label>Height (ft):<input type="number" :value="store.ringDimensions.height" @change="store.resizeRing(store.ringDimensions.width, $event.target.value)" /></label>
     </div>
 
-    <div class="stats-panel">
+    <div class="stats-panel" v-if="store.sport === 'barnhunt'">
       <h4>Bale Inventory</h4>
       <div class="stat-row main-stat"><span>Total Bales:</span><strong>{{ store.inventory.total }}</strong></div>
       <div class="stat-row"><span>Base Layer (L1):</span><span>{{ store.inventory.base }}</span></div>
@@ -215,8 +278,8 @@ onMounted(async () => {
       <ul>
         <li><strong>Click Grid:</strong> Add Item</li>
         <li><strong>Right-Click:</strong> Rotate</li>
-        <li><strong>Shift+Click:</strong> Cycle Type</li>
-        <li><strong>Alt+Click:</strong> Leaner Arrow</li>
+        <li v-if="store.sport === 'barnhunt'"><strong>Shift+Click:</strong> Cycle Type</li>
+        <li v-if="store.sport === 'barnhunt'"><strong>Alt+Click:</strong> Leaner Arrow</li>
         <li><strong>Drag:</strong> Move Item</li>
         <li><strong>Dbl-Click (Left):</strong> Delete</li>
       </ul>
@@ -284,4 +347,30 @@ onMounted(async () => {
   .controls { width: 100%; max-height: 250px; overflow-y: auto; padding: 10px; }
   .toolbox, .file-actions, .saas-header { display: flex; flex-wrap: wrap; gap: 8px; }
 }
+/* Add to <style scoped> */
+.sport-select-label { font-size: 0.85em; color: #666; margin-top: 5px; margin-bottom: 3px; }
+.sport-selector { display: flex; gap: 5px; margin-bottom: 10px; }
+.sport-selector label { 
+  flex: 1; 
+  border: 1px solid #ccc; 
+  border-radius: 4px; 
+  padding: 8px 5px; 
+  font-size: 0.85em; 
+  text-align: center; 
+  cursor: pointer; 
+  background: white;
+  transition: all 0.2s;
+}
+.sport-selector label:hover { background: #f9f9f9; }
+.sport-selector label.active { 
+  background: #e3f2fd; 
+  border-color: #2196f3; 
+  color: #1565c0; 
+  font-weight: bold; 
+}
+.sport-selector input { display: none; } /* Hide actual radio circles */
+.print-actions { display: flex; align-items: center; gap: 10px; margin-top: 5px; }
+.print-actions label { font-size: 0.85em; color: #666; font-weight: bold; }
+.btn-group-sm { display: flex; gap: 5px; flex: 1; }
+.btn-group-sm button { flex: 1; padding: 4px; font-size: 0.85em; }
 </style>
