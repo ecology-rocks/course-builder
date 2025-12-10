@@ -13,7 +13,7 @@ import {
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useUserStore } from './userStore'
-import { BH_RULES, AGILITY_RULES, checkSupport } from '../utils/validation'
+import { BH_RULES, AGILITY_RULES } from '../utils/validation'
 
 export const useMapStore = defineStore('map', () => {
   // CONFIGURATION
@@ -31,7 +31,7 @@ export const useMapStore = defineStore('map', () => {
   const startBox = ref(null) 
   const masterBlinds = ref([]) 
   const boardEdges = ref([])
-  const hides = ref([])
+  const hides = ref([]) // Barn Hunt Hides
   
   // BALE CONFIG
   const bales = ref([])
@@ -42,9 +42,20 @@ export const useMapStore = defineStore('map', () => {
   // AGILITY CONFIG
   const sport = ref('barnhunt') 
   const agilityObstacles = ref([]) 
-  const nextNumber = ref(1) // <--- NEW: Counter for Renumber Tool
+  const nextNumber = ref(1) 
+
+  // SCENT WORK CONFIG
+  const scentWorkObjects = ref([]) 
+
+  // NOTIFICATION
   const notification = ref(null)
+
   // ******** FUNCTIONS ********
+
+  function showNotification(message, type = 'info') {
+    notification.value = { message, type }
+    setTimeout(() => { notification.value = null }, 3000)
+  }
 
   // START DRAWING (MouseDown)
   function startDrawingBoard(x, y) {
@@ -60,14 +71,6 @@ export const useMapStore = defineStore('map', () => {
       y2: snappedY
     })
     isDrawingBoard.value = id
-  }
-
-function showNotification(message, type = 'info') {
-    notification.value = { message, type }
-    // Auto-clear after 3 seconds
-    setTimeout(() => {
-      notification.value = null
-    }, 3000)
   }
 
   // UPDATE DRAWING (MouseMove)
@@ -93,7 +96,7 @@ function showNotification(message, type = 'info') {
     isDrawingBoard.value = null
   }
 
-  // ACTIONS
+  // BARN HUNT ACTIONS
   function generateMasterBlinds(count) {
     const newBlinds = []
     for (let i = 0; i < count; i++) {
@@ -148,6 +151,7 @@ function showNotification(message, type = 'info') {
     }
   }
 
+  // --- RESTORED: Current Guidelines Calculation ---
   const currentGuidelines = computed(() => {
     if (sport.value === 'agility') {
       return AGILITY_RULES[classLevel.value] || AGILITY_RULES['Other']
@@ -165,7 +169,38 @@ function showNotification(message, type = 'info') {
   function removeStartBox() {
     startBox.value = null
   }
-  
+
+  // --- SCENT WORK ACTIONS ---
+  function addScentWorkObject(type, x, y) {
+    scentWorkObjects.value.push({
+      id: crypto.randomUUID(),
+      type: type, // 'box', 'luggage', 'container', 'cone', 'vehicle', 'buried'
+      x: Math.round(x * 2) / 2,
+      y: Math.round(y * 2) / 2,
+      rotation: 0,
+      isHot: false 
+    })
+  }
+
+  function removeScentWorkObject(id) {
+    scentWorkObjects.value = scentWorkObjects.value.filter(o => o.id !== id)
+  }
+
+  function rotateScentWorkObject(id) {
+    const obj = scentWorkObjects.value.find(o => o.id === id)
+    if (obj) {
+      obj.rotation = (obj.rotation + 45) % 360
+    }
+  }
+
+  function toggleScentWorkHot(id) {
+    const obj = scentWorkObjects.value.find(o => o.id === id)
+    if (obj) {
+      obj.isHot = !obj.isHot
+    }
+  }
+
+  // --- PERSISTENCE ---
   async function deleteMap(id) {
     try {
       await deleteDoc(doc(db, "maps", id))
@@ -201,6 +236,7 @@ function showNotification(message, type = 'info') {
       dimensions: ringDimensions.value,
       bales: bales.value,
       agilityObstacles: agilityObstacles.value,
+      scentWorkObjects: scentWorkObjects.value, 
       hides: hides.value,
       isShared: isShared.value,
       masterBlinds: masterBlinds.value,
@@ -232,6 +268,7 @@ function showNotification(message, type = 'info') {
     ringDimensions.value = data.data.dimensions || { width: 24, height: 24 }
     bales.value = data.data.bales || []
     agilityObstacles.value = data.data.agilityObstacles || [] 
+    scentWorkObjects.value = data.data.scentWorkObjects || [] 
     dcMats.value = data.data.dcMats || []
     boardEdges.value = data.data.boardEdges || []
     hides.value = data.data.hides || []
@@ -262,6 +299,7 @@ function showNotification(message, type = 'info') {
         dimensions: ringDimensions.value,
         bales: bales.value,
         agilityObstacles: agilityObstacles.value,
+        scentWorkObjects: scentWorkObjects.value, 
         dcMats: dcMats.value,
         masterBlinds: masterBlinds.value,
         boardEdges: boardEdges.value,
@@ -378,6 +416,7 @@ function showNotification(message, type = 'info') {
     ringDimensions.value = data.data.dimensions
     bales.value = data.data.bales
     agilityObstacles.value = data.data.agilityObstacles || []
+    scentWorkObjects.value = data.data.scentWorkObjects || [] 
     dcMats.value = data.data.dcMats || []
     boardEdges.value = data.data.boardEdges
     hides.value = data.data.hides || []
@@ -396,8 +435,11 @@ function showNotification(message, type = 'info') {
     
     // Clear Agility
     agilityObstacles.value = []
-    nextNumber.value = 1 // Reset counter
+    nextNumber.value = 1 
     
+    // Clear Scent Work
+    scentWorkObjects.value = [] 
+
     currentMapId.value = null
     mapName.value = "Untitled Map"
     classLevel.value = "Novice"
@@ -409,7 +451,7 @@ function showNotification(message, type = 'info') {
     isShared.value = false
   }
 
-  // GETTERS
+  // BALE PLACEMENT LOGIC
   const inventory = computed(() => {
     const total = bales.value.length
     const base = bales.value.filter(b => b.layer === 1).length
@@ -463,9 +505,7 @@ function showNotification(message, type = 'info') {
       supported: true 
     }
 
-if (!isValidPlacement(newBale)) {
-      // OLD: alert("Cannot place here...")
-      // NEW:
+    if (!isValidPlacement(newBale)) {
       showNotification("Cannot place here: Obstruction or Out of Bounds", 'error')
       return
     }
@@ -603,32 +643,21 @@ if (!isValidPlacement(newBale)) {
     })
   }
 
-function resizeRing(width, height) {
+  function resizeRing(width, height) {
     const w = Math.max(10, parseInt(width))
     const h = Math.max(10, parseInt(height))
 
     ringDimensions.value = { width: w, height: h }
     
-    // --- SAFETY CHECK: Pull stranded items back inside ---
+    // Bounds Check for all items
+    bales.value.forEach(b => { if (b.x >= w) b.x = w - 3.5; if (b.y >= h) b.y = h - 3.5 })
+    agilityObstacles.value.forEach(o => { if (o.x >= w) o.x = w - 5; if (o.y >= h) o.y = h - 5 })
+    // Scent Work bounds check
+    scentWorkObjects.value.forEach(o => { if (o.x >= w) o.x = w - 3; if (o.y >= h) o.y = h - 3 })
     
-    // 1. Barn Hunt Bales (Approx 3ft buffer)
-    bales.value.forEach(b => {
-       if (b.x >= w) b.x = w - 3.5 
-       if (b.y >= h) b.y = h - 3.5
-    })
-    
-    // 2. Agility Obstacles (Approx 2ft buffer)
-    agilityObstacles.value.forEach(o => {
-       if (o.x >= w) o.x = w - 5
-       if (o.y >= h) o.y = h - 5
-    })
-
-    // 3. Boards
     boardEdges.value.forEach(b => {
-      if (b.x1 > w) b.x1 = w
-      if (b.x2 > w) b.x2 = w
-      if (b.y1 > h) b.y1 = h
-      if (b.y2 > h) b.y2 = h
+      if (b.x1 > w) b.x1 = w; if (b.x2 > w) b.x2 = w
+      if (b.y1 > h) b.y1 = h; if (b.y2 > h) b.y2 = h
     })
 
     validateAllBales() 
@@ -652,71 +681,38 @@ function resizeRing(width, height) {
     if (board) {
       const mx = (board.x1 + board.x2) / 2
       const my = (board.y1 + board.y2) / 2
-
       const rad = (45 * Math.PI) / 180
-      const cos = Math.cos(rad)
-      const sin = Math.sin(rad)
-
-      const dx1 = board.x1 - mx
-      const dy1 = board.y1 - my
-      const rx1 = (dx1 * cos - dy1 * sin) + mx
-      const ry1 = (dx1 * sin + dy1 * cos) + my
-
-      const dx2 = board.x2 - mx
-      const dy2 = board.y2 - my
-      const rx2 = (dx2 * cos - dy2 * sin) + mx
-      const ry2 = (dx2 * sin + dy2 * cos) + my
-
-      board.x1 = Math.round(rx1 * 2) / 2
-      board.y1 = Math.round(ry1 * 2) / 2
-      board.x2 = Math.round(rx2 * 2) / 2
-      board.y2 = Math.round(ry2 * 2) / 2
+      const cos = Math.cos(rad); const sin = Math.sin(rad)
+      const dx1 = board.x1 - mx; const dy1 = board.y1 - my
+      const rx1 = (dx1 * cos - dy1 * sin) + mx; const ry1 = (dx1 * sin + dy1 * cos) + my
+      const dx2 = board.x2 - mx; const dy2 = board.y2 - my
+      const rx2 = (dx2 * cos - dy2 * sin) + mx; const ry2 = (dx2 * sin + dy2 * cos) + my
+      board.x1 = Math.round(rx1 * 2) / 2; board.y1 = Math.round(ry1 * 2) / 2
+      board.x2 = Math.round(rx2 * 2) / 2; board.y2 = Math.round(ry2 * 2) / 2
     }
   }
 
-function hasSupport(newBale) {
-    // Layer 1 is always supported by the floor
+  function hasSupport(newBale) {
     if (newBale.layer === 1) return true
-
-    // Find all bales on the layer directly below
     const lowerLayer = bales.value.filter(b => b.layer === newBale.layer - 1)
-    
-    // Calculate dimensions of the current bale
     const newW = newBale.rotation % 180 === 0 ? 3 : 1.5 
     const newH = newBale.rotation % 180 === 0 ? 1.5 : 3
-    const newArea = newW * newH
-
-    // Calculate Total Overlap Area with all bales below
     let totalSupportArea = 0
-
     lowerLayer.forEach(baseBale => {
       const baseW = baseBale.rotation % 180 === 0 ? 3 : 1.5
       const baseH = baseBale.rotation % 180 === 0 ? 1.5 : 3
-
-      // Calculate intersection rectangle
       const x_overlap = Math.max(0, Math.min(newBale.x + newW, baseBale.x + baseW) - Math.max(newBale.x, baseBale.x))
       const y_overlap = Math.max(0, Math.min(newBale.y + newH, baseBale.y + baseH) - Math.max(newBale.y, baseBale.y))
-      
       totalSupportArea += (x_overlap * y_overlap)
     })
-
-    // RULE: To be "Supported", you need at least ~1 sq ft of contact 
-    // or ~25% of your body resting on something.
     return totalSupportArea >= 1.0
   }
 
   // --- AGILITY ACTIONS ---
   function addAgilityObstacle(type, x, y) {
     agilityObstacles.value.push({
-      id: crypto.randomUUID(),
-      type: type, 
-      x: Math.round(x * 2) / 2,
-      y: Math.round(y * 2) / 2,
-      rotation: 0,
-      number: null, // <--- No Default Number
-      shape: 'straight',
-      poleCount: 12,
-      properties: {} 
+      id: crypto.randomUUID(), type: type, x: Math.round(x * 2) / 2, y: Math.round(y * 2) / 2,
+      rotation: 0, number: null, shape: 'straight', poleCount: 12
     })
   }
 
@@ -726,9 +722,7 @@ function hasSupport(newBale) {
 
   function rotateAgilityObstacle(id) {
     const obs = agilityObstacles.value.find(o => o.id === id)
-    if (obs) {
-      obs.rotation = (obs.rotation + 45) % 360
-    }
+    if (obs) obs.rotation = (obs.rotation + 45) % 360
   }
 
   function cycleAgilityShape(id) {
@@ -751,86 +745,27 @@ function hasSupport(newBale) {
     }
   }
 
-  // NEW: Renumber Action
   function renumberObstacle(id, number) {
     const obs = agilityObstacles.value.find(o => o.id === id)
-    if (obs) {
-      obs.number = number
-    }
+    if (obs) obs.number = number
   }
 
   return {
-    ringDimensions,
-    gridSize,
-    bales,
-    currentLayer,
-    selectedBaleId,
-    addBale,
-    removeBale,
-    rotateBale,
-    cycleOrientation,
-    cycleLean,
-    updateBalePosition,
-    hasSupport,
-    validateAllBales,
-    resizeRing,
-    activeTool,
-    setTool,
-    boardEdges,
-    removeBoardEdge,
-    isDrawingBoard,
-    updateDrawingBoard,
-    stopDrawingBoard,
-    startDrawingBoard,
-    exportMapToJSON,
-    importMapFromJSON,
-    importMapFromData,
-    saveToCloud,
-    loadUserMaps,
-    loadMapFromData,
-    deleteMap,
-    renameMap,
-    dcMats,
-    addDCMat,
-    removeDCMat,
-    rotateDCMat,
-    startBox,
-    addStartBox,
-    removeStartBox,
-    currentGuidelines,
-    classLevel,
-    previousClassCount,
-    inventory,
-    balesByLayer,
-    baleCounts,
-    mapName,
-    hides,
-    addHide,
-    removeHide,
-    cycleHideType,
-    reset,
-    masterBlinds,
-    generateMasterBlinds,
-    isShared,
-    updateBoardEndpoint,
-    rotateBoard,
-    currentMapId,
-    folders,
-    currentFolderId,
-    createFolder,
-    loadUserFolders,
-    moveMap,
-    deleteFolder,
-    sport,
-    agilityObstacles,
-    nextNumber, // <--- Export
-    addAgilityObstacle,
-    removeAgilityObstacle,
-    rotateAgilityObstacle,
-    cycleAgilityShape,
-    cycleAgilityPoles,
-    renumberObstacle, // <--- Export
-    notification,
-    showNotification
+    ringDimensions, gridSize, bales, currentLayer, selectedBaleId, addBale, removeBale, rotateBale, cycleOrientation, cycleLean,
+    updateBalePosition, hasSupport, validateAllBales, resizeRing, activeTool, setTool, boardEdges, removeBoardEdge,
+    isDrawingBoard, updateDrawingBoard, stopDrawingBoard, startDrawingBoard, exportMapToJSON, importMapFromJSON, importMapFromData,
+    saveToCloud, loadUserMaps, loadMapFromData, deleteMap, renameMap, dcMats, addDCMat, removeDCMat, rotateDCMat,
+    startBox, addStartBox, removeStartBox, currentGuidelines, classLevel, previousClassCount, inventory, balesByLayer, baleCounts,
+    mapName, hides, addHide, removeHide, cycleHideType, reset, masterBlinds, generateMasterBlinds, isShared, updateBoardEndpoint,
+    rotateBoard, currentMapId, folders, currentFolderId, createFolder, loadUserFolders, moveMap, deleteFolder, sport,
+    agilityObstacles, nextNumber, addAgilityObstacle, removeAgilityObstacle, rotateAgilityObstacle, cycleAgilityShape,
+    cycleAgilityPoles, renumberObstacle, notification, showNotification,
+    
+    // EXPORT SCENT WORK
+    scentWorkObjects, 
+    addScentWorkObject, 
+    removeScentWorkObject, 
+    rotateScentWorkObject, 
+    toggleScentWorkHot
   }
 })

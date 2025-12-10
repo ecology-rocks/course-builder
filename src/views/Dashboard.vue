@@ -12,7 +12,7 @@ const router = useRouter()
 const email = ref('')
 const password = ref('')
 const registerSport = ref('barnhunt')
-const isRegistering = ref(false) // <--- NEW: Toggle between modes
+const isRegistering = ref(false)
 
 // Dashboard State
 const isLoading = ref(false)
@@ -41,6 +41,7 @@ function formatDate(timestamp) {
 }
 
 function createNewMap(sportType) {
+  // 1. Permission Check
   if (!userStore.canAccessSport(sportType)) {
     if (confirm("This sport requires a Pro subscription. Go to Settings?")) {
       router.push('/settings')
@@ -48,13 +49,16 @@ function createNewMap(sportType) {
     return
   }
 
+  // 2. Reset & Configure
   mapStore.reset()
   mapStore.sport = sportType 
   
   if (sportType === 'agility') {
     mapStore.ringDimensions = { width: 80, height: 100 }
+  } else if (sportType === 'scentwork') {
+    mapStore.ringDimensions = { width: 40, height: 40 } // Default for Scent Work
   } else {
-    mapStore.ringDimensions = { width: 24, height: 24 }
+    mapStore.ringDimensions = { width: 24, height: 24 } // Default for Barn Hunt
   }
 
   router.push('/editor')
@@ -134,7 +138,6 @@ watch(() => userStore.user, async (newUser) => {
 
     <div v-if="!userStore.user" class="auth-container">
       <div class="auth-card">
-        
         <h2>{{ isRegistering ? 'Create Account' : 'Welcome Back' }}</h2>
         <p>{{ isRegistering ? 'Start building your maps today' : 'Login to access your maps' }}</p>
         
@@ -231,10 +234,14 @@ watch(() => userStore.user, async (newUser) => {
               <span v-if="!userStore.canAccessSport('agility')" class="lock-icon">🔒</span>
             </button>
 
-            <button class="sport-card disabled" title="Coming Soon">
+            <button 
+              @click="createNewMap('scentwork')" 
+              class="sport-card"
+              :class="{ disabled: !userStore.canAccessSport('scentwork') }"
+            >
               <span class="emoji">👃</span>
               <span class="label">Scent Work</span>
-              <span class="lock-icon">🔒</span>
+              <span v-if="!userStore.canAccessSport('scentwork')" class="lock-icon">🔒</span>
             </button>
 
           </div>
@@ -258,7 +265,9 @@ watch(() => userStore.user, async (newUser) => {
               @dragstart="onDragStart($event, map.id)"
             >
               <div class="map-preview" @click="openMap(map)">
-                <div class="preview-placeholder">{{ map.sport === 'agility' ? '🐕' : '📦' }}</div>
+                <div class="preview-placeholder">
+                  {{ map.sport === 'agility' ? '🐕' : (map.sport === 'scentwork' ? '👃' : '📦') }}
+                </div>
               </div>
               <div class="map-info">
                 <h4>{{ map.name }}</h4>
@@ -281,7 +290,7 @@ watch(() => userStore.user, async (newUser) => {
 </template>
 
 <style scoped>
-/* (Existing Styles...) */
+/* (Styles same as previous) */
 .dashboard { font-family: 'Inter', sans-serif; min-height: 100vh; background: #f4f6f8; }
 .navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
 .logo { font-weight: 800; font-size: 1.2rem; color: #2c3e50; }
@@ -303,24 +312,9 @@ watch(() => userStore.user, async (newUser) => {
 /* SPORT SELECTOR STYLES */
 .sport-select-label { font-size: 0.85em; color: #666; margin-top: 15px; margin-bottom: 5px; text-align: left; }
 .sport-selector { display: flex; gap: 10px; margin-bottom: 20px; }
-.sport-selector label { 
-  flex: 1; 
-  border: 1px solid #ddd; 
-  border-radius: 4px; 
-  padding: 10px; 
-  font-size: 0.9em; 
-  cursor: pointer; 
-  background: #fafafa;
-  transition: all 0.2s;
-}
+.sport-selector label { flex: 1; border: 1px solid #ddd; border-radius: 4px; padding: 10px; font-size: 0.9em; cursor: pointer; background: #fafafa; transition: all 0.2s; }
 .sport-selector label:hover { background: #f0f0f0; }
-.sport-selector label.active { 
-  background: #e3f2fd; 
-  border-color: #2196f3; 
-  color: #1565c0; 
-  font-weight: bold; 
-  box-shadow: 0 2px 5px rgba(33, 150, 243, 0.2);
-}
+.sport-selector label.active { background: #e3f2fd; border-color: #2196f3; color: #1565c0; font-weight: bold; box-shadow: 0 2px 5px rgba(33, 150, 243, 0.2); }
 .sport-selector input { display: none; }
 
 /* DASHBOARD LAYOUT */

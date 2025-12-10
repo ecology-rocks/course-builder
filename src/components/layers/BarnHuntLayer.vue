@@ -50,7 +50,7 @@ function getArrowPoints(width, height, direction) {
   }
 }
 
-// --- SNAPPING ---
+// --- SNAPPING FOR BALES ---
 function baleDragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
@@ -76,25 +76,41 @@ function baleDragBoundFunc(pos) {
   return { x: snappedX + offsetX + layerAbs.x, y: snappedY + offsetY + layerAbs.y }
 }
 
+// Generic Snap for Props
 function dragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
   const relativeX = pos.x - layerAbs.x
   const relativeY = pos.y - layerAbs.y
-  
   const step = props.scale / 2
   let snappedLeft = Math.round(relativeX / step) * step
   let snappedTop = Math.round(relativeY / step) * step
-  
   const maxX = store.ringDimensions.width * props.scale
   const maxY = store.ringDimensions.height * props.scale
   snappedLeft = Math.max(0, Math.min(snappedLeft, maxX))
   snappedTop = Math.max(0, Math.min(snappedTop, maxY))
-  
   return { x: snappedLeft + layerAbs.x, y: snappedTop + layerAbs.y }
 }
 
 // --- HANDLERS ---
+
+// 1. Generic Suppressor (For things that don't rotate, like Hides/Start)
+function handleContextMenu(e) {
+  e.evt.preventDefault()
+}
+
+// 2. DC Mat Rotation
+function handleDCRightClick(e, id) {
+  e.evt.preventDefault()
+  store.rotateDCMat(id)
+}
+
+// 3. Board Rotation
+function handleBoardRightClick(e, id) {
+  e.evt.preventDefault()
+  store.rotateBoard(id) // Fixed: was incorrectly calling rotateBoardEdge
+}
+
 function handleRightClick(e, id) { e.evt.preventDefault(); store.rotateBale(id) }
 function handleDblClick(e, id) { if (e.evt.button === 0) store.removeBale(id) }
 
@@ -150,14 +166,27 @@ function handleDragEnd(e, id, type) {
 }
 
 function handleBoardClick(e, id) {
-   if (store.activeTool === 'rotate') store.rotateBoardEdge(id)
+   if (store.activeTool === 'rotate') store.rotateBoard(id) // Fixed: was rotateBoardEdge
    if (store.activeTool === 'delete') store.removeBoardEdge(id)
 }
 function handleBoardHandleDrag(e, boardId, whichPoint) {
-  const node = e.target; const absPos = node.getAbsolutePosition()
-  const rawX = (absPos.x - props.GRID_OFFSET) / props.scale; const rawY = (absPos.y - props.GRID_OFFSET) / props.scale
+  const node = e.target; 
+  const absPos = node.getAbsolutePosition()
+  
+  // 1. Calculate Logical Position (Relative to Layer)
+  const rawX = (absPos.x - props.GRID_OFFSET) / props.scale; 
+  const rawY = (absPos.y - props.GRID_OFFSET) / props.scale
+  
+  // 2. Update Store
   store.updateBoardEndpoint(boardId, whichPoint, rawX, rawY)
-  node.position({ x: (Math.round(rawX * 2) / 2) * props.scale + props.GRID_OFFSET, y: (Math.round(rawY * 2) / 2) * props.scale + props.GRID_OFFSET })
+  
+  // 3. Snap Visual Position
+  // FIX: We do NOT add props.GRID_OFFSET here, because the node 
+  // is already inside a <v-layer> that has x=GRID_OFFSET.
+  node.position({ 
+    x: (Math.round(rawX * 2) / 2) * props.scale, 
+    y: (Math.round(rawY * 2) / 2) * props.scale 
+  })
 }
 function handleDCClick(e, id) {
   if (e.evt.button !== 0) return
@@ -177,6 +206,7 @@ function handleHideClick(e, id) {
       :config="{ draggable: true, dragBoundFunc: dragBoundFunc, x: store.startBox.x * scale, y: store.startBox.y * scale }"
       @dragend="handleDragEnd($event, null, 'startbox')"
       @click="store.activeTool === 'delete' ? store.removeStartBox() : null"
+      @contextmenu="handleContextMenu"
     >
        <v-rect :config="{ width: 4 * scale, height: 5 * scale, fill: 'rgba(200, 200, 200, 0.5)', stroke: 'black', dash: [10, 5] }" />
        <v-text :config="{ text: 'START', width: 4 * scale, padding: 5, align: 'center', fontSize: 14 }" />
@@ -186,7 +216,7 @@ function handleHideClick(e, id) {
       :config="{ draggable: true, dragBoundFunc: dragBoundFunc, x: mat.x * scale, y: mat.y * scale, rotation: mat.rotation }"
       @dragend="handleDragEnd($event, mat.id, 'dcmat')"
       @click="handleDCClick($event, mat.id)"
-      @contextmenu="handleDCClick($event, mat.id)"
+      @contextmenu="handleDCRightClick($event, mat.id)"
     >
        <v-rect :config="{ width: 2 * scale, height: 3 * scale, fill: '#ffcc80', stroke: 'black' }" />
        <v-text :config="{ text: 'DC', fontSize: 12, x: 5, y: 5 }" />
@@ -213,7 +243,10 @@ function handleHideClick(e, id) {
       <v-arrow v-if="bale.lean" :config="{ points: getArrowPoints(getBaleDims(bale).width*scale, getBaleDims(bale).height*scale, bale.lean), pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4 }" />
     </v-group>
 
-    <v-group v-for="board in store.boardEdges" :key="board.id" @click="handleBoardClick($event, board.id)" @contextmenu="handleBoardClick($event, board.id)">
+    <v-group v-for="board in store.boardEdges" :key="board.id" 
+      @click="handleBoardClick($event, board.id)" 
+      @contextmenu="handleBoardRightClick($event, board.id)"
+    >
       <v-line :config="{ points: [ board.x1*scale, board.y1*scale, board.x2*scale, board.y2*scale ], stroke: '#2e7d32', strokeWidth: 6, lineCap: 'round', hitStrokeWidth: 20 }" />
       <v-circle :config="{ x: board.x1*scale, y: board.y1*scale, radius: 6, fill: '#1b5e20', draggable: true, dragBoundFunc: dragBoundFunc }" @dragend="handleBoardHandleDrag($event, board.id, 'start')" />
       <v-circle :config="{ x: board.x2*scale, y: board.y2*scale, radius: 6, fill: '#1b5e20', draggable: true, dragBoundFunc: dragBoundFunc }" @dragend="handleBoardHandleDrag($event, board.id, 'end')" />
@@ -223,6 +256,7 @@ function handleHideClick(e, id) {
       :config="{ draggable: true, dragBoundFunc: dragBoundFunc, x: hide.x * scale, y: hide.y * scale }"
       @dragend="handleDragEnd($event, hide.id, 'hide')"
       @click="handleHideClick($event, hide.id)"
+      @contextmenu="handleContextMenu"
     >
        <v-circle :config="{ radius: 8, fill: hide.type === 'rat' ? 'red' : (hide.type === 'litter' ? 'yellow' : 'white'), stroke: 'black', strokeWidth: 2 }" />
        <v-text :config="{ text: hide.type === 'rat' ? 'R' : (hide.type === 'litter' ? 'L' : 'E'), fontSize: 10, x: -3, y: -4, fontStyle: 'bold' }" />
