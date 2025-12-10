@@ -71,17 +71,12 @@ const visibleAgilityObstacles = computed(() => {
 
 // --- HELPERS ---
 function getBaleColor(bale) {
-  // 1. If unsupported (and NOT dragging), turn RED
-  // We check store.activeTool != 'bale' or similar if we want to hide it while dragging, 
-  // but showing it immediately is better feedback.
   if (bale.supported === false) return '#ef5350' // Red Warning
-
-  // 2. Otherwise, standard layer colors
   switch(bale.layer) {
-    case 1: return '#e6c200' // Yellow
-    case 2: return '#4caf50' // Green
-    case 3: return '#2196f3' // Blue
-    default: return '#ccc'
+    case 1: return '#e6c200'
+    case 2: return '#4caf50' 
+    case 3: return '#2196f3' 
+    return '#ccc'
   }
 }
 
@@ -154,28 +149,21 @@ function handleRightClickBoard(e, id) { e.evt.preventDefault(); store.rotateBoar
 function handleRightClickDC(e, id) { e.evt.preventDefault(); store.rotateDCMat(id) }
 
 function handleLeftClick(e, id) {
-  // === NEW: Allow placing hides on top of bales ===
-  if (store.activeTool === 'hide') {
-    const stage = e.target.getStage()
-    const pointer = stage.getPointerPosition()
-    
-    // Calculate grid coordinates from the mouse pointer
-    const x = (pointer.x - GRID_OFFSET) / scale.value
-    const y = (pointer.y - GRID_OFFSET) / scale.value
-    
-    store.addHide(x, y)
-    return
-  }
-
-  // === Existing Bale Tools ===
   if (store.activeTool === 'rotate') { store.rotateBale(id); return }
   if (store.activeTool === 'type') { store.cycleOrientation(id); return }
   if (store.activeTool === 'lean') { store.cycleLean(id); return }
   if (store.activeTool === 'delete') { store.removeBale(id); return }
-  
-  // Shortcuts
   if (e.evt.shiftKey) { store.cycleOrientation(id); return }
   if (e.evt.altKey) { store.cycleLean(id); return }
+  
+  if (store.activeTool === 'hide') {
+    const stage = e.target.getStage()
+    const pointer = stage.getPointerPosition()
+    const x = (pointer.x - GRID_OFFSET) / scale.value
+    const y = (pointer.y - GRID_OFFSET) / scale.value
+    store.addHide(x, y)
+    return
+  }
 }
 
 function handleAgilityClick(e, id) {
@@ -220,7 +208,6 @@ function handleDblClickHide(e, id) { if (e.evt.button === 0) store.removeHide(id
 
 // --- SNAPPING LOGIC ---
 
-// 1. Generic Snap
 function dragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
@@ -240,17 +227,13 @@ function dragBoundFunc(pos) {
   return { x: snappedLeft + layerAbs.x, y: snappedTop + layerAbs.y }
 }
 
-// 2. Bale Snap
 function baleDragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
-  
   const anchorX = pos.x - layerAbs.x
   const anchorY = pos.y - layerAbs.y
-  
   const offsetX = 1.5 * scale.value
   const offsetY = 0.75 * scale.value
-  
   const topLeftX = anchorX - offsetX
   const topLeftY = anchorY - offsetY
   
@@ -288,7 +271,6 @@ function handleDragEnd(e, id, type) {
     if (bale) {
        const finalX = rawX - 1.5
        const finalY = rawY - 0.75
-       
        bale.x = Math.round(finalX * 2) / 2
        bale.y = Math.round(finalY * 2) / 2
        store.validateAllBales()
@@ -430,19 +412,35 @@ async function handlePrint(withHides = true) {
         <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
           
           <template v-for="n in store.ringDimensions.width + 1" :key="'v'+n">
-            <v-line v-if="(n-1) % 5 === 0" :config="{ points: [(n-1)*scale, 0, (n-1)*scale, store.ringDimensions.height*scale], stroke: (n-1)%10===0 ? '#999' : '#ddd', strokeWidth: 1 }" />
+            <v-line 
+              v-if="store.sport === 'agility' && (n-1) % 10 === 0" 
+              :config="{ points: [(n-1)*scale, 0, (n-1)*scale, store.ringDimensions.height*scale], stroke: '#ccc', strokeWidth: 1 }" 
+            />
+            <v-line 
+              v-if="store.sport === 'barnhunt' && (n-1) % 2 === 0" 
+              :config="{ points: [(n-1)*scale, 0, (n-1)*scale, store.ringDimensions.height*scale], stroke: '#999', strokeWidth: 1 }" 
+            />
           </template>
           
           <template v-for="n in store.ringDimensions.height + 1" :key="'h'+n">
-            <v-line v-if="(n-1) % 5 === 0" :config="{ points: [0, (n-1)*scale, store.ringDimensions.width*scale, (n-1)*scale], stroke: (n-1)%10===0 ? '#999' : '#ddd', strokeWidth: 1 }" />
+            <v-line 
+              v-if="store.sport === 'agility' && (n-1) % 10 === 0" 
+              :config="{ points: [0, (n-1)*scale, store.ringDimensions.width*scale, (n-1)*scale], stroke: '#ccc', strokeWidth: 1 }" 
+            />
+            <v-line 
+              v-if="store.sport === 'barnhunt' && (n-1) % 2 === 0" 
+              :config="{ points: [0, (n-1)*scale, store.ringDimensions.width*scale, (n-1)*scale], stroke: '#999', strokeWidth: 1 }" 
+            />
           </template>
 
           <template v-for="n in store.ringDimensions.width + 1" :key="'lx'+n">
-            <v-text v-if="(n-1) % 10 === 0" :config="{ x: (n-1)*scale, y: -20, text: (n-1).toString(), fontSize: 12, fill: '#666', align: 'center', width: 10, offsetX: 5 }" />
+            <v-text v-if="store.sport === 'agility' && (n-1) % 10 === 0" :config="{ x: (n-1)*scale, y: -20, text: (n-1).toString(), fontSize: 12, fill: '#666', align: 'center', width: 10, offsetX: 5 }" />
+            <v-text v-if="store.sport === 'barnhunt' && (n-1) % 2 === 0" :config="{ x: (n-1)*scale, y: -20, text: (n-1).toString(), fontSize: 10, fill: '#666', align: 'center', width: 10, offsetX: 5 }" />
           </template>
           
           <template v-for="n in store.ringDimensions.height + 1" :key="'ly'+n">
-            <v-text v-if="(n-1) % 10 === 0" :config="{ x: -25, y: (n-1)*scale-6, text: (n-1).toString(), fontSize: 12, fill: '#666', align: 'right', width: 20 }" />
+            <v-text v-if="store.sport === 'agility' && (n-1) % 10 === 0" :config="{ x: -25, y: (n-1)*scale-6, text: (n-1).toString(), fontSize: 12, fill: '#666', align: 'right', width: 20 }" />
+            <v-text v-if="store.sport === 'barnhunt' && (n-1) % 2 === 0" :config="{ x: -25, y: (n-1)*scale-6, text: (n-1).toString(), fontSize: 10, fill: '#666', align: 'right', width: 20 }" />
           </template>
 
           <v-group v-for="obs in visibleAgilityObstacles" :key="obs.id" 
@@ -543,14 +541,7 @@ async function handlePrint(withHides = true) {
             @click="handleLeftClick($event, bale.id)" 
             @dragend="handleDragEnd($event, bale.id, 'bale')"
           >
-            <v-rect :config="{ 
-              width: 3*scale, 
-              height: 1.5*scale, 
-              fill: getBaleColor(bale), 
-              stroke: 'black', 
-              strokeWidth: 1 
-            }" />
-            
+            <v-rect :config="{ width: 3*scale, height: 1.5*scale, fill: getBaleColor(bale), stroke: 'black', strokeWidth: 1 }" />
             <v-arrow v-if="bale.lean" :config="{ points: getArrowPoints(getBaleDims(bale).width*scale, getBaleDims(bale).height*scale, bale.lean), pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4 }" />
           </v-group>
 
