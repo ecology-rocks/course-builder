@@ -70,12 +70,18 @@ const visibleAgilityObstacles = computed(() => {
 })
 
 // --- HELPERS ---
-function getBaleColor(layer) {
-  switch(layer) {
-    case 1: return '#e6c200'
-    case 2: return '#4caf50' 
-    case 3: return '#2196f3' 
-    return '#ccc'
+function getBaleColor(bale) {
+  // 1. If unsupported (and NOT dragging), turn RED
+  // We check store.activeTool != 'bale' or similar if we want to hide it while dragging, 
+  // but showing it immediately is better feedback.
+  if (bale.supported === false) return '#ef5350' // Red Warning
+
+  // 2. Otherwise, standard layer colors
+  switch(bale.layer) {
+    case 1: return '#e6c200' // Yellow
+    case 2: return '#4caf50' // Green
+    case 3: return '#2196f3' // Blue
+    default: return '#ccc'
   }
 }
 
@@ -537,7 +543,14 @@ async function handlePrint(withHides = true) {
             @click="handleLeftClick($event, bale.id)" 
             @dragend="handleDragEnd($event, bale.id, 'bale')"
           >
-            <v-rect :config="{ width: 3*scale, height: 1.5*scale, fill: getBaleColor(bale.layer), stroke: 'black', strokeWidth: 1 }" />
+            <v-rect :config="{ 
+              width: 3*scale, 
+              height: 1.5*scale, 
+              fill: getBaleColor(bale), 
+              stroke: 'black', 
+              strokeWidth: 1 
+            }" />
+            
             <v-arrow v-if="bale.lean" :config="{ points: getArrowPoints(getBaleDims(bale).width*scale, getBaleDims(bale).height*scale, bale.lean), pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4 }" />
           </v-group>
 

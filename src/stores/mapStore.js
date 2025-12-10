@@ -674,23 +674,35 @@ function resizeRing(width, height) {
     }
   }
 
-  function hasSupport(newBale) {
+function hasSupport(newBale) {
+    // Layer 1 is always supported by the floor
     if (newBale.layer === 1) return true
 
+    // Find all bales on the layer directly below
     const lowerLayer = bales.value.filter(b => b.layer === newBale.layer - 1)
+    
+    // Calculate dimensions of the current bale
     const newW = newBale.rotation % 180 === 0 ? 3 : 1.5 
     const newH = newBale.rotation % 180 === 0 ? 1.5 : 3
+    const newArea = newW * newH
 
-    return lowerLayer.some(baseBale => {
+    // Calculate Total Overlap Area with all bales below
+    let totalSupportArea = 0
+
+    lowerLayer.forEach(baseBale => {
       const baseW = baseBale.rotation % 180 === 0 ? 3 : 1.5
       const baseH = baseBale.rotation % 180 === 0 ? 1.5 : 3
 
+      // Calculate intersection rectangle
       const x_overlap = Math.max(0, Math.min(newBale.x + newW, baseBale.x + baseW) - Math.max(newBale.x, baseBale.x))
       const y_overlap = Math.max(0, Math.min(newBale.y + newH, baseBale.y + baseH) - Math.max(newBale.y, baseBale.y))
-      const overlapArea = x_overlap * y_overlap
-
-      return overlapArea >= 1
+      
+      totalSupportArea += (x_overlap * y_overlap)
     })
+
+    // RULE: To be "Supported", you need at least ~1 sq ft of contact 
+    // or ~25% of your body resting on something.
+    return totalSupportArea >= 1.0
   }
 
   // --- AGILITY ACTIONS ---
