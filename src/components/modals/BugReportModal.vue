@@ -22,7 +22,7 @@ const encode = (data) => {
 }
 
 async function handleSubmit() {
-  if (!form.value.details) return alert("Please describe the bug.")
+  if (!form.value.message) return alert("Please describe the bug.")
 
   loading.value = true
 
@@ -64,7 +64,7 @@ async function handleSubmit() {
 
         <label>What happened?</label>
         <textarea 
-          v-model="form.details" 
+          v-model="form.message" 
           name="message" 
           rows="4" 
           placeholder="I clicked the bale and it exploded..." 
