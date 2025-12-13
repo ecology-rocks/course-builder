@@ -7,6 +7,7 @@ import {
 import { db } from '../firebase'
 import { useUserStore } from './userStore'
 import { BH_RULES, AGILITY_RULES } from '../utils/validation'
+import { mapService } from '../services/mapService'
 
 export const useMapStore = defineStore('map', () => {
   // --- CONFIGURATION ---
@@ -492,27 +493,20 @@ export const useMapStore = defineStore('map', () => {
       }
     }
 
-    try {
-      if (currentMapId.value) {
-        const mapRef = doc(db, "maps", currentMapId.value)
-        await updateDoc(mapRef, mapData)
-        if (!isAutoSave) alert("Map updated!")
-        else showNotification("Auto-saved", "success") // Subtle toast
-      } else {
-        // First time save always requires interaction, so we don't auto-create docs
-        if (!isAutoSave) {
-          const docRef = await addDoc(collection(db, "maps"), {
-            ...mapData,
-            createdAt: new Date()
-          })
-          currentMapId.value = docRef.id
-          alert("Map saved to cloud!")
-        }
+try {
+    if (currentMapId.value) {
+      await mapService.updateMap(currentMapId.value, mapData)
+      if (!isAutoSave) alert("Map updated!")
+    } else {
+      if (!isAutoSave) {
+        const newId = await mapService.createMap(mapData)
+        currentMapId.value = newId
+        alert("Map saved!")
       }
-    } catch (e) {
-      console.error("Save failed", e)
-      if (!isAutoSave) alert("Error saving map.")
     }
+  } catch (e) {
+    console.error(e)
+  }
   }
   async function loadUserMaps() { if (!useUserStore().user) return []; const q = query(collection(db, "maps"), where("uid", "==", useUserStore().user.uid)); return (await getDocs(q)).docs.map(doc => ({ id: doc.id, ...doc.data() })) }
   async function createFolder(name) { if (!useUserStore().user) return; await addDoc(collection(db, "folders"), { uid: useUserStore().user.uid, name, createdAt: new Date() }); await loadUserFolders() }
