@@ -100,7 +100,6 @@ function handleCta() {
         </div>
 
       </div>
-      <p style="margin-top: 20px; color: #666; font-size: 0.9em;">* Agility and Scent Work editors coming soon.</p>
     </section>
 
   <AppFooter />
