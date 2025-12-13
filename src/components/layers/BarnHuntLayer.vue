@@ -9,9 +9,14 @@ const userStore = useUserStore()
 
 // --- COMPUTED ---
 const visibleBales = computed(() => {
+  // Filter bales by layer (only show current layer and below)
+  // You could also change this to show all but dim them, depending on preference
   const filtered = store.bales.filter(b => b.layer <= store.currentLayer)
+  
+  // Sort for proper rendering order (lower layers first)
   return filtered.sort((a, b) => {
     if (a.layer !== b.layer) return a.layer - b.layer
+    // If same layer, leaners usually render on top/after
     const aIsLeaner = a.lean !== null
     const bIsLeaner = b.lean !== null
     if (aIsLeaner && !bIsLeaner) return 1
@@ -20,7 +25,29 @@ const visibleBales = computed(() => {
   })
 })
 
-// --- HELPERS ---
+// --- VISUAL HELPERS ---
+const hatchPattern = (() => {
+  const canvas = document.createElement('canvas')
+  canvas.width = 20; canvas.height = 20
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
+  ctx.fillRect(0,0,20,20)
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 1
+  ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(20, 0); ctx.stroke()
+  return canvas
+})()
+
+const pillarPattern = (() => {
+  const canvas = document.createElement('canvas')
+  canvas.width = 20; canvas.height = 20
+  const ctx = canvas.getContext('2d')
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+  ctx.fillRect(0,0,20,20)
+  ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 2
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(20, 20); ctx.moveTo(20, 0); ctx.lineTo(0, 20); ctx.stroke()
+  return canvas
+})()
+
 function getBaleColor(bale) {
   if (bale.supported === false) return '#ef5350'
   switch(bale.layer) {
@@ -30,6 +57,7 @@ function getBaleColor(bale) {
 }
 
 function getOpacity(layer) {
+  // If editing Layer 2, dim Layer 1. If editing Layer 1, hide Layer 2/3 (filtered in computed).
   return layer === store.currentLayer ? 1 : 0.5
 }
 
@@ -50,7 +78,7 @@ function getArrowPoints(width, height, direction) {
   }
 }
 
-// --- SNAPPING FOR BALES ---
+// --- SNAPPING LOGIC ---
 function baleDragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
@@ -76,7 +104,6 @@ function baleDragBoundFunc(pos) {
   return { x: snappedX + offsetX + layerAbs.x, y: snappedY + offsetY + layerAbs.y }
 }
 
-// Generic Snap for Props
 function dragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
@@ -94,28 +121,37 @@ function dragBoundFunc(pos) {
 
 // --- HANDLERS ---
 
-// 1. Generic Suppressor (For things that don't rotate, like Hides/Start)
-function handleContextMenu(e) {
-  e.evt.preventDefault()
-}
+function handleContextMenu(e) { e.evt.preventDefault() }
 
-// 2. DC Mat Rotation
 function handleDCRightClick(e, id) {
   e.evt.preventDefault()
   store.rotateDCMat(id)
 }
 
-// 3. Board Rotation
 function handleBoardRightClick(e, id) {
   e.evt.preventDefault()
-  store.rotateBoard(id) // Fixed: was incorrectly calling rotateBoardEdge
+  store.rotateBoard(id)
 }
 
-function handleRightClick(e, id) { e.evt.preventDefault(); store.rotateBale(id) }
-function handleDblClick(e, id) { if (e.evt.button === 0) store.removeBale(id) }
+function handleBaleRightClick(e, id) {
+  e.evt.preventDefault()
+  store.rotateBale(id)
+}
 
-function handleLeftClick(e, id) {
-  // 1. CLICK TO PLACE HIDE ON BALE
+// RESTORED: Double Click to Delete
+function handleDblClick(e, id) {
+  if (e.evt.button === 0) {
+    e.cancelBubble = true
+    store.removeBale(id)
+  }
+}
+
+// UPDATED: Single Click (Tools + Shortcuts)
+function handleBaleClick(e, bale) {
+  // Stop propagation so we don't trigger "add bale" on the stage
+  e.cancelBubble = true
+  
+  // 1. PLACE HIDE (Special Tool)
   if (store.activeTool === 'hide') {
     const stage = e.target.getStage()
     const pointer = stage.getPointerPosition()
@@ -125,13 +161,27 @@ function handleLeftClick(e, id) {
     return
   }
 
-  // 2. STANDARD TOOLS
-  if (store.activeTool === 'rotate') { store.rotateBale(id); return }
-  if (store.activeTool === 'type') { store.cycleOrientation(id); return }
-  if (store.activeTool === 'lean') { store.cycleLean(id); return }
-  if (store.activeTool === 'delete') { store.removeBale(id); return }
-  if (e.evt.shiftKey) { store.cycleOrientation(id); return }
-  if (e.evt.altKey) { store.cycleLean(id); return }
+  // 2. CHECK MODIFIERS (Native Event Access)
+  const isShift = e.evt.shiftKey
+  const isAlt = e.evt.altKey || e.evt.metaKey
+
+  // 3. APPLY LOGIC (Tools vs Shortcuts)
+  if (store.activeTool === 'delete') {
+    store.removeBale(bale.id)
+  } 
+  else if (store.activeTool === 'rotate') {
+    store.rotateBale(bale.id)
+  }
+  else if (store.activeTool === 'type' || isShift) {
+    store.cycleOrientation(bale.id)
+  }
+  else if (store.activeTool === 'lean' || isAlt) {
+    store.cycleLean(bale.id)
+  }
+  else {
+    // Default: Select it
+    store.selectedBaleId = bale.id
+  }
 }
 
 function handleDragEnd(e, id, type) {
@@ -147,6 +197,7 @@ function handleDragEnd(e, id, type) {
   if (type === 'bale') {
     const bale = store.bales.find(b => b.id === id)
     if (bale) {
+       // Offset because bales are anchored at center
        const finalX = rawX - 1.5
        const finalY = rawY - 0.75
        bale.x = Math.round(finalX * 2) / 2
@@ -166,35 +217,37 @@ function handleDragEnd(e, id, type) {
 }
 
 function handleBoardClick(e, id) {
-   if (store.activeTool === 'rotate') store.rotateBoard(id) // Fixed: was rotateBoardEdge
+   if (store.activeTool === 'rotate') store.rotateBoard(id)
    if (store.activeTool === 'delete') store.removeBoardEdge(id)
 }
+
 function handleBoardHandleDrag(e, boardId, whichPoint) {
   const node = e.target; 
   const absPos = node.getAbsolutePosition()
   
-  // 1. Calculate Logical Position (Relative to Layer)
+  // Calculate Logical Position
   const rawX = (absPos.x - props.GRID_OFFSET) / props.scale; 
   const rawY = (absPos.y - props.GRID_OFFSET) / props.scale
   
-  // 2. Update Store
   store.updateBoardEndpoint(boardId, whichPoint, rawX, rawY)
   
-  // 3. Snap Visual Position
-  // FIX: We do NOT add props.GRID_OFFSET here, because the node 
-  // is already inside a <v-layer> that has x=GRID_OFFSET.
+  // Snap Visual Position locally
   node.position({ 
     x: (Math.round(rawX * 2) / 2) * props.scale, 
     y: (Math.round(rawY * 2) / 2) * props.scale 
   })
 }
+
 function handleDCClick(e, id) {
   if (e.evt.button !== 0) return
+  e.cancelBubble = true
   if (store.activeTool === 'rotate') store.rotateDCMat(id)
   if (store.activeTool === 'delete') store.removeDCMat(id)
 }
+
 function handleHideClick(e, id) {
   if (e.evt.button !== 0) return
+  e.cancelBubble = true
   if (store.activeTool === 'delete') { store.removeHide(id); return }
   store.cycleHideType(id)
 }
@@ -234,12 +287,28 @@ function handleHideClick(e, id) {
         offsetX: 1.5 * scale, 
         offsetY: 0.75 * scale 
       }" 
-      @contextmenu="handleRightClick($event, bale.id)" 
+      @contextmenu="handleBaleRightClick($event, bale.id)" 
       @dblclick="handleDblClick($event, bale.id)" 
-      @click="handleLeftClick($event, bale.id)" 
+      @click="handleBaleClick($event, bale)" 
       @dragend="handleDragEnd($event, bale.id, 'bale')"
     >
-      <v-rect :config="{ width: 3*scale, height: 1.5*scale, fill: getBaleColor(bale), stroke: 'black', strokeWidth: 1 }" />
+      <v-rect 
+        :config="{ 
+          ...(() => {
+              const dims = getBaleDims(bale)
+              const w = dims.width * scale
+              const h = dims.height * scale
+              return { width: w, height: h, x: (1.5 * scale) - (w / 2), y: (0.75 * scale) - (h / 2) }
+          })(),
+          fill: bale.orientation === 'flat' ? getBaleColor(bale) : undefined,
+          fillPatternImage: (bale.orientation === 'tall' ? hatchPattern : (bale.orientation === 'pillar' ? pillarPattern : undefined)),
+          fillPatternRepeat: 'repeat',
+          stroke: (bale.orientation === 'flat' ? 'black' : (bale.orientation === 'pillar' ? '#d32f2f' : getBaleColor(bale))),
+          strokeWidth: (bale.id === store.selectedBaleId ? 4 : (bale.orientation === 'flat' ? 1 : 2)),
+          shadowBlur: bale.id === store.selectedBaleId ? 15 : 0,
+          shadowColor: '#2196f3'
+        }"
+      />
       <v-arrow v-if="bale.lean" :config="{ points: getArrowPoints(getBaleDims(bale).width*scale, getBaleDims(bale).height*scale, bale.lean), pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4 }" />
     </v-group>
 
