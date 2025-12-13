@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref, watch, nextTick } from 'vue'
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import { useMapStore } from '../stores/mapStore'
 import { useUserStore } from '../stores/userStore'
+import { useAutosave } from '@/composables/useAutosave'
 import EditorSidebar from './editor/EditorSidebar.vue'
 import { usePrinter } from '@/composables/usePrinter'
 
@@ -12,13 +13,56 @@ import ScentWorkLayer from './layers/ScentWorkLayer.vue' // <--- 1. IMPORT
 
 const store = useMapStore()
 const userStore = useUserStore()
-
+useAutosave(3000)
 // Config
 const scale = ref(40)
 const GRID_OFFSET = 30 
 const stageRef = ref(null) 
 const wrapperRef = ref(null)
 const showHides = ref(true)
+
+// --- KEYBOARD SHORTCUTS ---
+function handleKeydown(e) {
+  const isCtrl = e.ctrlKey || e.metaKey
+  const key = e.key.toLowerCase()
+
+  // Undo: Ctrl+Z (Ensure Shift is NOT pressed)
+  if (isCtrl && !e.shiftKey && key === 'z') {
+    e.preventDefault()
+    store.undo()
+    return
+  }
+  
+  // Redo: Ctrl+Y  OR  Ctrl+Shift+Z
+  if (isCtrl && (key === 'y' || (e.shiftKey && key === 'z'))) {
+    e.preventDefault()
+    store.redo()
+    return
+  }
+
+  // Delete: Delete or Backspace (if no input is focused)
+  if (e.key === 'Delete' || e.key === 'Backspace') {
+    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return
+    
+    // Check active tool or specific selection logic here if needed
+    // Currently we rely on the click-to-delete tool, but you could add
+    // store.deleteSelected() here in the future.
+  }
+}
+
+// --- SNAPSHOT ON DRAG START ---
+function handleDragStart(e) {
+  // We only care if it's a draggable item (Group, Circle, etc)
+  store.snapshot()
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeydown)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown)
+})
 
 const stageConfig = computed(() => ({
   width: (store.ringDimensions.width * scale.value) + (GRID_OFFSET * 2),
@@ -124,7 +168,7 @@ function handleStageMouseUp() {
         <button @click="fitToScreen">Fit</button>
       </div>
 
-      <v-stage ref="stageRef" :config="stageConfig" @mousedown="handleStageMouseDown" @mousemove="handleStageMouseMove" @mouseup="handleStageMouseUp" @contextmenu="handleStageContextMenu">
+      <v-stage ref="stageRef" :config="stageConfig" @mousedown="handleStageMouseDown" @dragstart="handleDragStart" @mousemove="handleStageMouseMove" @mouseup="handleStageMouseUp" @contextmenu="handleStageContextMenu">
         <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
           
           <template v-for="n in store.ringDimensions.width + 1" :key="'v'+n">

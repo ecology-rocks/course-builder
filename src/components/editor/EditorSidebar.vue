@@ -36,13 +36,19 @@ function handlePrint(isJudge) {
 
 <template>
   <aside class="editor-sidebar">
-    <div class="sidebar-header">
+<div class="sidebar-header">
       <div class="header-left">
         <button @click="router.push('/dashboard')" class="btn-back" title="Back to Dashboard">⬅</button>
         <h2>Editor</h2>
       </div>
-      <button @click="store.saveToCloud" class="btn-save">💾 Save</button>
+      
+      <div class="history-controls">
+        <button @click="store.undo()" :disabled="store.history.length === 0" title="Undo (Ctrl+Z)">↩️</button>
+        <button @click="store.redo()" :disabled="store.future.length === 0" title="Redo (Ctrl+Y)">↪️</button>
+        <button @click="store.saveToCloud" class="btn-save">💾</button>
+      </div>
     </div>
+
 
     <div v-if="!userStore.user" class="auth-box">
       <h3>Login Required</h3>
@@ -238,4 +244,9 @@ button.active { background: #e3f2fd; border-color: #2196f3; color: #1565c0; font
 .print-actions label { font-size: 0.85em; color: #666; font-weight: bold; }
 .btn-group-sm { display: flex; gap: 5px; flex: 1; }
 .btn-group-sm button { flex: 1; padding: 4px; font-size: 0.85em; text-align: center; }
+.history-controls { display: flex; gap: 5px; }
+.history-controls button { padding: 5px 8px; font-size: 1.1rem; border: none; background: transparent; cursor: pointer; opacity: 0.8; }
+.history-controls button:hover:not(:disabled) { opacity: 1; background: #eee; border-radius: 4px; }
+.history-controls button:disabled { opacity: 0.3; cursor: not-allowed; }
+.btn-save { margin-left: 5px; } /* Adjust save button margin */
 </style>
