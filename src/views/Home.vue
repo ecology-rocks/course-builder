@@ -26,10 +26,10 @@ function handleCta() {
     </nav>
 
     <header class="hero">
-      <h1>The Professional Map Builder for <span class="highlight">Dog Sports</span></h1>
+<h1>The Professional Map Builder for <span class="highlight">Dog Sports</span></h1>
       <p class="subtitle">
         Stop using spreadsheets and paint. Design legal, safe, and beautiful maps in minutes.
-        Starting with <strong>Barn Hunt</strong>.
+        Now for <strong>Barn Hunt, Agility, and Scent Work</strong>.
       </p>
       <button @click="handleCta" class="btn-cta">Start Building for Free</button>
       <div class="hero-image">
@@ -74,13 +74,13 @@ function handleCta() {
           <button @click="router.push('/dashboard')" class="btn-outline">Get Solo</button>
         </div>
 
-        <div class="price-card popular">
+<div class="price-card popular">
           <div class="badge">BEST VALUE</div>
           <h3>Pro</h3>
           <div class="price">$10<span>/mo</span></div>
           <ul>
             <li>✅ <strong>All Sports Access</strong></li>
-            <li>✅ Barn Hunt, Agility*, Scent Work*</li>
+            <li>✅ Barn Hunt, Agility, Scent Work</li>
             <li>✅ Priority Support</li>
             <li>✅ Early Access to New Features</li>
           </ul>
