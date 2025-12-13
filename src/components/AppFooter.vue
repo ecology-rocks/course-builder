@@ -1,3 +1,9 @@
+<script setup>
+import { ref } from 'vue'
+import BugReportModal from '@/components/modals/BugReportModal.vue'
+const showBugModal = ref(false)
+</script>
+
 <template>
   <footer class="app-footer">
     <div class="footer-content">
@@ -10,8 +16,11 @@
         <router-link to="/privacy">Privacy Policy</router-link>
         <span class="divider">•</span>
         <a href="mailto:support@k9coursebuilder.com">Contact Support</a>
+        <span class="divider">•</span>
+        <a href="#" @click.prevent="showBugModal = true">🐛 Report a Bug</a>
       </div>
     </div>
+    <BugReportModal v-if="showBugModal" @close="showBugModal = false" />
   </footer>
 </template>
 
