@@ -3,6 +3,7 @@ import { useMapStore } from '../../stores/mapStore'
 import { useUserStore } from '../../stores/userStore'
 import { useRouter } from 'vue-router'
 import AuthForm from '../auth/AuthForm.vue' // <--- 1. Import AuthForm
+import { ref } from 'vue'
 
 // --- 2. Import New Toolboxes ---
 import BarnHuntToolbox from './toolboxes/BarnHuntToolbox.vue'
@@ -12,10 +13,41 @@ import ScentWorkToolbox from './toolboxes/ScentWorkToolbox.vue'
 const store = useMapStore()
 const userStore = useUserStore()
 const router = useRouter()
+const fileInput = ref(null)
+const mergeInput = ref(null)
 const emit = defineEmits(['print'])
 
 function handlePrint(isJudge) {
   emit('print', isJudge)
+}
+
+function handleImportClick() {
+  if (confirm("This will overwrite your current map. Continue?")) {
+    fileInput.value.click()
+  }
+}
+
+function handleFileChange(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (e) => store.importMapFromJSON(e.target.result)
+  reader.readAsText(file)
+  event.target.value = '' // Reset
+}
+
+// NEW: Merge Handler
+function handleMergeClick() {
+  mergeInput.value.click()
+}
+
+function handleMergeChange(event) {
+  const file = event.target.files[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = (e) => store.mergeMapFromJSON(e.target.result)
+  reader.readAsText(file)
+  event.target.value = '' // Reset
 }
 </script>
 
@@ -66,9 +98,32 @@ function handlePrint(isJudge) {
 
       <hr />
 
-      <BarnHuntToolbox v-if="store.sport === 'barnhunt'" />
-      <AgilityToolbox v-else-if="store.sport === 'agility'" />
-      <ScentWorkToolbox v-else-if="store.sport === 'scentwork'" />
+<aside class="sidebar">
+    <div class="sidebar-header">
+      <h2>Editor Tools</h2>
+    </div>
+
+    <div class="panel">
+      <h3>📁 File</h3>
+      <div class="button-row">
+        <button @click="store.exportMapToJSON" class="btn-secondary">Export JSON</button>
+        <button @click="handleImportClick" class="btn-secondary">Load JSON</button>
+      </div>
+      <div class="button-row" style="margin-top: 5px;">
+        <button @click="handleMergeClick" class="btn-primary">➕ Merge / Add Tunnel</button>
+      </div>
+      
+      <input type="file" ref="fileInput" @change="handleFileChange" accept=".json" style="display: none" />
+      <input type="file" ref="mergeInput" @change="handleMergeChange" accept=".json" style="display: none" />
+    </div>
+
+    <div class="panel">
+       <BarnHuntToolbox v-if="store.sport === 'barnhunt'" />
+       <AgilityToolbox v-else-if="store.sport === 'agility'" />
+       <ScentWorkToolbox v-else-if="store.sport === 'scentwork'" />
+    </div>
+
+    </aside>
 
       <hr />
 
@@ -114,4 +169,8 @@ function handlePrint(isJudge) {
 .history-controls button { padding: 5px 8px; font-size: 1.1rem; border: none; background: transparent; cursor: pointer; opacity: 0.8; }
 .history-controls button:hover:not(:disabled) { opacity: 1; background: #eee; border-radius: 4px; }
 .history-controls button:disabled { opacity: 0.3; cursor: not-allowed; }
+.panel { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+.button-row { display: flex; gap: 10px; }
+.btn-secondary { background: #f0f0f0; border: 1px solid #ccc; padding: 8px; cursor: pointer; flex: 1; border-radius: 4px; }
+.btn-primary { background: #2196f3; color: white; border: none; padding: 8px; cursor: pointer; flex: 1; border-radius: 4px; width: 100%; }
 </style>

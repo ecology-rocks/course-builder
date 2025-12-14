@@ -433,6 +433,39 @@ function validateAllBales() {
     })
   }
 
+  function mergeMapFromJSON(jsonString) {
+    snapshot() // Save history before modifying
+    try {
+      const data = JSON.parse(jsonString)
+      const newItems = []
+      
+      // 1. Merge Bales (Assign NEW IDs)
+      if (data.bales) {
+        data.bales.forEach(b => {
+          const newId = crypto.randomUUID()
+          const newBale = { ...b, id: newId }
+          bales.value.push(newBale)
+          newItems.push(newId)
+        })
+      }
+      
+      // 2. Merge Other Objects (Add logic for other sports as needed)
+      // (Example for future: agilityObstacles, etc.)
+
+      // 3. Automatically SELECT the new items
+      // This allows the user to immediately drag the imported tunnel to where they want it
+      selection.value = newItems
+      
+      validateAllBales()
+      alert("Objects merged successfully! They are currently selected.")
+      
+    } catch (e) {
+      console.error(e)
+      alert("Failed to merge file. Invalid JSON.")
+    }
+  }
+
+
   function resizeRing(width, height) {
     snapshot()
     const w = Math.max(10, parseInt(width)); const h = Math.max(10, parseInt(height))
@@ -624,6 +657,6 @@ try {
 
   return {
     ringDimensions, gridSize, bales, currentLayer, selectedBaleId, addBale, removeBale, rotateBale, cycleOrientation, cycleLean, updateBalePosition, hasSupport, validateAllBales, resizeRing, activeTool, setTool, boardEdges, removeBoardEdge, isDrawingBoard, updateDrawingBoard, stopDrawingBoard, startDrawingBoard, exportMapToJSON, importMapFromJSON, importMapFromData, saveToCloud, loadUserMaps, loadMapFromData, deleteMap, renameMap, dcMats, addDCMat, removeDCMat, rotateDCMat, startBox, addStartBox, removeStartBox, currentGuidelines, classLevel, previousClassCount, inventory, balesByLayer, baleCounts, mapName, hides, addHide, removeHide, cycleHideType, reset, masterBlinds, generateMasterBlinds, isShared, updateBoardEndpoint, rotateBoard, currentMapId, folders, currentFolderId, createFolder, loadUserFolders, moveMap, deleteFolder, sport, agilityObstacles, nextNumber, addAgilityObstacle, removeAgilityObstacle, rotateAgilityObstacle, cycleAgilityShape, cycleAgilityPoles, renumberObstacle, notification, showNotification, scentWorkObjects, addScentWorkObject, removeScentWorkObject, rotateScentWorkObject, toggleScentWorkHot,
-    history, future, undo, redo, snapshot, selection, clearSelection, selectBale, selectArea, moveSelection, isDraggingSelection, commitDrag 
+    history, future, mergeMapFromJSON, undo, redo, snapshot, selection, clearSelection, selectBale, selectArea, moveSelection, isDraggingSelection, commitDrag 
   }
 })
