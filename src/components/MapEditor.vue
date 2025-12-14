@@ -20,6 +20,8 @@ const GRID_OFFSET = 30
 const stageRef = ref(null) 
 const wrapperRef = ref(null)
 const showHides = ref(true)
+const selectionRect = ref(null)
+const dragStart = ref(null)
 
 // --- KEYBOARD SHORTCUTS ---
 function handleKeydown(e) {
@@ -103,12 +105,25 @@ function handlePrint(withHides) {
 
 // Stage Click (Creation)
 function handleStageMouseDown(e) {
+  // 1. Only allow left-click
+  // 2. Only trigger if clicking the blank stage (not an existing object)
   if (e.evt.button !== 0 || e.target !== e.target.getStage()) return
   
   const pointer = e.target.getStage().getPointerPosition()
   const x = (pointer.x - GRID_OFFSET) / scale.value
   const y = (pointer.y - GRID_OFFSET) / scale.value
+  
+  // Prevent drawing outside the top-left bounds
   if (x < 0 || y < 0) return 
+
+  // --- SELECTION TOOL (Global) ---
+  if (store.activeTool === 'select') {
+    store.clearSelection()
+    // Initialize the drag box state (make sure you defined these refs!)
+    dragStart.value = { x, y }
+    selectionRect.value = { x, y, w: 0, h: 0 }
+    return
+  }
 
   // --- BARN HUNT ---
   if (store.sport === 'barnhunt') {
@@ -118,35 +133,80 @@ function handleStageMouseDown(e) {
     else if (store.activeTool === 'dcmat') store.addDCMat(x, y)
     else if (store.activeTool === 'hide') store.addHide(x, y)
   } 
+  
   // --- AGILITY ---
   else if (store.sport === 'agility') {
-    if (['jump', 'tunnel', 'weave', 'contact', 'table', 'aframe', 'dogwalk', 'teeter'].includes(store.activeTool)) {
+    const agilityTools = ['jump', 'tunnel', 'weave', 'contact', 'table', 'aframe', 'dogwalk', 'teeter']
+    if (agilityTools.includes(store.activeTool)) {
       store.addAgilityObstacle(store.activeTool, x, y)
     }
   }
-  // --- SCENT WORK (NEW) ---
+  
+  // --- SCENT WORK ---
   else if (store.sport === 'scentwork') {
-    // 1. Drawing Tape Lines (Reusing 'board' logic)
     if (store.activeTool === 'board') {
-      store.startDrawingBoard(x, y)
+      store.startDrawingBoard(x, y) // Reuses board logic for tape
     }
-    // 2. Placing Objects
-    else if (['box', 'luggage', 'container', 'cone', 'vehicle', 'buried'].includes(store.activeTool)) {
-      store.addScentWorkObject(store.activeTool, x, y)
+    else {
+      const swTools = ['box', 'luggage', 'container', 'cone', 'vehicle', 'buried']
+      if (swTools.includes(store.activeTool)) {
+        store.addScentWorkObject(store.activeTool, x, y)
+      }
     }
   }
 }
 
 function handleStageMouseMove(e) {
-  // Shared 'board' logic works for both Barn Hunt walls and Scent Work tape
+  const stage = e.target.getStage()
+  const pointer = stage.getPointerPosition()
+  const x = (pointer.x - GRID_OFFSET) / scale.value
+  const y = (pointer.y - GRID_OFFSET) / scale.value
+
+  // SELECTION BOX LOGIC
+  if (store.activeTool === 'select' && selectionRect.value && dragStart.value) {
+    selectionRect.value.w = x - dragStart.value.x
+    selectionRect.value.h = y - dragStart.value.y
+    return
+  }
+
+  // EXISTING BOARD LOGIC
   if (store.activeTool === 'board' && store.isDrawingBoard) {
-    const pointer = e.target.getStage().getPointerPosition()
-    store.updateDrawingBoard((pointer.x - GRID_OFFSET)/scale.value, (pointer.y - GRID_OFFSET)/scale.value)
+    store.updateDrawingBoard(x, y)
   }
 }
 
 function handleStageMouseUp() {
+  // FINISH SELECTION
+  if (store.activeTool === 'select' && selectionRect.value) {
+    store.selectArea(
+      selectionRect.value.x, 
+      selectionRect.value.y, 
+      selectionRect.value.w, 
+      selectionRect.value.h
+    )
+    selectionRect.value = null
+    dragStart.value = null
+  }
+  
+  // EXISTING BOARD FINISH
   if (store.activeTool === 'board') store.stopDrawingBoard()
+}
+
+function handleGroupDragMove(e, id) {
+  if (!store.selection.includes(id)) return
+  
+  // Calculate Delta
+  const node = e.target
+  const newPos = node.position()
+  
+  // We don't actually let Konva move the node freely if it's a group,
+  // We prefer to control it via store, OR we let Konva move the leader
+  // and we manually move the followers.
+  
+  // EASIER APPROACH:
+  // When 'dragstart' happens on a selected item:
+  // 1. We record start positions of ALL selected items.
+  // 2. On 'dragmove', we apply the delta to ALL items in the store.
 }
 </script>
 
@@ -204,7 +264,16 @@ function handleStageMouseUp() {
             :showHides="showHides" 
             :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale/2))*(scale/2), y: Math.round(pos.y / (scale/2))*(scale/2) })" 
           />
-
+<v-rect v-if="selectionRect" 
+             :config="{
+               x: selectionRect.x * scale,
+               y: selectionRect.y * scale,
+               width: selectionRect.w * scale,
+               height: selectionRect.h * scale,
+               fill: 'rgba(0, 161, 255, 0.3)',
+               stroke: '#00a1ff'
+             }"
+          />
         </v-layer>
       </v-stage>
     </div>

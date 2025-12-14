@@ -23,6 +23,8 @@ const store = useMapStore()
 
     <h3>Actions</h3>
     <div class="action-tools">
+      <button @click="store.setTool('select')" :class="{ active: store.activeTool === 'select' }">⬜ Select Area</button>
+      
       <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">🔄 Rotate</button>
       <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">📐 Orientation</button>
       <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">↗️ Lean</button>

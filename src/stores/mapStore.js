@@ -36,6 +36,8 @@ export const useMapStore = defineStore('map', () => {
   // --- EDITOR STATE ---
   const currentLayer = ref(1)
   const selectedBaleId = ref(null)
+  const selection = ref([]) // Array of IDs
+  const isDraggingSelection = ref(false)
   const activeTool = ref('bale')
   const nextNumber = ref(1) 
   const notification = ref(null)
@@ -59,6 +61,10 @@ export const useMapStore = defineStore('map', () => {
     })
     history.value.push(state)
     if (history.value.length > 50) history.value.shift()
+  }
+
+function clearSelection() {
+    selection.value = []
   }
 
   function restoreState(jsonString) {
@@ -163,6 +169,40 @@ export const useMapStore = defineStore('map', () => {
     validateAllBales()
   }
 
+
+function selectArea(x, y, w, h) {
+    const rX = w < 0 ? x + w : x
+    const rY = h < 0 ? y + h : y
+    const rW = Math.abs(w)
+    const rH = Math.abs(h)
+
+    const hits = bales.value.filter(b => {
+      const r = getBaleRect(b) // Use the same helper!
+      
+      return (
+        r.x < rX + rW &&
+        r.x + r.w > rX &&
+        r.y < rY + rH &&
+        r.y + r.h > rY
+      )
+    })
+
+    selection.value = hits.map(b => b.id)
+  }
+
+function moveSelection(dx, dy) {
+    // No snapshot here (handled by DragStart/End)
+    // Apply delta to ALL selected items
+    bales.value.forEach(b => {
+      if (selection.value.includes(b.id)) {
+        b.x += dx
+        b.y += dy
+      }
+    })
+    // Don't validate on every pixel move (performance), 
+    // we validate on DragEnd in the component
+  }
+  
   function removeBale(id) {
     snapshot()
     bales.value = bales.value.filter(b => b.id !== id)
@@ -314,48 +354,81 @@ export const useMapStore = defineStore('map', () => {
     masterBlinds.value = newBlinds
   }
 
+// Helper for true dimensions
+  function getBaleRect(bale) {
+    let w, h
+    const isRotated = bale.rotation % 180 !== 0
+    if (bale.orientation === 'tall') { w = isRotated ? 1 : 3; h = isRotated ? 3 : 1 }
+    else if (bale.orientation === 'pillar') { w = isRotated ? 1 : 1.5; h = isRotated ? 1.5 : 1 }
+    else { w = isRotated ? 1.5 : 3; h = isRotated ? 3 : 1.5 }
+    return { x: bale.x, y: bale.y, w, h }
+  }
+
+
+function selectBale(id, multi = false) {
+    if (multi) {
+      if (selection.value.includes(id)) {
+        selection.value = selection.value.filter(i => i !== id)
+      } else {
+        selection.value.push(id)
+      }
+    } else {
+      selection.value = [id]
+    }
+  }
+
   // --- HELPERS ---
   const currentGuidelines = computed(() => sport.value === 'agility' ? (AGILITY_RULES[classLevel.value] || AGILITY_RULES['Other']) : (BH_RULES[classLevel.value] || BH_RULES['Other']))
   function setTool(tool) { activeTool.value = tool }
   
-  function hasSupport(newBale) {
+function hasSupport(newBale) {
     if (newBale.layer === 1) return true
-    const lowerLayer = bales.value.filter(b => b.layer === newBale.layer - 1)
-    const newW = newBale.rotation % 180 === 0 ? 3 : 1.5; const newH = newBale.rotation % 180 === 0 ? 1.5 : 3
+    
+    const r1 = getBaleRect(newBale)
     let totalSupportArea = 0
+    
+    // Find bales on the layer directly below
+    const lowerLayer = bales.value.filter(b => b.layer === newBale.layer - 1)
+    
     lowerLayer.forEach(baseBale => {
-      const baseW = baseBale.rotation % 180 === 0 ? 3 : 1.5; const baseH = baseBale.rotation % 180 === 0 ? 1.5 : 3
-      const x_overlap = Math.max(0, Math.min(newBale.x + newW, baseBale.x + baseW) - Math.max(newBale.x, baseBale.x))
-      const y_overlap = Math.max(0, Math.min(newBale.y + newH, baseBale.y + baseH) - Math.max(newBale.y, baseBale.y))
+      const r2 = getBaleRect(baseBale)
+      
+      // Calculate Overlap
+      const x_overlap = Math.max(0, Math.min(r1.x + r1.w, r2.x + r2.w) - Math.max(r1.x, r2.x))
+      const y_overlap = Math.max(0, Math.min(r1.y + r1.h, r2.y + r2.h) - Math.max(r1.y, r2.y))
+      
       totalSupportArea += (x_overlap * y_overlap)
     })
+    
+    // Rule: Needs at least 1 sq ft of support (approx 20% of a bale) to be safe
     return totalSupportArea >= 1.0
   }
 
-  function isValidPlacement(newBale) {
-    let w, h; const isRotated = newBale.rotation % 180 !== 0
-    if (newBale.orientation === 'flat') { w = isRotated ? 1.5 : 3; h = isRotated ? 3 : 1.5 }
-    else if (newBale.orientation === 'tall') { w = isRotated ? 1 : 3; h = isRotated ? 3 : 1 }
-    else { w = isRotated ? 1 : 1.5; h = isRotated ? 1.5 : 1 }
-    if (newBale.x < 0 || newBale.x + w > ringDimensions.value.width || newBale.y < 0 || newBale.y + h > ringDimensions.value.height) return false
-    if (newBale.rotation % 90 !== 0) return true
+function isValidPlacement(newBale) {
+    const r1 = getBaleRect(newBale)
+    
+    // 1. Check Ring Bounds
+    if (r1.x < 0 || r1.y < 0 || r1.x + r1.w > ringDimensions.value.width || r1.y + r1.h > ringDimensions.value.height) {
+      return false
+    }
+
+    // 2. Check Collision with SAME layer
+    // (We accept 90-degree rotations, but simple overlap check is enough for now)
     return !bales.value.some(existing => {
-      if (existing.layer !== newBale.layer || existing.rotation % 90 !== 0) return false
-      const exRotated = existing.rotation % 180 !== 0; let exW, exH
-      if (existing.orientation === 'flat') { exW = exRotated ? 1.5 : 3; exH = exRotated ? 3 : 1.5 }
-      else if (existing.orientation === 'tall') { exW = exRotated ? 1 : 3; exH = exRotated ? 3 : 1 }
-      else { exW = exRotated ? 1 : 1.5; exH = exRotated ? 1.5 : 1 }
-      return (newBale.x < existing.x + exW && newBale.x + w > existing.x && newBale.y < existing.y + exH && newBale.y + h > existing.y)
+      if (existing.id === newBale.id) return false // Don't collide with self
+      if (existing.layer !== newBale.layer) return false // Ignore other layers
+      
+      const r2 = getBaleRect(existing)
+      
+      // AABB Collision Check
+      return (r1.x < r2.x + r2.w && r1.x + r1.w > r2.x && r1.y < r2.y + r2.h && r1.y + r1.h > r2.y)
     })
   }
 
-  function validateAllBales() {
+function validateAllBales() {
     bales.value.forEach(bale => {
-      let w, h; const isRotated = bale.rotation % 180 !== 0
-      if (bale.orientation === 'flat') { w = isRotated ? 1.5 : 3; h = isRotated ? 3 : 1.5 }
-      else if (bale.orientation === 'tall') { w = isRotated ? 1 : 3; h = isRotated ? 3 : 1 }
-      else { w = isRotated ? 1 : 1.5; h = isRotated ? 1.5 : 1 }
-      const outOfBounds = bale.x < 0 || bale.y < 0 || bale.x + w > ringDimensions.value.width || bale.y + h > ringDimensions.value.height
+      const r = getBaleRect(bale)
+      const outOfBounds = r.x < 0 || r.y < 0 || r.x + r.w > ringDimensions.value.width || r.y + r.h > ringDimensions.value.height
       bale.supported = !outOfBounds && hasSupport(bale)
     })
   }
@@ -453,6 +526,41 @@ export const useMapStore = defineStore('map', () => {
     validateAllBales()
   }
 
+// src/stores/mapStore.js
+
+  function commitDrag(id, newX, newY) {
+    snapshot() // Save history
+
+    // 1. Calculate how far the dragged item moved
+    const primary = bales.value.find(b => b.id === id)
+    if (!primary) return
+
+    const dx = newX - primary.x
+    const dy = newY - primary.y
+
+    // 2. Update positions
+    // If the dragged item is NOT in the selection, just move it alone
+    if (!selection.value.includes(id)) {
+      primary.x = Math.round(newX * 2) / 2
+      primary.y = Math.round(newY * 2) / 2
+    } 
+    // If it IS selected, move the WHOLE group
+    else {
+      bales.value.forEach(b => {
+        if (selection.value.includes(b.id)) {
+          b.x = Math.round((b.x + dx) * 2) / 2
+          b.y = Math.round((b.y + dy) * 2) / 2
+        }
+      })
+    }
+    
+    // 3. Re-Validate Support (Fixes the Red/Green issue)
+    validateAllBales()
+
+    // 4. Force Vue to see the changes (Fixes visual lag)
+    bales.value = [...bales.value]
+  }
+
   async function deleteMap(id) { try { await deleteDoc(doc(db, "maps", id)); if (currentMapId.value === id) currentMapId.value = null } catch (e) { console.error("Delete failed", e); alert("Failed to delete map.") } }
   async function renameMap(id, newName) { try { await updateDoc(doc(db, "maps", id), { name: newName }); if (currentMapId.value === id) mapName.value = newName } catch (e) { console.error(e) } }
   async function saveToCloud(isAutoSave = false) {
@@ -516,6 +624,6 @@ try {
 
   return {
     ringDimensions, gridSize, bales, currentLayer, selectedBaleId, addBale, removeBale, rotateBale, cycleOrientation, cycleLean, updateBalePosition, hasSupport, validateAllBales, resizeRing, activeTool, setTool, boardEdges, removeBoardEdge, isDrawingBoard, updateDrawingBoard, stopDrawingBoard, startDrawingBoard, exportMapToJSON, importMapFromJSON, importMapFromData, saveToCloud, loadUserMaps, loadMapFromData, deleteMap, renameMap, dcMats, addDCMat, removeDCMat, rotateDCMat, startBox, addStartBox, removeStartBox, currentGuidelines, classLevel, previousClassCount, inventory, balesByLayer, baleCounts, mapName, hides, addHide, removeHide, cycleHideType, reset, masterBlinds, generateMasterBlinds, isShared, updateBoardEndpoint, rotateBoard, currentMapId, folders, currentFolderId, createFolder, loadUserFolders, moveMap, deleteFolder, sport, agilityObstacles, nextNumber, addAgilityObstacle, removeAgilityObstacle, rotateAgilityObstacle, cycleAgilityShape, cycleAgilityPoles, renumberObstacle, notification, showNotification, scentWorkObjects, addScentWorkObject, removeScentWorkObject, rotateScentWorkObject, toggleScentWorkHot,
-    history, future, undo, redo, snapshot 
+    history, future, undo, redo, snapshot, selection, clearSelection, selectBale, selectArea, moveSelection, isDraggingSelection, commitDrag 
   }
 })
