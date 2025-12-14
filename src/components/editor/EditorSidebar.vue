@@ -3,8 +3,8 @@ import { useMapStore } from '../../stores/mapStore'
 import { useUserStore } from '../../stores/userStore'
 import { useRouter } from 'vue-router'
 import AuthForm from '../auth/AuthForm.vue' // <--- 1. Import AuthForm
-import { ref } from 'vue'
-
+import { ref, computed } from 'vue'
+import LibraryModal from '@/components/modals/LibraryModal.vue'
 // --- 2. Import New Toolboxes ---
 import BarnHuntToolbox from './toolboxes/BarnHuntToolbox.vue'
 import AgilityToolbox from './toolboxes/AgilityToolbox.vue'
@@ -15,7 +15,16 @@ const userStore = useUserStore()
 const router = useRouter()
 const fileInput = ref(null)
 const mergeInput = ref(null)
+const showLibrary = ref(false)
 const emit = defineEmits(['print'])
+const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
+
+async function handleSaveToLibrary() {
+  const name = prompt("Name this library item:")
+  if (name) {
+    await store.saveSelectionToLibrary(name)
+  }
+}
 
 function handlePrint(isJudge) {
   emit('print', isJudge)
@@ -99,10 +108,6 @@ function handleMergeChange(event) {
       <hr />
 
 <aside class="sidebar">
-    <div class="sidebar-header">
-      <h2>Editor Tools</h2>
-    </div>
-
     <div class="panel">
       <h3>📁 File</h3>
       <div class="button-row">
@@ -118,11 +123,22 @@ function handleMergeChange(event) {
     </div>
 
     <div class="panel">
+      <h3>📚 Library</h3>
+      <button @click="showLibrary = true" class="btn-primary" style="width: 100%; margin-bottom: 10px;">
+        Browse Tunnel Library
+      </button>
+      
+      <button v-if="isAdmin" @click="handleSaveToLibrary" class="btn-admin">
+        🔒 Save Selection to Lib
+      </button>
+    </div>
+
+    <div class="panel">
        <BarnHuntToolbox v-if="store.sport === 'barnhunt'" />
        <AgilityToolbox v-else-if="store.sport === 'agility'" />
        <ScentWorkToolbox v-else-if="store.sport === 'scentwork'" />
     </div>
-
+<LibraryModal v-if="showLibrary" @close="showLibrary = false" />
     </aside>
 
       <hr />
@@ -173,4 +189,5 @@ function handleMergeChange(event) {
 .button-row { display: flex; gap: 10px; }
 .btn-secondary { background: #f0f0f0; border: 1px solid #ccc; padding: 8px; cursor: pointer; flex: 1; border-radius: 4px; }
 .btn-primary { background: #2196f3; color: white; border: none; padding: 8px; cursor: pointer; flex: 1; border-radius: 4px; width: 100%; }
+.btn-admin { background: #333; color: #ffd700; border: 1px solid #ffd700; width: 100%; padding: 8px; cursor: pointer; border-radius: 4px; margin-top: 5px; font-weight: bold; }
 </style>

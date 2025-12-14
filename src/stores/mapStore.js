@@ -8,6 +8,20 @@ import { db } from '../firebase'
 import { useUserStore } from './userStore'
 import { BH_RULES, AGILITY_RULES } from '../utils/validation'
 import { mapService } from '../services/mapService'
+import { libraryService } from '../services/libraryService'
+
+// Helper: Rotate a point (x,y) around a center (cx,cy)
+function rotatePoint(x, y, cx, cy, angleDeg) {
+  const rad = (Math.PI / 180) * angleDeg
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+  const dx = x - cx
+  const dy = y - cy
+  return {
+    x: (dx * cos - dy * sin) + cx,
+    y: (dx * sin + dy * cos) + cy
+  }
+}
 
 export const useMapStore = defineStore('map', () => {
   // --- CONFIGURATION ---
@@ -67,6 +81,41 @@ function clearSelection() {
     selection.value = []
   }
 
+async function saveSelectionToLibrary(name) {
+    const userStore = useUserStore()
+    
+    // 1. Validation
+    if (selection.value.length === 0) {
+      alert("Nothing selected! Select a tunnel first.")
+      return
+    }
+    if (!userStore.user) {
+      alert("You must be logged in.")
+      return
+    }
+
+    // 2. Extract Data (Similar to export, but only for selected items)
+    const exportData = {
+      bales: bales.value.filter(b => selection.value.includes(b.id)),
+      boardEdges: boardEdges.value.filter(b => selection.value.includes(b.id)),
+      // Add other object types here if needed (e.g. dcMats)
+    }
+
+    // 3. Send to Service
+    try {
+      await libraryService.addToLibrary(userStore.user, {
+        name: name,
+        sport: sport.value,
+        type: 'tunnel',
+        data: exportData
+      })
+      alert(`Saved "${name}" to Library!`)
+    } catch (e) {
+      console.error(e)
+      alert(e.message) // Will show "Unauthorized" if not Sam
+    }
+  }
+
   function restoreState(jsonString) {
     const data = JSON.parse(jsonString)
     bales.value = data.bales || []
@@ -97,6 +146,29 @@ function clearSelection() {
     future.value.push(current)
     const previous = history.value.pop()
     restoreState(previous)
+  }
+
+function deleteSelection() {
+    // Safety check
+    if (selection.value.length === 0) return
+
+    snapshot() // Save history so we can Undo this mass deletion
+
+    // Filter out ANY object whose ID is in the selection array
+    bales.value = bales.value.filter(b => !selection.value.includes(b.id))
+    boardEdges.value = boardEdges.value.filter(b => !selection.value.includes(b.id))
+    dcMats.value = dcMats.value.filter(m => !selection.value.includes(m.id))
+    hides.value = hides.value.filter(h => !selection.value.includes(h.id))
+    
+    // (Future proofing for other sports)
+    agilityObstacles.value = agilityObstacles.value.filter(o => !selection.value.includes(o.id))
+    scentWorkObjects.value = scentWorkObjects.value.filter(o => !selection.value.includes(o.id))
+
+    // Clear the selection since those items are gone
+    selection.value = []
+    
+    // Recalculate support for anything left behind
+    validateAllBales()
   }
 
   function redo() {
@@ -176,18 +248,24 @@ function selectArea(x, y, w, h) {
     const rW = Math.abs(w)
     const rH = Math.abs(h)
 
-    const hits = bales.value.filter(b => {
-      const r = getBaleRect(b) // Use the same helper!
-      
-      return (
-        r.x < rX + rW &&
-        r.x + r.w > rX &&
-        r.y < rY + rH &&
-        r.y + r.h > rY
-      )
-    })
+    // 1. Find Bales
+    const hitBales = bales.value.filter(b => {
+      const r = getBaleRect(b)
+      return (r.x < rX + rW && r.x + r.w > rX && r.y < rY + rH && r.y + r.h > rY)
+    }).map(b => b.id)
 
-    selection.value = hits.map(b => b.id)
+    // 2. Find Boards (Check if any part of the line is in the box)
+    const hitBoards = boardEdges.value.filter(b => {
+      // simplified: check if midpoint or endpoints are in rect
+      // (For perfect line intersection, we'd need more math, but this is usually enough for a drag box)
+      const minBx = Math.min(b.x1, b.x2); const maxBx = Math.max(b.x1, b.x2)
+      const minBy = Math.min(b.y1, b.y2); const maxBy = Math.max(b.y1, b.y2)
+      
+      // Check overlap of bounding boxes
+      return (minBx < rX + rW && maxBx > rX && minBy < rY + rH && maxBy > rY)
+    }).map(b => b.id)
+
+    selection.value = [...hitBales, ...hitBoards]
   }
 
 function moveSelection(dx, dy) {
@@ -433,31 +511,55 @@ function validateAllBales() {
     })
   }
 
+// src/stores/mapStore.js
+
   function mergeMapFromJSON(jsonString) {
-    snapshot() // Save history before modifying
+    snapshot()
     try {
       const data = JSON.parse(jsonString)
       const newItems = []
       
-      // 1. Merge Bales (Assign NEW IDs)
+      // 1. Merge Bales
       if (data.bales) {
         data.bales.forEach(b => {
           const newId = crypto.randomUUID()
+          // create a copy to avoid reference issues
           const newBale = { ...b, id: newId }
           bales.value.push(newBale)
           newItems.push(newId)
         })
       }
-      
-      // 2. Merge Other Objects (Add logic for other sports as needed)
-      // (Example for future: agilityObstacles, etc.)
 
-      // 3. Automatically SELECT the new items
-      // This allows the user to immediately drag the imported tunnel to where they want it
+      // 2. Merge Boards (THIS WAS MISSING)
+      if (data.boardEdges) {
+        data.boardEdges.forEach(b => {
+          const newId = crypto.randomUUID()
+          const newBoard = { ...b, id: newId }
+          boardEdges.value.push(newBoard)
+          newItems.push(newId)
+        })
+      }
+
+      // 3. Merge DC Mats (Just in case you have mats in your tunnels)
+      if (data.dcMats) {
+        data.dcMats.forEach(m => {
+          const newId = crypto.randomUUID()
+          const newMat = { ...m, id: newId }
+          dcMats.value.push(newMat)
+          newItems.push(newId)
+        })
+      }
+      
+      // 4. Select the new items
+      // This allows you to immediately drag the imported group
       selection.value = newItems
       
       validateAllBales()
-      alert("Objects merged successfully! They are currently selected.")
+      // Force reactivity
+      bales.value = [...bales.value]
+      boardEdges.value = [...boardEdges.value]
+      
+      alert("Tunnel loaded successfully!")
       
     } catch (e) {
       console.error(e)
@@ -561,37 +663,113 @@ function validateAllBales() {
 
 // src/stores/mapStore.js
 
-  function commitDrag(id, newX, newY) {
-    snapshot() // Save history
+function commitDrag(id, newX, newY) {
+    snapshot()
+    
+    // Attempt to find the "Leader" (the object we dragged)
+    let startX, startY
+    const bale = bales.value.find(b => b.id === id)
+    
+    if (bale) { 
+      startX = bale.x; startY = bale.y 
+    } else {
+      // If we dragged something else (like a board handle?), we might need different logic.
+      // For now, assuming we dragged a bale to move the group is safest.
+      return 
+    }
 
-    // 1. Calculate how far the dragged item moved
-    const primary = bales.value.find(b => b.id === id)
-    if (!primary) return
+    const dx = newX - startX
+    const dy = newY - startY
 
-    const dx = newX - primary.x
-    const dy = newY - primary.y
-
-    // 2. Update positions
-    // If the dragged item is NOT in the selection, just move it alone
     if (!selection.value.includes(id)) {
-      primary.x = Math.round(newX * 2) / 2
-      primary.y = Math.round(newY * 2) / 2
-    } 
-    // If it IS selected, move the WHOLE group
-    else {
+      bale.x = Math.round(newX * 2) / 2
+      bale.y = Math.round(newY * 2) / 2
+    } else {
+      // Move Bales
       bales.value.forEach(b => {
         if (selection.value.includes(b.id)) {
           b.x = Math.round((b.x + dx) * 2) / 2
           b.y = Math.round((b.y + dy) * 2) / 2
         }
       })
+      // Move Boards
+      boardEdges.value.forEach(b => {
+        if (selection.value.includes(b.id)) {
+          b.x1 = Math.round((b.x1 + dx) * 2) / 2
+          b.y1 = Math.round((b.y1 + dy) * 2) / 2
+          b.x2 = Math.round((b.x2 + dx) * 2) / 2
+          b.y2 = Math.round((b.y2 + dy) * 2) / 2
+        }
+      })
     }
     
-    // 3. Re-Validate Support (Fixes the Red/Green issue)
     validateAllBales()
+    bales.value = [...bales.value]     // Trigger Reactivity
+    boardEdges.value = [...boardEdges.value] 
+  }
 
-    // 4. Force Vue to see the changes (Fixes visual lag)
+  function rotateSelection() {
+    if (selection.value.length === 0) return
+    snapshot()
+
+    // 1. Calculate Center of Selection
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    
+    // Bounds of Bales
+    bales.value.forEach(b => {
+      if (selection.value.includes(b.id)) {
+        const r = getBaleRect(b)
+        minX = Math.min(minX, r.x); minY = Math.min(minY, r.y)
+        maxX = Math.max(maxX, r.x + r.w); maxY = Math.max(maxY, r.y + r.h)
+      }
+    })
+    // Bounds of Boards
+    boardEdges.value.forEach(b => {
+      if (selection.value.includes(b.id)) {
+        minX = Math.min(minX, b.x1, b.x2); minY = Math.min(minY, b.y1, b.y2)
+        maxX = Math.max(maxX, b.x1, b.x2); maxY = Math.max(maxY, b.y1, b.y2)
+      }
+    })
+
+    if (minX === Infinity) return 
+
+    // Center point (Grid Aligned)
+    const cx = Math.round(((minX + maxX) / 2) * 2) / 2
+    const cy = Math.round(((minY + maxY) / 2) * 2) / 2
+
+    // 2. Rotate Bales (90 deg clockwise)
+    bales.value.forEach(b => {
+      if (selection.value.includes(b.id)) {
+        // We rotate the CENTER of the bale
+        const r = getBaleRect(b)
+        const bcx = r.x + r.w/2
+        const bcy = r.y + r.h/2
+        
+        const newCenter = rotatePoint(bcx, bcy, cx, cy, 90)
+        
+        // Update Rotation (Keep it 0-360 positive)
+        b.rotation = (b.rotation + 90) % 360
+        
+        // Recalculate Top-Left from new center + new dimensions
+        const newR = getBaleRect(b) // b has new rotation now
+        b.x = Math.round((newCenter.x - newR.w/2)*2)/2
+        b.y = Math.round((newCenter.y - newR.h/2)*2)/2
+      }
+    })
+
+    // 3. Rotate Boards
+    boardEdges.value.forEach(b => {
+      if (selection.value.includes(b.id)) {
+        const p1 = rotatePoint(b.x1, b.y1, cx, cy, 90)
+        const p2 = rotatePoint(b.x2, b.y2, cx, cy, 90)
+        b.x1 = Math.round(p1.x*2)/2; b.y1 = Math.round(p1.y*2)/2
+        b.x2 = Math.round(p2.x*2)/2; b.y2 = Math.round(p2.y*2)/2
+      }
+    })
+
+    validateAllBales()
     bales.value = [...bales.value]
+    boardEdges.value = [...boardEdges.value]
   }
 
   async function deleteMap(id) { try { await deleteDoc(doc(db, "maps", id)); if (currentMapId.value === id) currentMapId.value = null } catch (e) { console.error("Delete failed", e); alert("Failed to delete map.") } }
@@ -657,6 +835,6 @@ try {
 
   return {
     ringDimensions, gridSize, bales, currentLayer, selectedBaleId, addBale, removeBale, rotateBale, cycleOrientation, cycleLean, updateBalePosition, hasSupport, validateAllBales, resizeRing, activeTool, setTool, boardEdges, removeBoardEdge, isDrawingBoard, updateDrawingBoard, stopDrawingBoard, startDrawingBoard, exportMapToJSON, importMapFromJSON, importMapFromData, saveToCloud, loadUserMaps, loadMapFromData, deleteMap, renameMap, dcMats, addDCMat, removeDCMat, rotateDCMat, startBox, addStartBox, removeStartBox, currentGuidelines, classLevel, previousClassCount, inventory, balesByLayer, baleCounts, mapName, hides, addHide, removeHide, cycleHideType, reset, masterBlinds, generateMasterBlinds, isShared, updateBoardEndpoint, rotateBoard, currentMapId, folders, currentFolderId, createFolder, loadUserFolders, moveMap, deleteFolder, sport, agilityObstacles, nextNumber, addAgilityObstacle, removeAgilityObstacle, rotateAgilityObstacle, cycleAgilityShape, cycleAgilityPoles, renumberObstacle, notification, showNotification, scentWorkObjects, addScentWorkObject, removeScentWorkObject, rotateScentWorkObject, toggleScentWorkHot,
-    history, future, mergeMapFromJSON, undo, redo, snapshot, selection, clearSelection, selectBale, selectArea, moveSelection, isDraggingSelection, commitDrag 
+    history, future, mergeMapFromJSON, deleteSelection, saveSelectionToLibrary, rotateSelection, undo, redo, snapshot, selection, clearSelection, selectBale, selectArea, moveSelection, isDraggingSelection, commitDrag 
   }
 })

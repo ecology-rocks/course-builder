@@ -25,10 +25,26 @@ const store = useMapStore()
     <div class="action-tools">
       <button @click="store.setTool('select')" :class="{ active: store.activeTool === 'select' }">⬜ Select Area</button>
       
-      <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">🔄 Rotate</button>
+      <button 
+        v-if="store.selection.length > 1" 
+        @click="store.rotateSelection()" 
+        style="background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7;"
+      >
+        🔄 Rotate Group (90°)
+      </button>
+
+      <button 
+        v-if="store.selection.length > 0" 
+        @click="store.deleteSelection()" 
+        style="background: #ffebee; color: #c62828; border-color: #ef9a9a; font-weight: bold;"
+      >
+        🗑️ Delete Selected ({{ store.selection.length }})
+      </button>
+
+      <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">🔄 Rotate Item</button>
       <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">📐 Orientation</button>
       <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">↗️ Lean</button>
-      <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">🗑️ Delete</button>
+      <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">🗑️ Delete Tool</button>
     </div>
   </div>
 </template>

@@ -22,9 +22,16 @@ const wrapperRef = ref(null)
 const showHides = ref(true)
 const selectionRect = ref(null)
 const dragStart = ref(null)
+// Tracks if we are "thinking about" placing an item but waiting to see if you drag instead
+const maybePlacing = ref(false)
 
 // --- KEYBOARD SHORTCUTS ---
+// src/components/MapEditor.vue
+
 function handleKeydown(e) {
+  // 1. SAFETY CHECK: If the event has no key, ignore it.
+  if (!e.key) return 
+
   const isCtrl = e.ctrlKey || e.metaKey
   const key = e.key.toLowerCase()
 
@@ -42,13 +49,13 @@ function handleKeydown(e) {
     return
   }
 
-  // Delete: Delete or Backspace (if no input is focused)
-  if (e.key === 'Delete' || e.key === 'Backspace') {
-    if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return
-    
-    // Check active tool or specific selection logic here if needed
-    // Currently we rely on the click-to-delete tool, but you could add
-    // store.deleteSelected() here in the future.
+  // Delete: Delete or Backspace
+  if (key === 'delete' || key === 'backspace') {
+    // Only delete if we have a selection and aren't typing in an input field
+    // We check existence of 'target' just in case
+    if (store.selection.length > 0 && e.target && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+      store.deleteSelection()
+    }
   }
 }
 
@@ -112,7 +119,7 @@ function handleStageMouseDown(e) {
   const pointer = e.target.getStage().getPointerPosition()
   const x = (pointer.x - GRID_OFFSET) / scale.value
   const y = (pointer.y - GRID_OFFSET) / scale.value
-  
+  dragStart.value = { x, y }
   // Prevent drawing outside the top-left bounds
   if (x < 0 || y < 0) return 
 
@@ -127,11 +134,18 @@ function handleStageMouseDown(e) {
 
   // --- BARN HUNT ---
   if (store.sport === 'barnhunt') {
-    if (store.activeTool === 'bale') store.addBale(x, y)
-    else if (store.activeTool === 'board') store.startDrawingBoard(x, y)
-    else if (store.activeTool === 'startbox') store.addStartBox(x, y)
-    else if (store.activeTool === 'dcmat') store.addDCMat(x, y)
-    else if (store.activeTool === 'hide') store.addHide(x, y)
+// A. If using Board Tool, start drawing immediately (same as before)
+    if (store.activeTool === 'board') {
+      store.startDrawingBoard(x, y)
+      return
+    }
+
+    // B. If using Explicit Select Tool, start box immediately (same as before)
+    if (store.activeTool === 'select') {
+      selectionRect.value = { x, y, w: 0, h: 0 }
+      return
+    }
+    maybePlacing.value = true
   } 
   
   // --- AGILITY ---
@@ -162,22 +176,45 @@ function handleStageMouseMove(e) {
   const x = (pointer.x - GRID_OFFSET) / scale.value
   const y = (pointer.y - GRID_OFFSET) / scale.value
 
-  // SELECTION BOX LOGIC
-  if (store.activeTool === 'select' && selectionRect.value && dragStart.value) {
+  // 1. UPDATE SELECTION BOX (Fixed)
+  // Remove "store.activeTool === 'select'" check. 
+  // If a box exists (explicit or implicit), resize it!
+  if (selectionRect.value && dragStart.value) {
     selectionRect.value.w = x - dragStart.value.x
     selectionRect.value.h = y - dragStart.value.y
     return
   }
 
-  // EXISTING BOARD LOGIC
+  // 2. EXISTING BOARD LOGIC
   if (store.activeTool === 'board' && store.isDrawingBoard) {
     store.updateDrawingBoard(x, y)
+    return // Add return here to prevent fall-through
+  }
+
+  // 3. DETECT DRAG (Start Implicit Selection)
+  if (maybePlacing.value) {
+    const dist = Math.hypot(x - dragStart.value.x, y - dragStart.value.y)
+    
+    if (dist > 0.5) {
+      maybePlacing.value = false 
+      
+      // Start the box
+      selectionRect.value = { 
+        x: dragStart.value.x, 
+        y: dragStart.value.y, 
+        w: 0, 
+        h: 0 
+      }
+    }
   }
 }
 
+// src/components/MapEditor.vue
+
 function handleStageMouseUp() {
-  // FINISH SELECTION
-  if (store.activeTool === 'select' && selectionRect.value) {
+  // 1. FINISH SELECTION (Explicit or Implicit)
+  // If a selection box exists, finalize the selection and stop.
+  if (selectionRect.value) {
     store.selectArea(
       selectionRect.value.x, 
       selectionRect.value.y, 
@@ -186,10 +223,45 @@ function handleStageMouseUp() {
     )
     selectionRect.value = null
     dragStart.value = null
+    maybePlacing.value = false // Reset placement flag
+    return
+  }
+
+  // 2. EXECUTE PLACEMENT (Only if we clicked without dragging)
+  if (maybePlacing.value) {
+    const { x, y } = dragStart.value
+
+    // --- BARN HUNT ---
+    if (store.sport === 'barnhunt') {
+      if (store.activeTool === 'bale') store.addBale(x, y)
+      else if (store.activeTool === 'startbox') store.addStartBox(x, y)
+      else if (store.activeTool === 'dcmat') store.addDCMat(x, y)
+      else if (store.activeTool === 'hide') store.addHide(x, y)
+    } 
+    
+    // --- AGILITY ---
+    else if (store.sport === 'agility') {
+       // Assuming addAgilityObstacle handles the 'type' internally or via activeTool
+       store.addAgilityObstacle(store.activeTool, x, y)
+    }
+    
+    // --- SCENT WORK ---
+    else if (store.sport === 'scentwork') {
+      const swTools = ['box', 'luggage', 'container', 'cone', 'vehicle', 'buried']
+      if (swTools.includes(store.activeTool)) {
+        store.addScentWorkObject(store.activeTool, x, y)
+      }
+    }
+    
+    // Reset State
+    maybePlacing.value = false
+    dragStart.value = null
   }
   
-  // EXISTING BOARD FINISH
-  if (store.activeTool === 'board') store.stopDrawingBoard()
+  // 3. FINISH BOARD DRAWING (Barn Hunt specific)
+  if (store.activeTool === 'board') {
+    store.stopDrawingBoard()
+  }
 }
 
 function handleGroupDragMove(e, id) {
@@ -265,15 +337,15 @@ function handleGroupDragMove(e, id) {
             :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale/2))*(scale/2), y: Math.round(pos.y / (scale/2))*(scale/2) })" 
           />
 <v-rect v-if="selectionRect" 
-             :config="{
-               x: selectionRect.x * scale,
-               y: selectionRect.y * scale,
-               width: selectionRect.w * scale,
-               height: selectionRect.h * scale,
-               fill: 'rgba(0, 161, 255, 0.3)',
-               stroke: '#00a1ff'
-             }"
-          />
+           :config="{
+             x: (selectionRect.x * scale),
+             y: (selectionRect.y * scale),
+             width: selectionRect.w * scale,
+             height: selectionRect.h * scale,
+             fill: 'rgba(0, 161, 255, 0.3)',
+             stroke: '#00a1ff'
+           }"
+        />
         </v-layer>
       </v-stage>
     </div>
