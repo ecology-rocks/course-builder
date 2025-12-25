@@ -10,6 +10,7 @@ import { usePrinter } from '@/composables/usePrinter'
 import AgilityLayer from './layers/AgilityLayer.vue'
 import BarnHuntLayer from './layers/BarnHuntLayer.vue'
 import ScentWorkLayer from './layers/ScentWorkLayer.vue' // <--- 1. IMPORT
+import MapLegend from './layers/MapLegend.vue'
 
 const store = useMapStore()
 const userStore = useUserStore()
@@ -463,6 +464,12 @@ function handleGroupDragMove(e, id) {
              stroke: '#00a1ff'
            }"
         />
+<MapLegend 
+          v-if="store.sport === 'barnhunt'" 
+          :scale="scale" 
+          :GRID_OFFSET="GRID_OFFSET" 
+        />
+
         </v-layer>
       </v-stage>
     </div>

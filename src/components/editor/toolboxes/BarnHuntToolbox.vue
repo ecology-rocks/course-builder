@@ -12,6 +12,32 @@ const store = useMapStore()
       <button @click="store.currentLayer = 3" :class="{ active: store.currentLayer === 3 }">3</button>
     </div>
 
+    <div class="panel" v-if="store.sport === 'barnhunt'">
+      <h3>📊 Statistics</h3>
+      <div class="stats-grid">
+        <div class="stat-box">
+          <span class="label">Total</span>
+          <span class="value">{{ store.inventory.total }}</span>
+        </div>
+        <div class="stat-box">
+          <span class="label">Base</span>
+          <span class="value">{{ store.inventory.base }}</span>
+        </div>
+        <div class="stat-box">
+          <span class="label">Layer 2</span>
+          <span class="value">{{ store.inventory.layer2 }}</span>
+        </div>
+        <div class="stat-box">
+          <span class="label">Layer 3</span>
+          <span class="value">{{ store.inventory.layer3 }}</span>
+        </div>
+      </div>
+      
+      <div class="nesting-info" :class="{ valid: store.inventory.isNestingValid }">
+         <small>Class Change: <strong>{{ store.inventory.deltaString }}</strong> bales</small>
+      </div>
+    </div>
+
     <h3>Place Items</h3>
     <div class="tool-grid">
       <button @click="store.setTool('bale')" :class="{ active: store.activeTool === 'bale' }">📦 Bale</button>
@@ -63,4 +89,10 @@ const store = useMapStore()
 button { padding: 8px 12px; border: 1px solid #ddd; background: white; border-radius: 4px; cursor: pointer; text-align: left; transition: all 0.2s; font-size: 0.9rem; }
 button:hover { background: #f5f5f5; }
 button.active { background: #e3f2fd; border-color: #2196f3; color: #1565c0; font-weight: bold; }
+
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.stat-box { background: white; border: 1px solid #ddd; padding: 5px; border-radius: 4px; text-align: center; }
+.stat-box .label { display: block; font-size: 0.7rem; color: #888; text-transform: uppercase; }
+.stat-box .value { display: block; font-size: 1.1rem; font-weight: bold; color: #333; }
+.nesting-info { font-size: 0.8rem; color: #666; text-align: center; padding-top: 5px; border-top: 1px solid #eee; }
 </style>
