@@ -21,13 +21,11 @@ const visibleBales = computed(() => {
   })
 })
 
-// Check if we are allowed to drag bales right now
-// (Disabled when drawing boards, placing start boxes, etc.)
 const isDraggable = computed(() => {
   return store.activeTool === 'select' || store.activeTool === 'bale'
 })
 
-// --- HELPERS (Colors, Dims, Snapping) ---
+// --- HELPERS ---
 function getBaleColor(bale) {
   if (bale.supported === false) return '#ef5350'
   switch(bale.layer) {
@@ -36,11 +34,14 @@ function getBaleColor(bale) {
   }
 }
 function getOpacity(layer) { return layer === store.currentLayer ? 1 : 0.5 }
+
+// Dimensions based on orientation
 function getBaleDims(bale) {
   if (bale.orientation === 'pillar') return { width: 1.5, height: 1.0 }
   if (bale.orientation === 'tall') return { width: 3.0, height: 1.0 }
-  return { width: 3.0, height: 1.5 }
+  return { width: 3.0, height: 1.5 } // Flat
 }
+
 function getArrowPoints(width, height, direction) {
   const cx = width / 2; const cy = height / 2; const size = Math.min(width, height) * 0.4
   switch (direction) {
@@ -51,6 +52,8 @@ function getArrowPoints(width, height, direction) {
     default: return []
   }
 }
+
+// Snapping Logic
 function baleDragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
@@ -75,7 +78,13 @@ function handleRightClick(e, id) { e.evt.preventDefault(); store.rotateBale(id) 
 function handleDblClick(e, id) { if (e.evt.button === 0) store.removeBale(id) }
 
 function handleLeftClick(e, id) {
-  // 1. BOARD TOOL INTERCEPTION (This allows clicking a bale to start a board)
+  const evt = e.evt 
+  
+  // 1. Keyboard Shortcuts
+  if (evt.altKey) { store.cycleOrientation(id); return }
+  if (evt.ctrlKey) { store.cycleLean(id); return }
+
+  // 2. Board Tool
   if (store.activeTool === 'board') {
      const stage = e.target.getStage()
      const p = stage.getPointerPosition()
@@ -87,27 +96,24 @@ function handleLeftClick(e, id) {
      return
   }
 
-  // 2. SELECTION LOGIC
+  // 3. Select/Move
   if (store.activeTool === 'select' || store.activeTool === 'bale') {
-    const isMulti = e.evt.shiftKey || e.evt.ctrlKey || e.evt.metaKey
+    const isMulti = evt.shiftKey || evt.ctrlKey || evt.metaKey
     if (!store.selection.includes(id) && !isMulti) store.selectBale(id, false) 
     else if (isMulti) store.selectBale(id, true) 
     return
   }
 
-  // 3. OTHER TOOLS
+  // 4. Specific Tools
   if (store.activeTool === 'rotate') { store.rotateBale(id); return }
-  if (store.activeTool === 'type') { store.cycleOrientation(id); return }
-  if (store.activeTool === 'lean') { store.cycleLean(id); return }
+  if (store.activeTool === 'type' || store.activeTool === 'orientation') { store.cycleOrientation(id); return } 
+  if (store.activeTool === 'lean') { store.cycleLean(id); return }        
   if (store.activeTool === 'delete') { store.removeBale(id); return }
 }
 
 function handleDragStart(e, id) {
-  if (!isDraggable.value) return // Safety check
-
-  if (!store.selection.includes(id)) {
-    store.selectBale(id, false)
-  }
+  if (!isDraggable.value) return 
+  if (!store.selection.includes(id)) store.selectBale(id, false)
   dragStartPos.value = {}
   store.selection.forEach(selId => {
     const node = baleRefs.value[selId]?.getNode()
@@ -142,7 +148,6 @@ function handleDragEnd(e, id, type) {
   else if (type === 'startbox') { if (store.startBox) { store.startBox.x = rawX; store.startBox.y = rawY } }
 }
 
-// ... Board/Mat/Hide Handlers ...
 function handleBoardClick(e, id) {
    if (store.activeTool === 'rotate') store.rotateBoard(id)
    if (store.activeTool === 'delete') store.removeBoardEdge(id)
@@ -173,7 +178,7 @@ function handleHideClick(e, id) { if (e.evt.button !== 0) return; if (store.acti
       :ref="el => baleRefs[bale.id] = el"
       :config="{ 
         id: bale.id,
-        draggable: isDraggable, /* <--- CRITICAL FIX: Only draggable if using Select/Bale tool */
+        draggable: isDraggable, 
         dragBoundFunc: baleDragBoundFunc, 
         listening: bale.layer === store.currentLayer || store.selection.includes(bale.id),
         x: (bale.x*scale) + (1.5*scale), 
@@ -191,12 +196,26 @@ function handleHideClick(e, id) { if (e.evt.button !== 0) return; if (store.acti
       @dragend="handleDragEnd($event, bale.id, 'bale')"
     >
       <v-rect :config="{ 
-        width: 3*scale, height: 1.5*scale, 
+        width: getBaleDims(bale).width * scale, 
+        height: getBaleDims(bale).height * scale, 
         fill: getBaleColor(bale), 
         stroke: store.selection.includes(bale.id) ? '#00a1ff' : 'black',
         strokeWidth: store.selection.includes(bale.id) ? 3 : 1,
         shadowColor: '#00a1ff', shadowBlur: store.selection.includes(bale.id) ? 10 : 0, shadowOpacity: 0.5
       }" />
+
+      <v-line v-if="bale.orientation === 'tall'" 
+        :config="{ 
+          points: [0, 0, getBaleDims(bale).width*scale, getBaleDims(bale).height*scale], 
+          stroke: 'black', strokeWidth: 1, opacity: 0.4 
+        }" 
+      />
+
+      <v-group v-if="bale.orientation === 'pillar'">
+        <v-line :config="{ points: [0, 0, getBaleDims(bale).width*scale, getBaleDims(bale).height*scale], stroke: 'black', strokeWidth: 1, opacity: 0.4 }" />
+        <v-line :config="{ points: [getBaleDims(bale).width*scale, 0, 0, getBaleDims(bale).height*scale], stroke: 'black', strokeWidth: 1, opacity: 0.4 }" />
+      </v-group>
+
       <v-arrow v-if="bale.lean" :config="{ points: getArrowPoints(getBaleDims(bale).width*scale, getBaleDims(bale).height*scale, bale.lean), pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4 }" />
     </v-group>
 

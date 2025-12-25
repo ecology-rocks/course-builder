@@ -778,7 +778,7 @@ function commitDrag(id, newX, newY) {
 
   async function deleteMap(id) { try { await deleteDoc(doc(db, "maps", id)); if (currentMapId.value === id) currentMapId.value = null } catch (e) { console.error("Delete failed", e); alert("Failed to delete map.") } }
   async function renameMap(id, newName) { try { await updateDoc(doc(db, "maps", id), { name: newName }); if (currentMapId.value === id) mapName.value = newName } catch (e) { console.error(e) } }
-  async function saveToCloud(isAutoSave = false) {
+async function saveToCloud(isAutoSave = false, thumbnail = null) {
     const userStore = useUserStore()
     
     // 1. Silent fail if not logged in (don't bug user while editing)
