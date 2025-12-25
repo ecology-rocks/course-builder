@@ -32,6 +32,7 @@ export const libraryService = {
     const payload = {
       name: itemData.name,
       sport: itemData.sport,
+      thumbnail: itemData.thumbnail || null,
       type: itemData.type || 'tunnel', // 'tunnel', 'sequence', etc.
       data: itemData.data, // The JSON blob of bales/boards
       createdAt: new Date(),

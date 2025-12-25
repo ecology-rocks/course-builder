@@ -40,6 +40,7 @@ export const useMapStore = defineStore('map', () => {
   const masterBlinds = ref([]) 
   const boardEdges = ref([])
   const hides = ref([]) 
+  const savedMaps = ref([])
   const sport = ref('barnhunt') // <--- RESTORED THIS VARIABLE
   
   // --- ITEMS ---
@@ -81,7 +82,9 @@ function clearSelection() {
     selection.value = []
   }
 
-async function saveSelectionToLibrary(name) {
+// src/stores/mapStore.js
+
+  async function saveSelectionToLibrary(name, thumbnail) { // <--- FIXED LINE
     const userStore = useUserStore()
     
     // 1. Validation
@@ -94,11 +97,11 @@ async function saveSelectionToLibrary(name) {
       return
     }
 
-    // 2. Extract Data (Similar to export, but only for selected items)
+    // 2. Extract Data 
     const exportData = {
       bales: bales.value.filter(b => selection.value.includes(b.id)),
       boardEdges: boardEdges.value.filter(b => selection.value.includes(b.id)),
-      // Add other object types here if needed (e.g. dcMats)
+      dcMats: dcMats.value.filter(m => selection.value.includes(m.id)),
     }
 
     // 3. Send to Service
@@ -107,12 +110,13 @@ async function saveSelectionToLibrary(name) {
         name: name,
         sport: sport.value,
         type: 'tunnel',
-        data: exportData
+        data: exportData,
+        thumbnail: thumbnail // <--- Now this works because 'thumbnail' is defined above
       })
       alert(`Saved "${name}" to Library!`)
     } catch (e) {
       console.error(e)
-      alert(e.message) // Will show "Unauthorized" if not Sam
+      alert(e.message) 
     }
   }
 
@@ -796,6 +800,7 @@ function commitDrag(id, newX, newY) {
       isShared: isShared.value,
       level: classLevel.value, 
       sport: sport.value,
+      thumbnail: thumbnail,
       updatedAt: new Date(),
       data: {
         dimensions: ringDimensions.value,
@@ -827,7 +832,13 @@ try {
     console.error(e)
   }
   }
-  async function loadUserMaps() { if (!useUserStore().user) return []; const q = query(collection(db, "maps"), where("uid", "==", useUserStore().user.uid)); return (await getDocs(q)).docs.map(doc => ({ id: doc.id, ...doc.data() })) }
+ async function loadUserMaps() {
+     if (!useUserStore().user) return
+     const q = query(collection(db, "maps"), where("uid", "==", useUserStore().user.uid))
+     const snapshot = await getDocs(q)
+     savedMaps.value = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+     return savedMaps.value
+  }
   async function createFolder(name) { if (!useUserStore().user) return; await addDoc(collection(db, "folders"), { uid: useUserStore().user.uid, name, createdAt: new Date() }); await loadUserFolders() }
   async function loadUserFolders() { if (!useUserStore().user) return; folders.value = (await getDocs(query(collection(db, "folders"), where("uid", "==", useUserStore().user.uid)))).docs.map(doc => ({ id: doc.id, ...doc.data() })) }
   async function moveMap(mapId, fid) { await updateDoc(doc(db, "maps", mapId), { folderId: fid }); if (currentMapId.value === mapId) currentFolderId.value = fid }
@@ -835,6 +846,6 @@ try {
 
   return {
     ringDimensions, gridSize, bales, currentLayer, selectedBaleId, addBale, removeBale, rotateBale, cycleOrientation, cycleLean, updateBalePosition, hasSupport, validateAllBales, resizeRing, activeTool, setTool, boardEdges, removeBoardEdge, isDrawingBoard, updateDrawingBoard, stopDrawingBoard, startDrawingBoard, exportMapToJSON, importMapFromJSON, importMapFromData, saveToCloud, loadUserMaps, loadMapFromData, deleteMap, renameMap, dcMats, addDCMat, removeDCMat, rotateDCMat, startBox, addStartBox, removeStartBox, currentGuidelines, classLevel, previousClassCount, inventory, balesByLayer, baleCounts, mapName, hides, addHide, removeHide, cycleHideType, reset, masterBlinds, generateMasterBlinds, isShared, updateBoardEndpoint, rotateBoard, currentMapId, folders, currentFolderId, createFolder, loadUserFolders, moveMap, deleteFolder, sport, agilityObstacles, nextNumber, addAgilityObstacle, removeAgilityObstacle, rotateAgilityObstacle, cycleAgilityShape, cycleAgilityPoles, renumberObstacle, notification, showNotification, scentWorkObjects, addScentWorkObject, removeScentWorkObject, rotateScentWorkObject, toggleScentWorkHot,
-    history, future, mergeMapFromJSON, deleteSelection, saveSelectionToLibrary, rotateSelection, undo, redo, snapshot, selection, clearSelection, selectBale, selectArea, moveSelection, isDraggingSelection, commitDrag 
+    history, future, mergeMapFromJSON, savedMaps,deleteSelection, saveSelectionToLibrary, rotateSelection, undo, redo, snapshot, selection, clearSelection, selectBale, selectArea, moveSelection, isDraggingSelection, commitDrag 
   }
 })

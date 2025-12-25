@@ -16,13 +16,17 @@ const router = useRouter()
 const fileInput = ref(null)
 const mergeInput = ref(null)
 const showLibrary = ref(false)
-const emit = defineEmits(['print'])
+const emit = defineEmits(['print', 'save-map', 'save-library'])
 const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
+
+function handleSaveClick() {
+  emit('save-map') // Ask parent to generate thumb & save
+}
 
 async function handleSaveToLibrary() {
   const name = prompt("Name this library item:")
   if (name) {
-    await store.saveSelectionToLibrary(name)
+    emit('save-library', name) // Ask parent to crop, thumb & save
   }
 }
 
@@ -46,9 +50,7 @@ function handleFileChange(event) {
 }
 
 // NEW: Merge Handler
-function handleMergeClick() {
-  mergeInput.value.click()
-}
+function handleMergeClick() { mergeInput.value.click() }
 
 function handleMergeChange(event) {
   const file = event.target.files[0]

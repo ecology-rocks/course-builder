@@ -89,6 +89,123 @@ function fitToScreen() {
   scale.value = Math.max(Math.min(Math.floor(newScale), 40), 5)
 }
 
+
+function handleSaveMap() {
+  if (!stageRef.value) return
+  const stage = stageRef.value.getStage()
+  
+  // Create a low-res thumbnail (0.5 quality is fine for previews)
+  const dataURL = stage.toDataURL({ 
+    pixelRatio: 0.5, 
+    mimeType: 'image/jpeg', 
+    quality: 0.7 
+  })
+  
+  store.saveToCloud(false, dataURL)
+}
+
+/// FULL FUNCTION: handleLibrarySave
+// Calculates the bounding box of the selected items, creates a cropped image,
+// and sends it to the store to save to Firestore.
+function handleLibrarySave(name) {
+  // 1. Safety Checks
+  if (!stageRef.value) return
+  if (store.selection.length === 0) {
+    alert("Nothing selected! Select items to save first.")
+    return
+  }
+
+  const stage = stageRef.value.getStage()
+  
+  // 2. Calculate Bounding Box of Selection
+  // We iterate through all objects to find min/max X/Y of those in the selection.
+  let minX = Infinity
+  let minY = Infinity
+  let maxX = -Infinity
+  let maxY = -Infinity
+  let found = false
+
+  // Helper to process bounds
+  const updateBounds = (x, y, w, h) => {
+    found = true
+    minX = Math.min(minX, x)
+    minY = Math.min(minY, y)
+    maxX = Math.max(maxX, x + w)
+    maxY = Math.max(maxY, y + h)
+  }
+
+  // Check Bales
+  store.bales.forEach(b => {
+    if (store.selection.includes(b.id)) {
+      // Determine width/height based on orientation/rotation
+      const isRotated = b.rotation % 180 !== 0
+      let w, h
+      if (b.orientation === 'tall') {
+         w = isRotated ? 1 : 3
+         h = isRotated ? 3 : 1
+      } else if (b.orientation === 'pillar') {
+         w = isRotated ? 1 : 1.5
+         h = isRotated ? 1.5 : 1
+      } else {
+         w = isRotated ? 1.5 : 3
+         h = isRotated ? 3 : 1.5
+      }
+      updateBounds(b.x, b.y, w, h)
+    }
+  })
+
+  // Check Board Edges
+  store.boardEdges.forEach(b => {
+    if (store.selection.includes(b.id)) {
+      found = true
+      minX = Math.min(minX, Math.min(b.x1, b.x2))
+      minY = Math.min(minY, Math.min(b.y1, b.y2))
+      maxX = Math.max(maxX, Math.max(b.x1, b.x2))
+      maxY = Math.max(maxY, Math.max(b.y1, b.y2))
+    }
+  })
+
+  // Check DC Mats
+  store.dcMats.forEach(m => {
+    if (store.selection.includes(m.id)) {
+      // Mats are 2x3
+      const w = m.rotation % 180 !== 0 ? 3 : 2
+      const h = m.rotation % 180 !== 0 ? 2 : 3
+      updateBounds(m.x, m.y, w, h)
+    }
+  })
+
+  // If calculation failed (shouldn't happen if selection.length > 0)
+  if (!found || minX === Infinity) {
+    alert("Could not calculate selection bounds.")
+    return
+  }
+
+  // 3. Define Padding (1 foot buffer around the items)
+  const padding = 1 
+  
+  // 4. Calculate Crop Coordinates (in Pixels)
+  // We must account for scale and the grid offset
+  const cropX = (minX - padding) * scale.value + GRID_OFFSET
+  const cropY = (minY - padding) * scale.value + GRID_OFFSET
+  const cropWidth = (maxX - minX + (padding * 2)) * scale.value
+  const cropHeight = (maxY - minY + (padding * 2)) * scale.value
+
+  // 5. Generate Data URL
+  const dataURL = stage.toDataURL({
+    x: cropX,
+    y: cropY,
+    width: cropWidth,
+    height: cropHeight,
+    pixelRatio: 0.5, // 0.5 is usually plenty for a thumbnail
+    mimeType: 'image/jpeg',
+    quality: 0.7
+  })
+console.log("GENERATED THUMBNAIL:", dataURL ? dataURL.slice(0, 50) + "..." : "NULL")
+  // 6. Send to Store
+  store.saveSelectionToLibrary(name, dataURL)
+}
+
 function handleStageContextMenu(e) {
   e.evt.preventDefault() // This works for Konva events
 }
@@ -284,7 +401,7 @@ function handleGroupDragMove(e, id) {
 
 <template>
   <div class="editor-container">
-    <EditorSidebar @print="handlePrint" />
+    <EditorSidebar @print="handlePrint" @save-map="handleSaveMap" @save-library="handleLibrarySave" />
 
     <div class="canvas-wrapper" ref="wrapperRef">
       <Transition name="fade">

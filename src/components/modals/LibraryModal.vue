@@ -53,7 +53,8 @@ async function handleDelete(id) {
             <span class="tag">{{ item.type }}</span>
           </div>
           <div class="card-preview">
-            📦 {{ item.data.bales?.length || 0 }} Bales
+            <img v-if="item.thumbnail" :src="item.thumbnail" alt="Preview" />
+            <span v-else>📦 {{ item.data.bales?.length || 0 }} Bales</span>
           </div>
           <div class="card-actions">
             <button @click="handleImport(item)" class="btn-primary">➕ Add to Map</button>
@@ -79,4 +80,18 @@ header { padding: 20px; border-bottom: 1px solid #eee; display: flex; justify-co
 .btn-primary { flex-grow: 1; background: #2196f3; color: white; border: none; padding: 8px; border-radius: 4px; cursor: pointer; }
 .btn-danger { background: #ffebee; color: #c62828; border: none; padding: 8px; border-radius: 4px; cursor: pointer; }
 .close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
+.card-preview { 
+  flex-grow: 1; 
+  background: white; 
+  border: 1px solid #eee; 
+  height: 120px; /* Taller for image */
+  display: flex; align-items: center; justify-content: center; 
+  overflow: hidden; 
+}
+.card-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain; /* Keeps aspect ratio */
+  padding: 5px;
+}
 </style>
