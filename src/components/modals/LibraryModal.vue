@@ -36,7 +36,7 @@ async function handleDelete(id) {
   <div class="modal-backdrop" @click.self="$emit('close')">
     <div class="modal">
       <header>
-        <h2>📚 Tunnel Library ({{ store.sport }})</h2>
+        <h2>📚 Map Library </h2>
         <button @click="$emit('close')" class="close-btn">×</button>
       </header>
       
@@ -50,7 +50,6 @@ async function handleDelete(id) {
         <div v-for="item in items" :key="item.id" class="lib-card">
           <div class="card-header">
             <h3>{{ item.name }}</h3>
-            <span class="tag">{{ item.type }}</span>
           </div>
           <div class="card-preview">
             <img v-if="item.thumbnail" :src="item.thumbnail" alt="Preview" />
