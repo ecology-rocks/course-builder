@@ -33,13 +33,33 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
 
   // --- PHYSICS & VALIDATION HELPERS ---
 
-  function getBaleRect(bale) {
-    let w, h
+function getBaleRect(bale) {
+    // 1. Determine "Unrotated" Dimensions (How the bale is stored in memory)
+    // These must match the visual offsets used in your Layer component
+    let uw, uh
+    if (bale.orientation === 'tall') { 
+      uw = 3; uh = 1 
+    } else if (bale.orientation === 'pillar') { 
+      uw = 1.5; uh = 1 
+    } else { 
+      // Flat
+      uw = 3; uh = 1.5 
+    }
+
+    // 2. Determine Center Point (Rotation happens around this point)
+    const cx = bale.x + (uw / 2)
+    const cy = bale.y + (uh / 2)
+
+    // 3. Determine "Rotated" Dimensions (The actual visual bounding box)
     const isRotated = bale.rotation % 180 !== 0
-    if (bale.orientation === 'tall') { w = isRotated ? 1 : 3; h = isRotated ? 3 : 1 }
-    else if (bale.orientation === 'pillar') { w = isRotated ? 1 : 1.5; h = isRotated ? 1.5 : 1 }
-    else { w = isRotated ? 1.5 : 3; h = isRotated ? 3 : 1.5 }
-    return { x: bale.x, y: bale.y, w, h }
+    const rw = isRotated ? uh : uw
+    const rh = isRotated ? uw : uh
+
+    // 4. Calculate True Top-Left of the bounding box
+    const rx = cx - (rw / 2)
+    const ry = cy - (rh / 2)
+
+    return { x: rx, y: ry, w: rw, h: rh }
   }
 
   function hasSupport(newBale) {

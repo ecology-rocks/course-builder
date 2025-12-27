@@ -8,6 +8,21 @@ export function useSelectionLogic(state, snapshot, validateAllBales) {
 
   // --- LOCAL HELPERS ---
 
+function smartSnap(val, dimension) {
+    const gridSize = 0.5 
+    const half = dimension / 2
+    
+    // Calculate how far the center is from the grid lines naturally
+    // For a 1.5' wide bale, remainder is 0.25
+    const remainder = half % gridSize
+
+    // 1. Subtract remainder to find the "base" grid line
+    // 2. Snap to nearest grid
+    // 3. Add remainder back to offset the Top-Left correctly
+    return Math.round((val - remainder) / gridSize) * gridSize + remainder
+  }
+
+  
   // Rotates a point (x,y) around a center (cx,cy) by angleDeg
   function rotatePoint(x, y, cx, cy, angleDeg) {
     const rad = (Math.PI / 180) * angleDeg
@@ -138,10 +153,10 @@ export function useSelectionLogic(state, snapshot, validateAllBales) {
     validateAllBales()
   }
 
-  function commitDrag(id, newX, newY) {
-    snapshot()
+function commitDrag(id, newX, newY) {
+    snapshot() // Save history
     
-    // Attempt to find the "Leader" (the object we dragged)
+    // 1. Find the "Leader" (the object dragged)
     let startX, startY
     const bale = state.bales.value.find(b => b.id === id)
     
@@ -149,48 +164,54 @@ export function useSelectionLogic(state, snapshot, validateAllBales) {
       startX = bale.x
       startY = bale.y 
     } else {
-      // Logic for non-bale drags (like mats) could go here
-      // For now, if we can't find the leader bale, we abort group move
-      // (Or handle single item move logic elsewhere)
+      // If we can't find the leader (e.g. dragging a mat), just return or handle appropriately
       return 
     }
 
     const dx = newX - startX
     const dy = newY - startY
 
+    // Helper: Snaps to nearest 3 inches (0.25 ft)
+    const snap = (val) => Math.round(val * 4) / 4
+
     if (!state.selection.value.includes(id)) {
-      // If we dragged an item that WASN'T selected, just move that one item
-      bale.x = Math.round(newX * 2) / 2
-      bale.y = Math.round(newY * 2) / 2
+      // CASE A: Dragging a single unselected item
+      // We snap the item's new position directly
+      bale.x = snap(newX)
+      bale.y = snap(newY)
     } else {
-      // Move Bales
+      // CASE B: Dragging a selection group
+      
+      // 1. Move Bales
       state.bales.value.forEach(b => {
         if (state.selection.value.includes(b.id)) {
-          b.x = Math.round((b.x + dx) * 2) / 2
-          b.y = Math.round((b.y + dy) * 2) / 2
+          b.x = snap(b.x + dx)
+          b.y = snap(b.y + dy)
         }
       })
-      // Move Boards
+      
+      // 2. Move Boards
       state.boardEdges.value.forEach(b => {
         if (state.selection.value.includes(b.id)) {
-          b.x1 = Math.round((b.x1 + dx) * 2) / 2
-          b.y1 = Math.round((b.y1 + dy) * 2) / 2
-          b.x2 = Math.round((b.x2 + dx) * 2) / 2
-          b.y2 = Math.round((b.y2 + dy) * 2) / 2
+          b.x1 = snap(b.x1 + dx)
+          b.y1 = snap(b.y1 + dy)
+          b.x2 = snap(b.x2 + dx)
+          b.y2 = snap(b.y2 + dy)
         }
       })
-      // Move DC Mats
+      
+      // 3. Move DC Mats
       state.dcMats.value.forEach(m => {
         if (state.selection.value.includes(m.id)) {
-           m.x = Math.round((m.x + dx) * 2) / 2
-           m.y = Math.round((m.y + dy) * 2) / 2
+           m.x = snap(m.x + dx)
+           m.y = snap(m.y + dy)
         }
       })
     }
     
     validateAllBales()
     
-    // Force Reactivity (Vue sometimes misses deep array updates)
+    // Force Reactivity
     state.bales.value = [...state.bales.value]
     state.boardEdges.value = [...state.boardEdges.value]
     state.dcMats.value = [...state.dcMats.value]

@@ -56,16 +56,50 @@ function getArrowPoints(width, height, direction) {
 // Snapping Logic
 function baleDragBoundFunc(pos) {
   const node = this
+  const baleId = node.attrs.id
+  const bale = store.bales.find(b => b.id === baleId)
+  
+  if (!bale) return pos 
+
+  // 1. Determine Visual Dimensions (Is it rotated?)
+  let w = 3.0
+  let h = 1.5
+  if (bale.orientation === 'pillar') { w = 1.5; h = 1.0 }
+  else if (bale.orientation === 'tall') { w = 3.0; h = 1.0 }
+  
+  const isRotated = bale.rotation % 180 !== 0
+  
+  // Swap dimensions if rotated
+  const visualW = (isRotated ? h : w) * props.scale
+  const visualH = (isRotated ? w : h) * props.scale
+
+  // 2. Define Constraints (Based on the Center point)
+  const halfW = visualW / 2
+  const halfH = visualH / 2
+  
+  const minX = halfW
+  const maxX = (store.ringDimensions.width * props.scale) - halfW
+  const minY = halfH
+  const maxY = (store.ringDimensions.height * props.scale) - halfH
+
+  // 3. Snap Logic (3-inch / 0.25ft intervals)
   const layerAbs = node.getLayer().getAbsolutePosition()
-  const anchorX = pos.x - layerAbs.x
-  const anchorY = pos.y - layerAbs.y
-  const offsetX = 1.5 * props.scale; const offsetY = 0.75 * props.scale
-  const step = props.scale / 2
-  let snappedX = Math.round((anchorX - offsetX) / step) * step
-  let snappedY = Math.round((anchorY - offsetY) / step) * step
-  const maxX = store.ringDimensions.width * props.scale; const maxY = store.ringDimensions.height * props.scale
-  snappedX = Math.max(0, Math.min(snappedX, maxX)); snappedY = Math.max(0, Math.min(snappedY, maxY))
-  return { x: snappedX + offsetX + layerAbs.x, y: snappedY + offsetY + layerAbs.y }
+  const relX = pos.x - layerAbs.x
+  const relY = pos.y - layerAbs.y
+  
+  const step = props.scale / 4 // <--- 3-inch snapping
+
+  let snappedRelX = Math.round(relX / step) * step
+  let snappedRelY = Math.round(relY / step) * step
+  
+  // 4. Clamp to boundaries
+  snappedRelX = Math.max(minX, Math.min(snappedRelX, maxX))
+  snappedRelY = Math.max(minY, Math.min(snappedRelY, maxY))
+  
+  return {
+    x: snappedRelX + layerAbs.x,
+    y: snappedRelY + layerAbs.y
+  }
 }
 function dragBoundFunc(pos) {
   const node = this; const layerAbs = node.getLayer().getAbsolutePosition(); const step = props.scale / 2
