@@ -117,7 +117,7 @@ function handleMergeChange(event) {
         <button @click="handleImportClick" class="btn-secondary">Load JSON</button>
       </div>
       <div class="button-row" style="margin-top: 5px;">
-        <button @click="handleMergeClick" class="btn-primary">➕ Merge / Add Tunnel</button>
+        <button @click="handleMergeClick" class="btn-primary">➕ Merge Uploaded File</button>
       </div>
       
       <input type="file" ref="fileInput" @change="handleFileChange" accept=".json" style="display: none" />
