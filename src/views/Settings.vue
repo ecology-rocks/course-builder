@@ -218,7 +218,7 @@ async function handleRemoveJudge(email) {
         <div class="form-row">
           <label>Official Club Name:</label>
           <div class="input-group">
-            <input v-model="localClubName" placeholder="e.g. Buckeye United Dog Sports" />
+            <input v-model="localClubName" placeholder="e.g. Ohio Dog Club" />
             <button @click="saveClubName" class="btn-primary small">Save</button>
           </div>
         </div>
