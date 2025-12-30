@@ -40,7 +40,7 @@ export const useMapStore = defineStore('map', () => {
   const masterBlinds = ref([]) 
   const savedMaps = ref([])
   const gridStartCorner = ref('top-left') // options: 'top-left', 'top-right', 'bottom-left', 'bottom-right'
-
+  const clipboard = ref([])
   const currentLayer = ref(1)
   const selectedBaleId = ref(null)
   const selection = ref([]) 
@@ -93,7 +93,7 @@ export const useMapStore = defineStore('map', () => {
     dcMats, hides, mapName, currentMapId, currentFolderId, wallTypes,
     isShared, classLevel, sport, scentWorkObjects, 
     masterBlinds, startBox, previousClassCount, savedMaps, folders,
-    isDrawingBoard, currentLayer, selectedBaleId, gridStartCorner,
+    isDrawingBoard, currentLayer, selectedBaleId, gridStartCorner, clipboard,
     // Methods
     reset
   }
@@ -130,7 +130,7 @@ export const useMapStore = defineStore('map', () => {
     agilityObstacles, scentWorkObjects, nextNumber, notification,
     savedMaps, currentMapId, mapName, isShared,
     classLevel, sport, folders, currentFolderId, previousClassCount,
-    selection, isDraggingSelection, wallTypes, gridStartCorner,
+    selection, isDraggingSelection, wallTypes, gridStartCorner, clipboard,
 
     // Core
     setTool, reset, showNotification, resizeRing, currentGuidelines,

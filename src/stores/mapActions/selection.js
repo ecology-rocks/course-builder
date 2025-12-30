@@ -22,6 +22,75 @@ function smartSnap(val, dimension) {
     return Math.round((val - remainder) / gridSize) * gridSize + remainder
   }
 
+function copySelection() {
+    const selectedIds = state.selection.value
+    if (selectedIds.length === 0) return
+
+    const clip = []
+
+    // Helper to find selected items in a specific array and tag them
+    const capture = (sourceArray, type) => {
+      sourceArray.forEach(item => {
+        if (selectedIds.includes(item.id)) {
+          // Deep clone to prevent reference issues
+          clip.push({ type, data: JSON.parse(JSON.stringify(item)) })
+        }
+      })
+    }
+
+    // Check all possible arrays
+    capture(state.bales.value, 'bale')
+    capture(state.boardEdges.value, 'board')
+    capture(state.dcMats.value, 'dcmat')
+    capture(state.hides.value, 'hide')
+    
+    if (state.agilityObstacles.value) capture(state.agilityObstacles.value, 'agility')
+    if (state.scentWorkObjects.value) capture(state.scentWorkObjects.value, 'scent')
+
+    state.clipboard.value = clip
+    // Optional: console.log(`Copied ${clip.length} items`)
+  }
+
+  function pasteSelection() {
+    if (!state.clipboard.value || state.clipboard.value.length === 0) return
+
+    snapshot() // Save history before pasting
+    
+    // Deselect current items so we can select the NEW pasted ones
+    state.selection.value = []
+    const newSelection = []
+    const OFFSET = 1 // Offset pasted items by 1ft so they are visible
+
+    state.clipboard.value.forEach(clipItem => {
+      // Generate NEW ID
+      const newId = crypto.randomUUID()
+      const newItem = { ...clipItem.data, id: newId }
+
+      // Apply Offset
+      if (clipItem.type === 'board') {
+        newItem.x1 += OFFSET; newItem.y1 += OFFSET
+        newItem.x2 += OFFSET; newItem.y2 += OFFSET
+      } else {
+        newItem.x += OFFSET; newItem.y += OFFSET
+      }
+
+      // Add to correct array
+      if (clipItem.type === 'bale') state.bales.value.push(newItem)
+      else if (clipItem.type === 'board') state.boardEdges.value.push(newItem)
+      else if (clipItem.type === 'dcmat') state.dcMats.value.push(newItem)
+      else if (clipItem.type === 'hide') state.hides.value.push(newItem)
+      else if (clipItem.type === 'agility') state.agilityObstacles.value.push(newItem)
+      else if (clipItem.type === 'scent') state.scentWorkObjects.value.push(newItem)
+
+      // Add to selection
+      newSelection.push(newId)
+    })
+
+    state.selection.value = newSelection
+    validateAllBales()
+  }
+
+
   
   // Rotates a point (x,y) around a center (cx,cy) by angleDeg
   function rotatePoint(x, y, cx, cy, angleDeg) {
@@ -319,6 +388,8 @@ function commitDrag(id, newX, newY) {
     moveSelection,
     deleteSelection,
     commitDrag,
-    rotateSelection
+    rotateSelection,
+    copySelection,
+    pasteSelection,
   }
 }

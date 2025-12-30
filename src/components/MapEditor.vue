@@ -43,6 +43,19 @@ function handleKeydown(e) {
     return
   }
   
+
+  if (isCtrl && key === 'c') {
+    e.preventDefault() // Prevent browser copy
+    store.copySelection()
+    return
+  }
+
+  if (isCtrl && key === 'v') {
+    e.preventDefault() // Prevent browser paste
+    store.pasteSelection()
+    return
+  }
+  
   // Redo: Ctrl+Y  OR  Ctrl+Shift+Z
   if (isCtrl && (key === 'y' || (e.shiftKey && key === 'z'))) {
     e.preventDefault()
@@ -512,7 +525,7 @@ function getGridLabelY(index) {
               }" 
             />
           </template>
-          
+
           <v-group v-if="store.sport === 'barnhunt'">
             <v-line :config="{ 
               points: [0, 0, store.ringDimensions.width*scale, 0], 

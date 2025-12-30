@@ -8,7 +8,7 @@
  - Numbered rat spots for Master
  - Anchor bale marking and anchor bale measurements from walls
  - Official Barn Hunt maps require legends - need to add a legend. 
- - Toast notification after successful save
+ - [x]  Toast notification after successful save
  - [x] DONE -  Need to be able to label the type of wall/fencing. 
 
 ## Feature Requests & Future Updates (Long Term)
@@ -20,7 +20,7 @@
  - Change tracking between levels (for nested course design)
  - Need a gate marker
  - Premade tunnels should indicate EastCoast/WestCoast dimensions
- - Provide options for choosing where grid numbering starts (lower/top left/right)
+ - [x] DONE - Provide options for choosing where grid numbering starts (lower/top left/right)
  - Provide explicit instructions for PDF generation until I build a PDF tool
  
 
