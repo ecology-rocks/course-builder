@@ -29,7 +29,8 @@ export function useMapPersistence(state, userStore, notifications) {
       isShared: state.isShared.value,
       hides: state.hides.value,
       startBox: state.startBox.value,
-      wallTypes: state.wallTypes ? state.wallTypes.value : {}
+      wallTypes: state.wallTypes ? state.wallTypes.value : {},
+      gridStartCorner: state.gridStartCorner.value
     }
   }
 
@@ -156,7 +157,9 @@ export function useMapPersistence(state, userStore, notifications) {
     state.classLevel.value = data.level || 'Novice'
     state.sport.value = data.sport || 'barnhunt'
     state.ringDimensions.value = data.data?.dimensions || data.dimensions || { width: 24, height: 24 }
-    
+    if (state.gridStartCorner) {
+       state.gridStartCorner.value = data.data?.gridStartCorner || data.gridStartCorner || 'top-left'
+    }
     state.bales.value = data.data?.bales || data.bales || []
     state.agilityObstacles.value = data.data?.agilityObstacles || data.agilityObstacles || []
     state.scentWorkObjects.value = data.data?.scentWorkObjects || data.scentWorkObjects || []
@@ -177,7 +180,9 @@ export function useMapPersistence(state, userStore, notifications) {
     state.sport.value = data.sport || 'barnhunt'
     state.isShared.value = data.isShared || false
     state.currentFolderId.value = data.folderId || null
-    
+    if (state.gridStartCorner) {
+       state.gridStartCorner.value = mapData.gridStartCorner || 'top-left'
+    }
     // Support legacy and new data structures
     const mapData = data.data || data
     

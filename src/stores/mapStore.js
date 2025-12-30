@@ -39,6 +39,7 @@ export const useMapStore = defineStore('map', () => {
   const startBox = ref(null) 
   const masterBlinds = ref([]) 
   const savedMaps = ref([])
+  const gridStartCorner = ref('top-left') // options: 'top-left', 'top-right', 'bottom-left', 'bottom-right'
 
   const currentLayer = ref(1)
   const selectedBaleId = ref(null)
@@ -64,6 +65,7 @@ export const useMapStore = defineStore('map', () => {
     currentMapId.value = null; mapName.value = "Untitled Map"; classLevel.value = "Novice"; sport.value = 'barnhunt'
     ringDimensions.value = { width: 24, height: 24 }; previousClassCount.value = 0; currentLayer.value = 1; activeTool.value = 'bale'
     wallTypes.value = { top: 'fence', right: 'fence', bottom: 'fence', left: 'fence' }
+    gridStartCorner.value = 'top-left'
     // History reset happens inside history module logic if we exposed a clear method, but usually it clears on reload
   }
 
@@ -91,7 +93,7 @@ export const useMapStore = defineStore('map', () => {
     dcMats, hides, mapName, currentMapId, currentFolderId, wallTypes,
     isShared, classLevel, sport, scentWorkObjects, 
     masterBlinds, startBox, previousClassCount, savedMaps, folders,
-    isDrawingBoard, currentLayer, selectedBaleId,
+    isDrawingBoard, currentLayer, selectedBaleId, gridStartCorner,
     // Methods
     reset
   }
@@ -128,7 +130,7 @@ export const useMapStore = defineStore('map', () => {
     agilityObstacles, scentWorkObjects, nextNumber, notification,
     savedMaps, currentMapId, mapName, isShared,
     classLevel, sport, folders, currentFolderId, previousClassCount,
-    selection, isDraggingSelection, wallTypes,
+    selection, isDraggingSelection, wallTypes, gridStartCorner,
 
     // Core
     setTool, reset, showNotification, resizeRing, currentGuidelines,
