@@ -199,7 +199,7 @@ function handleHideClick(e, id) { if (e.evt.button !== 0) return; if (store.acti
 <template>
   <v-group>
     <v-group v-if="store.startBox" :config="{ draggable: true, dragBoundFunc: dragBoundFunc, x: store.startBox.x * scale, y: store.startBox.y * scale }" @dragend="handleDragEnd($event, null, 'startbox')" @click="store.activeTool === 'delete' ? store.removeStartBox() : null">
-       <v-rect :config="{ width: 4 * scale, height: 5 * scale, fill: 'rgba(200, 200, 200, 0.5)', stroke: 'black', dash: [10, 5] }" />
+       <v-rect :config="{ width: 4 * scale, height: 4 * scale, fill: 'rgba(200, 200, 200, 0.5)', stroke: 'black', dash: [10, 5] }" />
        <v-text :config="{ text: 'START', width: 4 * scale, padding: 5, align: 'center', fontSize: 14 }" />
     </v-group>
 

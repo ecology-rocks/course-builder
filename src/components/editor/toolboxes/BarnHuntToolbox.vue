@@ -49,7 +49,7 @@ const store = useMapStore()
 
     <h3>Actions</h3>
     <div class="action-tools">
-      <button @click="store.setTool('select')" :class="{ active: store.activeTool === 'select' }">⬜ Select Area</button>
+      <button @click="store.setTool('select')" :class="{ active: store.activeTool === 'select' }">⬜ Select Area (Click + Drag)</button>
       
       <button 
         v-if="store.selection.length > 1" 
@@ -67,10 +67,10 @@ const store = useMapStore()
         🗑️ Delete Selected ({{ store.selection.length }})
       </button>
 
-      <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">🔄 Rotate Item</button>
-      <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">📐 Orientation</button>
-      <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">↗️ Lean</button>
-      <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">🗑️ Delete Tool</button>
+      <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">🔄 Rotate Item (Right Click)</button>
+      <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">📐 Orientation (Alt+Click)</button>
+      <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">↗️ Lean (Ctrl+Click)</button>
+      <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">🗑️ Delete Tool (Double Click)</button>
     </div>
   </div>
 </template>
