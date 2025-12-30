@@ -73,7 +73,7 @@ function handleMergeChange(event) {
       <div class="history-controls">
         <button @click="store.undo()" :disabled="store.history.length === 0" title="Undo (Ctrl+Z)">↩️</button>
         <button @click="store.redo()" :disabled="store.future.length === 0" title="Redo (Ctrl+Y)">↪️</button>
-        <button @click="store.saveToCloud" class="btn-save">💾</button>
+        <button @click="store.saveToCloud()" class="btn-save">💾</button>
       </div>
     </div>
 
