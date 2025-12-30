@@ -3,7 +3,8 @@ import { ref, onMounted, computed, watch } from 'vue'
 import { useUserStore } from '../stores/userStore'
 import { useMapStore } from '../stores/mapStore'
 import { useRouter } from 'vue-router'
-import AuthForm from '../components/auth/AuthForm.vue' // <--- Import Component
+import AuthForm from '../components/auth/AuthForm.vue'
+import DeleteMapModal from '../components/modals/DeleteMapModal.vue'
 
 const userStore = useUserStore()
 const mapStore = useMapStore()
@@ -13,6 +14,10 @@ const router = useRouter()
 const isLoading = ref(false)
 const isDragOver = ref(false)
 const localMaps = ref([])
+
+//Delete States
+const showDeleteModal = ref(false)
+const mapToDeleteId = ref(null)
 
 function handleLogout() {
   userStore.logout()
@@ -57,6 +62,21 @@ async function handleDelete(id) {
   if(confirm("Are you sure you want to delete this map?")) {
     await mapStore.deleteMap(id)
     localMaps.value = await mapStore.loadUserMaps() 
+  }
+}
+
+// --- Delete Logic ---
+function requestDelete(id) {
+  mapToDeleteId.value = id
+  showDeleteModal.value = true
+}
+
+async function confirmDelete() {
+  if (mapToDeleteId.value) {
+    await mapStore.deleteMap(mapToDeleteId.value)
+    localMaps.value = await mapStore.loadUserMaps()
+    showDeleteModal.value = false
+    mapToDeleteId.value = null
   }
 }
 
@@ -112,6 +132,11 @@ watch(() => userStore.user, async (newUser) => {
 
 <template>
   <div class="dashboard">
+    <Transition name="fade">
+      <div v-if="mapStore.notification" class="toast-notification" :class="mapStore.notification.type">
+        {{ mapStore.notification.message }}
+      </div>
+    </Transition>
     <nav class="navbar">
       <div class="logo">🐾 K9CourseBuilder</div>
       <div class="nav-links">
@@ -223,7 +248,7 @@ watch(() => userStore.user, async (newUser) => {
                 </div>
                 <div class="actions">
                   <button @click="openMap(map)">Edit</button>
-                  <button @click="handleDelete(map.id)" class="btn-danger">Delete</button>
+                  <button @click="requestDelete(map.id)" class="btn-danger">Delete</button>
                 </div>
               </div>
             </div>
@@ -232,6 +257,13 @@ watch(() => userStore.user, async (newUser) => {
 
       </main>
     </div>
+
+    <DeleteMapModal 
+      v-if="showDeleteModal" 
+      @close="showDeleteModal = false" 
+      @confirm="confirmDelete" 
+    />
+
   </div>
 </template>
 
@@ -285,4 +317,21 @@ watch(() => userStore.user, async (newUser) => {
 .actions .btn-danger { color: #d32f2f; border-color: #ef9a9a; }
 .actions .btn-danger:hover { background: #ffebee; }
 .empty-state { text-align: center; color: #999; margin-top: 40px; font-style: italic; }
+
+.toast-notification { 
+  position: fixed; 
+  top: 80px; /* Below navbar */
+  left: 50%; 
+  transform: translateX(-50%); 
+  padding: 12px 24px; 
+  border-radius: 8px; 
+  color: white; 
+  font-weight: bold; 
+  z-index: 2000; 
+  pointer-events: none;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+.toast-notification.success { background-color: #388e3c; }
+.toast-notification.error { background-color: #d32f2f; }
+.toast-notification.info { background-color: #2196f3; }
 </style>

@@ -265,7 +265,9 @@ export function useMapPersistence(state, userStore, notifications) {
       // If we deleted the currently open map, clear the ID so we don't try to update it later
       if (state.currentMapId.value === id) state.currentMapId.value = null 
       // Refresh list
+      
       await loadUserMaps()
+      notifications.show("Map deleted.", 'success')
     } catch (e) { 
       console.error("Delete failed", e)
       notifications.show("Failed to delete map.", 'error') 
