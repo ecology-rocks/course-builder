@@ -28,7 +28,8 @@ export function useMapPersistence(state, userStore, notifications) {
       previousClassCount: state.previousClassCount.value,
       isShared: state.isShared.value,
       hides: state.hides.value,
-      startBox: state.startBox.value
+      startBox: state.startBox.value,
+      wallTypes: state.wallTypes ? state.wallTypes.value : {}
     }
   }
 
@@ -67,12 +68,12 @@ export function useMapPersistence(state, userStore, notifications) {
         if (!isAutoSave) {
           const newId = await mapService.createMap(mapData)
           state.currentMapId.value = newId
-          notifications.show("Map saved!")
+          notifications.show("Map saved!", 'success')
         }
       }
     } catch (e) {
       console.error(e)
-      if (!isAutoSave) alert("Failed to save map.")
+      if (!isAutoSave) alert("Failed to save map.", 'error')
     }
   }
 
@@ -104,7 +105,7 @@ export function useMapPersistence(state, userStore, notifications) {
         data: exportData,
         thumbnail: thumbnail
       })
-      alert(`Saved "${name}" to Library!`)
+      notifications.show(`Saved "${name}" to Library!`, 'success')
     } catch (e) {
       console.error(e)
       alert(e.message) 
@@ -142,7 +143,7 @@ export function useMapPersistence(state, userStore, notifications) {
     try { 
       importMapFromData(JSON.parse(jsonString)) 
     } catch (e) { 
-      alert("Failed to parse map file.")
+      notifications.show("Failed to parse map file.", 'error')
       console.error(e) 
     } 
   }
@@ -190,6 +191,7 @@ export function useMapPersistence(state, userStore, notifications) {
     state.masterBlinds.value = data.masterBlinds || []
     state.startBox.value = mapData.startBox || null
     state.previousClassCount.value = mapData.previousClassCount || 0
+    if (state.wallTypes && mapData.wallTypes) { state.wallTypes.value = mapData.wallTypes }
     
     state.validateAllBales()
   }
@@ -240,11 +242,11 @@ export function useMapPersistence(state, userStore, notifications) {
       state.bales.value = [...state.bales.value]
       state.boardEdges.value = [...state.boardEdges.value]
       
-      alert("Tunnel loaded successfully!")
+      notifications.show("Library item loaded successfully!", 'success')
       
     } catch (e) {
       console.error(e)
-      alert("Failed to merge file. Invalid JSON.")
+      notifications.show("Failed to merge file. Invalid JSON.", 'error')
     }
   }
 
@@ -266,7 +268,7 @@ export function useMapPersistence(state, userStore, notifications) {
       await loadUserMaps()
     } catch (e) { 
       console.error("Delete failed", e)
-      alert("Failed to delete map.") 
+      notifications.show("Failed to delete map.", 'error') 
     } 
   }
 

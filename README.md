@@ -9,7 +9,7 @@
  - Anchor bale marking and anchor bale measurements from walls
  - Official Barn Hunt maps require legends - need to add a legend. 
  - Toast notification after successful save
- - Need to be able to label the type of wall/fencing. 
+ - [x] DONE -  Need to be able to label the type of wall/fencing. 
 
 ## Feature Requests & Future Updates (Long Term)
  - Offline caching, offline version, local storage options
@@ -26,7 +26,6 @@
 
 ## Bug Reports
  - Lock down club seats to max 5.
- - Put keyboard shortcuts in tooltips so people know
 
 
 ## Planned Updates

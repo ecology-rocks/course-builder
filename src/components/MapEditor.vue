@@ -469,7 +469,7 @@ function getWallStroke(type) {
               stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right) 
             }" />
           </v-group>
-          
+
           <AgilityLayer v-if="store.sport === 'agility'" :scale="scale" :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale/2))*(scale/2), y: Math.round(pos.y / (scale/2))*(scale/2) })" />
           
           <BarnHuntLayer v-if="store.sport === 'barnhunt'" :scale="scale" :showHides="showHides" :GRID_OFFSET="GRID_OFFSET" />
@@ -508,6 +508,7 @@ function getWallStroke(type) {
 .toast-notification { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 8px; color: white; font-weight: bold; z-index: 2000; pointer-events: none; }
 .toast-notification.error { background-color: #d32f2f; }
 .toast-notification.success { background-color: #388e3c; }
+.toast-notification.info {   background-color: #2196f3; }
 .zoom-controls { position: fixed; bottom: 20px; right: 20px; background: white; padding: 5px; border-radius: 8px; display: flex; gap: 5px; z-index: 100; }
 .zoom-controls button { width: 30px; height: 30px; cursor: pointer; }
 </style>
