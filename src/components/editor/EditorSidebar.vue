@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import AuthForm from '../auth/AuthForm.vue' // <--- 1. Import AuthForm
 import { ref, computed } from 'vue'
 import LibraryModal from '@/components/modals/LibraryModal.vue'
+import WallSettingsModal from '@/components/modals/WallSettingsModal.vue'
 // --- 2. Import New Toolboxes ---
 import BarnHuntToolbox from './toolboxes/BarnHuntToolbox.vue'
 import AgilityToolbox from './toolboxes/AgilityToolbox.vue'
@@ -18,6 +19,7 @@ const mergeInput = ref(null)
 const showLibrary = ref(false)
 const emit = defineEmits(['print', 'save-map', 'save-library'])
 const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
+const showWallModal = ref(false)
 
 function handleSaveClick() {
   emit('save-map') // Ask parent to generate thumb & save
@@ -107,6 +109,11 @@ function handleMergeChange(event) {
         </select>
       </div>
 
+      <div v-if="store.sport === 'barnhunt'" class="config-group">
+        <button @click="showWallModal = true" class="btn-secondary" style="width:100%; font-weight:bold;">
+          🧱 Wall Settings
+        </button>
+      </div>
       <hr />
 
 <aside class="sidebar">
@@ -141,6 +148,7 @@ function handleMergeChange(event) {
        <ScentWorkToolbox v-else-if="store.sport === 'scentwork'" />
     </div>
 <LibraryModal v-if="showLibrary" @close="showLibrary = false" />
+<WallSettingsModal v-if="showWallModal" @close="showWallModal = false" />
     </aside>
 
       <hr />

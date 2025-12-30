@@ -398,6 +398,12 @@ function handleGroupDragMove(e, id) {
   // 1. We record start positions of ALL selected items.
   // 2. On 'dragmove', we apply the delta to ALL items in the store.
 }
+
+function getWallStroke(type) {
+  // Solid Wall = Thick Black, Fence = Standard Thin
+  return type === 'wall' ? 8 : 1
+}
+
 </script>
 
 <template>
@@ -445,6 +451,25 @@ function handleGroupDragMove(e, id) {
             <v-text v-if="store.sport === 'scentwork' && (n-1) % 5 === 0" :config="{ x: -25, y: (n-1)*scale-6, text: (n-1).toString(), fontSize: 12, fill: '#666', align: 'right', width: 20 }" />
           </template>
 
+          <v-group v-if="store.sport === 'barnhunt'">
+            <v-line :config="{ 
+              points: [0, 0, store.ringDimensions.width*scale, 0], 
+              stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.top) 
+            }" />
+            <v-line :config="{ 
+              points: [0, store.ringDimensions.height*scale, store.ringDimensions.width*scale, store.ringDimensions.height*scale], 
+              stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.bottom) 
+            }" />
+            <v-line :config="{ 
+              points: [0, 0, 0, store.ringDimensions.height*scale], 
+              stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.left) 
+            }" />
+            <v-line :config="{ 
+              points: [store.ringDimensions.width*scale, 0, store.ringDimensions.width*scale, store.ringDimensions.height*scale], 
+              stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right) 
+            }" />
+          </v-group>
+          
           <AgilityLayer v-if="store.sport === 'agility'" :scale="scale" :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale/2))*(scale/2), y: Math.round(pos.y / (scale/2))*(scale/2) })" />
           
           <BarnHuntLayer v-if="store.sport === 'barnhunt'" :scale="scale" :showHides="showHides" :GRID_OFFSET="GRID_OFFSET" />
