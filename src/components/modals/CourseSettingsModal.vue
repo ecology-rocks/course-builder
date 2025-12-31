@@ -6,6 +6,27 @@
         <button class="close-btn" @click="$emit('close')">×</button>
       </div>
 
+      <div class="settings-section" v-if="store.sport === 'barnhunt'">
+        <h4>Comparison Baseline</h4>
+        <p class="hint">Compare your current map against a saved map.</p>
+        
+        <div class="form-group">
+          <label>Compare Against:</label>
+          <div class="comparison-row">
+            <select v-model="selectedMapId" @change="handleMapSelect" :disabled="loadingMaps">
+              <option :value="null">-- Select a Saved Map --</option>
+              <option v-for="map in userMaps" :key="map.id" :value="map.id">
+                {{ map.name }}
+              </option>
+            </select>
+          </div>
+          <p class="status-text" v-if="store.comparisonMapName">
+            Currently comparing vs: <strong>{{ store.comparisonMapName }}</strong>
+          </p>
+        </div>
+      </div>
+      <hr v-if="store.sport === 'barnhunt'" />
+
       <div class="settings-section">
         <h4>Trial Information</h4>
         <div class="form-grid">
@@ -133,8 +154,36 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue' // Added ref, onMounted
 import { useMapStore } from '@/stores/mapStore'
 const store = useMapStore()
+
+const userMaps = ref([])
+const selectedMapId = ref(null)
+const loadingMaps = ref(false)
+
+onMounted(async () => {
+  if (store.sport === 'barnhunt') {
+    loadingMaps.value = true
+    try {
+      userMaps.value = await store.loadUserMaps()
+    } finally {
+      loadingMaps.value = false
+    }
+  }
+})
+
+function handleMapSelect() {
+  if (!selectedMapId.value) return
+  
+  const map = userMaps.value.find(m => m.id === selectedMapId.value)
+  if (map) {
+    // The structure might be map.data.bales or map.bales depending on migration
+    const data = map.data || map
+    const bales = data.bales || []
+    store.setComparisonBales(bales, map.name)
+  }
+}
 
 function getBorderStyle(type) {
   return type === 'wall' ? '4px solid #333' : '2px dashed #999'
@@ -166,6 +215,8 @@ function formatCorner(c) {
   border-radius: 8px;
   width: 400px;
   max-width: 90vw;
+  max-height: 90vh; /* Added constraint */
+  overflow-y: auto; /* Added scroll */
 }
 
 .modal-header {
@@ -200,6 +251,12 @@ function formatCorner(c) {
   margin-top: 5px;
 }
 
+.status-text {
+  font-size: 0.8rem;
+  color: #2e7d32;
+  margin-top: 5px;
+}
+
 /* FORMS */
 .form-grid {
   display: flex;
@@ -220,7 +277,7 @@ function formatCorner(c) {
 }
 
 /* --- FIX: Added width: 100% and box-sizing --- */
-.form-group input {
+.form-group input, .form-group select {
   padding: 6px;
   border: 1px solid #ddd;
   border-radius: 4px;
@@ -239,12 +296,9 @@ function formatCorner(c) {
   min-width: 0;
 }
 
-.form-group select {
-  padding: 6px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  width: 100%;
-  box-sizing: border-box;
+.comparison-row {
+  display: flex;
+  gap: 10px;
 }
 
 .corner-selector {

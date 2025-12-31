@@ -178,6 +178,8 @@ export function useMapPersistence(state, userStore, notifications) {
        const def = { length: 3, width: 1.5, height: 1 }
        state.baleConfig.value = data.data?.baleConfig || data.baleConfig || def
     }
+    state.previousBales.value = JSON.parse(JSON.stringify(data.data?.bales || data.bales || []))
+    state.comparisonMapName.value = "Original File"
     if (state.validateAllBales) state.validateAllBales()
   }
 
@@ -195,6 +197,7 @@ export function useMapPersistence(state, userStore, notifications) {
     const mapData = data.data || data 
     // -------------------------------------------
 
+    
     // Now it is safe to access mapData for everything below
     state.ringDimensions.value = mapData.dimensions || { width: 24, height: 24 }
     state.bales.value = mapData.bales || []
@@ -206,6 +209,8 @@ export function useMapPersistence(state, userStore, notifications) {
     state.masterBlinds.value = data.masterBlinds || []
     state.startBox.value = mapData.startBox || null
     state.previousClassCount.value = mapData.previousClassCount || 0
+    state.previousBales.value = JSON.parse(JSON.stringify(mapData.bales || []))
+    state.comparisonMapName.value = "Original Save"
     
     if (state.wallTypes && mapData.wallTypes) state.wallTypes.value = mapData.wallTypes
     if (state.gridStartCorner) state.gridStartCorner.value = mapData.gridStartCorner || 'top-left'

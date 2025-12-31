@@ -1,13 +1,13 @@
 import { nextTick } from 'vue'
 
 export function usePrinter(store, userStore, stageRef, scale) {
-  
+
   async function handlePrint(withHides = true) {
     const originalScale = scale.value
     scale.value = 40 // Force standard print resolution
     await nextTick()
     const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
-    await wait(100) 
+    await wait(100)
 
     const d = new Date().toLocaleDateString()
     const logoHtml = userStore.clubLogoUrl ? `<img src="${userStore.clubLogoUrl}" class="print-logo" />` : ''
@@ -21,7 +21,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
         let text = `${store.classLevel}`
         if (store.trialNumber) text += ` Trial ${store.trialNumber}`
         if (store.trialDay) text += `, ${store.trialDay}`
-        if (layerName) text += ` - ${layerName.replace('• ', '')}` 
+        if (layerName) text += ` - ${layerName.replace('• ', '')}`
         return text
       } else {
         return `${store.classLevel} ${store.sport === 'agility' ? 'Agility' : 'Barn Hunt'} ${layerName || ''}`
@@ -45,6 +45,29 @@ export function usePrinter(store, userStore, stageRef, scale) {
         </div>
       </div>
     `
+
+
+    const diffs = store.differentials
+    const getDiffHtml = () => {
+      if (!diffs) return ''
+
+      const fmt = (l) => {
+        const d = diffs[l]
+        const sign = d.net > 0 ? '+' : ''
+        return `<div><strong>L${l}:</strong> ${sign}${d.net} bales, ${d.moved} moved</div>`
+      }
+
+      return `
+        <div class="legend-section" style="border-top: 1px solid #ccc; padding-top: 5px; margin-top: 10px;">
+          <h4 style="margin-bottom: 2px;">Changes vs. Previous</h4>
+          <div style="font-size: 11px;">
+            ${fmt(1)}
+            ${fmt(2)}
+            ${fmt(3)}
+          </div>
+        </div>
+      `
+    }
 
     // --- NEW: Legend HTML (Matches BarnHuntLayer.vue visuals) ---
     const getLegendHtml = () => `
@@ -78,7 +101,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
           <div class="legend-item"><span class="symbol start"></span> Start Box</div>
           <div class="legend-item"><span class="symbol dc"></span> DC Mat</div>
         </div>
-
+        ${getDiffHtml()}
         ${withHides ? `
         <div class="legend-section">
           <h4>Hides</h4>
@@ -179,8 +202,8 @@ export function usePrinter(store, userStore, stageRef, scale) {
     // AGILITY (Kept standard for now, but wrapped in page-body structure)
     if (store.sport === 'agility') {
       const dataUrl = stageRef.value.getStage().toDataURL({ pixelRatio: 3 })
-      scale.value = originalScale 
-      
+      scale.value = originalScale
+
       const win = window.open('', '_blank')
       win.document.write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>${printStyles}</style></head><body>
         <div class="print-page">
@@ -203,17 +226,17 @@ export function usePrinter(store, userStore, stageRef, scale) {
       if (layerNum === 1) return true
       return store.bales.some(b => b.layer === layerNum)
     }
-    
+
     if (shouldPrintLayer(1)) {
       store.currentLayer = 1; await wait(150);
       pages.push({ title: '• Layer 1', img: stageRef.value.getStage().toDataURL({ pixelRatio: 3 }) })
     }
-    
+
     if (shouldPrintLayer(2)) {
       store.currentLayer = 2; await wait(150);
       pages.push({ title: '• Layer 2', img: stageRef.value.getStage().toDataURL({ pixelRatio: 3 }) })
     }
-    
+
     if (shouldPrintLayer(3)) {
       store.currentLayer = 3; await wait(150);
       pages.push({ title: '• Layer 3', img: stageRef.value.getStage().toDataURL({ pixelRatio: 3 }) })

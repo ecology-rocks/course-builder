@@ -25,14 +25,13 @@
  - Numbered rat spots for Master
  - Ability to modify subscriptions, add extra seats to club sub, etc. 
  - Documentation + Guides
- - Fix validation over tunnel boards
  - Increase line thickness on tall bale slash marks so they're visible when printing
  
  
 
 ## Bug Reports
- - Lock down club seats to max 5.
-
+ - ~~Lock down club seats to max 5.~~
+ - ~~Validation is blocking bale placement~~
 
 ## Planned Updates
 

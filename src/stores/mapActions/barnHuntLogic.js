@@ -31,6 +31,65 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
     }
   })
 
+  const differentials = computed(() => {
+    // If no previous map data, return null
+    if (!state.previousBales.value || state.previousBales.value.length === 0) return null
+
+    const stats = {
+      1: { net: 0, moved: 0 },
+      2: { net: 0, moved: 0 },
+      3: { net: 0, moved: 0 }
+    }
+
+    const getLayers = (baleList) => ({
+      1: baleList.filter(b => b.layer === 1),
+      2: baleList.filter(b => b.layer === 2),
+      3: baleList.filter(b => b.layer === 3)
+    })
+
+    const currentLayers = getLayers(state.bales.value)
+    const prevLayers = getLayers(state.previousBales.value)
+
+    ;[1, 2, 3].forEach(layer => {
+      const curr = currentLayers[layer]
+      const prev = prevLayers[layer] // We will clone this to splice out matches
+
+      // 1. Calculate Net Change (e.g. 10 -> 12 = +2)
+      stats[layer].net = curr.length - prev.length
+
+      // 2. Calculate "Moved" using Spatial Matching (Ignore IDs)
+      // Logic: Count how many bales are physically identical (Static).
+      // Any bale that ISN'T static but is within the count of "reused" bales is a Move.
+      
+      let staticCount = 0
+      const prevPool = [...prev] // Clone to consume matches
+
+      curr.forEach(bale => {
+        // Look for a bale in previous map at same X, Y, Rotation, Orientation
+        const matchIndex = prevPool.findIndex(p => 
+          Math.abs(p.x - bale.x) < 0.05 && 
+          Math.abs(p.y - bale.y) < 0.05 &&
+          p.rotation === bale.rotation &&
+          p.orientation === bale.orientation
+        )
+
+        if (matchIndex !== -1) {
+          staticCount++
+          prevPool.splice(matchIndex, 1) // Remove so we don't count it twice
+        }
+      })
+
+      // Formula: 
+      // If we have 10 old bales and 12 new bales, and 8 are static:
+      // We reused 10 old bales. 8 sat still. 2 moved. (And 2 were added).
+      // Moved = Min(OldTotal, NewTotal) - Static
+      const reusedCount = Math.min(curr.length, prev.length)
+      stats[layer].moved = reusedCount - staticCount
+    })
+
+    return stats
+  })
+
   // --- PHYSICS & VALIDATION HELPERS ---
 
 function getBaleRect(bale) {
@@ -272,7 +331,7 @@ function validateAllBales() {
     addHide, removeHide, cycleHideType, 
     addDCMat, removeDCMat, rotateDCMat,
     addStartBox, removeStartBox, generateMasterBlinds,
-    startDrawingBoard, updateDrawingBoard, stopDrawingBoard, removeBoardEdge, updateBoardEndpoint, rotateBoard,
+    startDrawingBoard, updateDrawingBoard, stopDrawingBoard, removeBoardEdge, updateBoardEndpoint, rotateBoard, differentials,
     // Exports computed stats
     balesByLayer, baleCounts, inventory
   }

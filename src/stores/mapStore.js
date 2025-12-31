@@ -20,6 +20,7 @@ export const useMapStore = defineStore('map', () => {
   const ringDimensions = ref({ width: 24, height: 24 })
   const gridSize = ref(20) 
   const previousClassCount = ref(0) 
+  const previousBales = ref([])
   const currentMapId = ref(null) 
   const mapName = ref("Untitled Map")
   const isShared = ref(false)
@@ -48,6 +49,7 @@ export const useMapStore = defineStore('map', () => {
   const startBox = ref(null) 
   const masterBlinds = ref([]) 
   const savedMaps = ref([])
+  const comparisonMapName = ref(null)
   
   // Editor State
   const clipboard = ref([])
@@ -72,6 +74,8 @@ export const useMapStore = defineStore('map', () => {
     agilityObstacles.value = []; scentWorkObjects.value = []; nextNumber.value = 1; 
     currentMapId.value = null; mapName.value = "Untitled Map"; classLevel.value = "Novice"; sport.value = 'barnhunt'
     ringDimensions.value = { width: 24, height: 24 }; previousClassCount.value = 0; currentLayer.value = 1; activeTool.value = 'bale'
+    previousBales.value = [] // <--- ADD THIS
+  comparisonMapName.value = null
     
     // Reset Settings
     wallTypes.value = { top: 'fence', right: 'fence', bottom: 'fence', left: 'fence' }
@@ -82,6 +86,7 @@ export const useMapStore = defineStore('map', () => {
     baleConfig.value = { length: 3, width: 1.5, height: 1 }
   }
 
+  
   // ==========================================
   // 3. INITIALIZE MODULES
   // ==========================================
@@ -93,7 +98,7 @@ export const useMapStore = defineStore('map', () => {
     isShared, classLevel, sport, scentWorkObjects, 
     masterBlinds, startBox, previousClassCount, savedMaps, folders,
     isDrawingBoard, currentLayer, selectedBaleId,
-    wallTypes, gridStartCorner, clipboard,
+    wallTypes, gridStartCorner, clipboard, previousBales,
     // New Fields
     trialLocation, trialDay, trialNumber, baleConfig,
     // Methods passed to modules
@@ -154,6 +159,14 @@ export const useMapStore = defineStore('map', () => {
 
   const currentGuidelines = computed(() => sport.value === 'agility' ? (AGILITY_RULES[classLevel.value] || AGILITY_RULES['Other']) : (BH_RULES[classLevel.value] || BH_RULES['Other']))
 
+
+function setComparisonBales(bales, name = "Custom Map") { // <--- ADD THIS FUNCTION
+  // Deep clone to ensure we have a static snapshot
+  previousBales.value = JSON.parse(JSON.stringify(bales))
+  comparisonMapName.value = name
+}
+
+  
   // ==========================================
   // 5. EXPORTS
   // ==========================================
@@ -164,10 +177,10 @@ export const useMapStore = defineStore('map', () => {
     agilityObstacles, scentWorkObjects, nextNumber, notification,
     savedMaps, currentMapId, mapName, isShared,
     classLevel, sport, folders, currentFolderId, previousClassCount,
-    selection, isDraggingSelection, clipboard,
+    selection, isDraggingSelection, clipboard, previousBales, setComparisonBales,
     
     // Settings
-    wallTypes, gridStartCorner, trialLocation, trialDay, trialNumber, baleConfig,
+    wallTypes, gridStartCorner, trialLocation, trialDay, trialNumber, baleConfig, comparisonMapName,
 
     // Actions
     setTool, reset, showNotification, resizeRing, toggleAnchor, 
