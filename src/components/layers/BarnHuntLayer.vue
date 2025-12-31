@@ -298,7 +298,7 @@ function handleHideClick(e, id) { if (e.evt.button !== 0) return; if (store.acti
       :config="{ draggable: true, dragBoundFunc: dragBoundFunc, x: mat.x * scale, y: mat.y * scale, rotation: mat.rotation }"
       @dragend="handleDragEnd($event, mat.id, 'dcmat')" @click="handleDCClick($event, mat.id)"
       @contextmenu="handleDCRightClick($event, mat.id)">
-      <v-rect :config="{ width: 2 * scale, height: 3 * scale, fill: '#ffcc80', stroke: 'black' }" />
+      <v-rect :config="{ width: 2 * scale, height: 3 * scale, fill: '#d1c4e9', stroke: 'black' }" />
       <v-text :config="{ text: 'DC', fontSize: 12, x: 5, y: 5 }" />
     </v-group>
 

@@ -11,30 +11,23 @@ export function usePrinter(store, userStore, stageRef, scale) {
 
     const d = new Date().toLocaleDateString()
     const logoHtml = userStore.clubLogoUrl ? `<img src="${userStore.clubLogoUrl}" class="print-logo" />` : ''
-    
-    // --- UPDATED: Use Trial Location if available, else fallback to user profile club name ---
+    // Use Trial Location if available, else fallback
     const clubName = store.trialLocation || userStore.clubName
     const clubHtml = clubName ? `<div class="meta"><strong>Club:</strong> ${clubName}</div>` : ''
 
-    // --- UPDATED: Construct Subtitle ---
-    // If we have Trial info, use the requested format: "{{Class}} Trial {{Number}}, {{Day}} - {{Layer}}"
-    // Otherwise fall back to the old format.
+    // Shared Header
     const getSubtitle = (layerName) => {
       if (store.trialNumber || store.trialDay) {
         let text = `${store.classLevel}`
         if (store.trialNumber) text += ` Trial ${store.trialNumber}`
         if (store.trialDay) text += `, ${store.trialDay}`
-        
-        // Append Layer info
         if (layerName) text += ` - ${layerName.replace('• ', '')}` 
         return text
       } else {
-        // Fallback
         return `${store.classLevel} ${store.sport === 'agility' ? 'Agility' : 'Barn Hunt'} ${layerName || ''}`
       }
     }
 
-    // Shared Header
     const getHeader = (subtitleSuffix = '') => `
       <div class="header">
         <div class="header-left">
@@ -53,12 +46,68 @@ export function usePrinter(store, userStore, stageRef, scale) {
       </div>
     `
 
+    // --- NEW: Legend HTML (Matches BarnHuntLayer.vue visuals) ---
+    const getLegendHtml = () => `
+      <div class="legend-sidebar">
+        <h3>Legend</h3>
+        
+        <div class="legend-section">
+          <h4>Bales (Layers)</h4>
+          <div class="legend-item"><span class="symbol layer-1"></span> Layer 1 (Base)</div>
+          <div class="legend-item"><span class="symbol layer-2"></span> Layer 2</div>
+          <div class="legend-item"><span class="symbol layer-3"></span> Layer 3</div>
+        </div>
+
+        <div class="legend-section">
+          <h4>Boundaries</h4>
+          <div class="legend-item"><span class="symbol fence"></span> Fence</div>
+          <div class="legend-item"><span class="symbol wall"></span> Solid Wall</div>
+        </div>
+        <div class="legend-section">
+          <h4>Orientation</h4>
+          <div class="legend-item"><span class="symbol flat"></span> Flat</div>
+          <div class="legend-item"><span class="symbol tall"></span> Tall (On Side)</div>
+          <div class="legend-item"><span class="symbol pillar"></span> Pillar (On End)</div>
+        </div>
+
+        <div class="legend-section">
+          <h4>Features</h4>
+          <div class="legend-item"><span class="symbol anchor">⚓</span> Anchor Bale</div>
+          <div class="legend-item"><span class="symbol tunnel"></span> Tunnel Board</div>
+          <div class="legend-item"><span class="symbol leaner">↗</span> Leaner</div>
+          <div class="legend-item"><span class="symbol start"></span> Start Box</div>
+          <div class="legend-item"><span class="symbol dc"></span> DC Mat</div>
+        </div>
+
+        ${withHides ? `
+        <div class="legend-section">
+          <h4>Hides</h4>
+          <div class="legend-item"><span class="symbol hide-rat">R</span> Rat</div>
+          <div class="legend-item"><span class="symbol hide-litter">L</span> Litter</div>
+          <div class="legend-item"><span class="symbol hide-empty">E</span> Empty</div>
+        </div>
+        ` : ''}
+      </div>
+    `
+
+    // --- UPDATED: CSS to include Grid Layout and Legend Styles ---
+    // Shared CSS
     const printStyles = `
       @page { size: landscape; margin: 0.25in; }
-      html, body { margin: 0; padding: 0; width: 100%; }
+      
+      /* --- FORCE BACKGROUND PRINTING --- */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+
+      html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
       body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; }
+      
       .print-page { height: 98vh; width: 100%; display: flex; flex-direction: column; break-after: page; page-break-after: always; }
       .print-page:last-child { break-after: auto; page-break-after: auto; }
+      
       .header { flex: 0 0 auto; display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px; }
       .header-left { display: flex; align-items: center; gap: 15px; }
       .print-logo { height: 60px; width: auto; object-fit: contain; }
@@ -67,23 +116,86 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .header-right { text-align: right; }
       .meta { font-size: 14px; margin-bottom: 2px; }
       .sub-meta { font-size: 11px; color: #888; margin-top: 4px; }
-      .map-container { flex: 1; min-height: 0; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+
+      /* Layout */
+      .page-body { flex: 1; display: flex; min-height: 0; gap: 20px; }
+      .map-container { flex: 1; display: flex; justify-content: center; align-items: flex-start; overflow: hidden; }
       img.map-img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #eee; }
+
+      /* Legend Styles */
+      .legend-sidebar { width: 160px; flex-shrink: 0; border-left: 1px solid #ccc; padding-left: 15px; font-size: 12px; }
+      .legend-sidebar h3 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #333; display: inline-block; }
+      .legend-section { margin-bottom: 15px; }
+      .legend-section h4 { margin: 0 0 5px 0; font-size: 11px; color: #666; text-transform: uppercase; }
+      .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; line-height: 1.2; }
+      
+      .symbol { display: inline-block; width: 20px; height: 12px; border: 1px solid black; position: relative; }
+      
+      /* Colors */
+      .layer-1 { background: #e6c200; }
+      .layer-2 { background: #4caf50; }
+      .layer-3 { background: #2196f3; }
+      
+      /* Patterns for Orientation */
+      .flat { background: #fff; }
+      .tall { 
+        background: linear-gradient(to bottom right, transparent 48%, black 49%, black 51%, transparent 52%); 
+        background-color: #fff;
+      }
+      .pillar { 
+        background: 
+          linear-gradient(to bottom right, transparent 48%, black 49%, black 51%, transparent 52%),
+          linear-gradient(to bottom left, transparent 48%, black 49%, black 51%, transparent 52%);
+        background-color: #fff;
+      }
+
+      /* Items */
+      .anchor { border: 2px solid #d32f2f; color: #d32f2f; font-weight: bold; text-align: center; line-height: 10px; font-size: 14px; border-radius: 2px; background: white; }
+      .tunnel { height: 4px; background: #2e7d32; border: none; }
+      .leaner { border: none; font-size: 16px; font-weight: bold; width: auto; height: auto; }
+      .start { border: 1px dashed black; background: #eee; }
+      .dc { background: #d1c4e9; }
+
+
+      .fence { height: 1px; background: black; border: none; }
+      .wall { height: 6px; background: black; border: none; }
+      
+      /* --- NEW: Hide Styles --- */
+      .hide-rat, .hide-litter, .hide-empty {
+        width: 16px; 
+        height: 16px; 
+        border-radius: 50%; 
+        border: 2px solid black;
+        text-align: center; 
+        line-height: 12px; 
+        font-size: 10px; 
+        font-weight: bold;
+      }
+      .hide-rat { background: red; color: black; }
+      .hide-litter { background: yellow; color: black; }
+      .hide-empty { background: white; color: black; }
     `
 
-    // AGILITY
+    // AGILITY (Kept standard for now, but wrapped in page-body structure)
     if (store.sport === 'agility') {
       const dataUrl = stageRef.value.getStage().toDataURL({ pixelRatio: 3 })
       scale.value = originalScale 
       
       const win = window.open('', '_blank')
-      win.document.write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>${printStyles}</style></head><body><div class="print-page">${getHeader('')}<div class="map-container"><img src="${dataUrl}" class="map-img"/></div></div></body></html>`)
+      win.document.write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>${printStyles}</style></head><body>
+        <div class="print-page">
+          ${getHeader()}
+          <div class="page-body">
+            <div class="map-container"><img src="${dataUrl}" class="map-img"/></div>
+          </div>
+        </div>
+      </body></html>`)
       win.document.close()
       setTimeout(() => { win.focus(); win.print(); }, 500);
       return
     }
 
-    // BARN HUNT (Multi-Page)
+    // BARN HUNT (Multi-Page with Legend)
     const originalLayer = store.currentLayer
     const pages = []
 
@@ -113,8 +225,11 @@ export function usePrinter(store, userStore, stageRef, scale) {
     const pagesHtml = pages.map(p => `
       <div class="print-page">
         ${getHeader(p.title)}
-        <div class="map-container">
-          <img src="${p.img}" class="map-img" />
+        <div class="page-body">
+          <div class="map-container">
+            <img src="${p.img}" class="map-img" />
+          </div>
+          ${getLegendHtml()}
         </div>
       </div>
     `).join('')

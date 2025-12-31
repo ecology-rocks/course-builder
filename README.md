@@ -5,8 +5,7 @@
  - [x] DONE - Add a "Trial" at "Club" indicator to the print info (by Class Level). 
  - [x] DONE - Allow judges to set bale sizes (instead of worrying about 3 stringers)
  - [x] DONE - Copy/paste keyboard shortcuts
- - Numbered rat spots for Master
- - Anchor bale marking and anchor bale measurements from walls
+ - [x] DONE - Anchor bale marking and anchor bale measurements from walls
  - Official Barn Hunt maps require legends - need to add a legend. 
  - [x] DONE - Toast notification after successful save
  - [x] DONE -  Need to be able to label the type of wall/fencing. 
@@ -22,6 +21,7 @@
  - Premade tunnels should indicate EastCoast/WestCoast dimensions
  - [x] DONE - Provide options for choosing where grid numbering starts (lower/top left/right)
  - Provide explicit instructions for PDF generation until I build a PDF tool
+ - Numbered rat spots for Master
  
 
 ## Bug Reports
