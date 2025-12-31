@@ -210,6 +210,7 @@ function handleMergeChange(event) {
 .sidebar-content {
   padding: 15px;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
 }
 
@@ -231,6 +232,7 @@ select {
   padding: 8px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  box-sizing: border-box;
 }
 
 .dims-row {
@@ -343,6 +345,7 @@ select {
   cursor: pointer;
   flex: 1;
   border-radius: 4px;
+  box-sizing: border-box;
 }
 
 .print-info {
@@ -362,6 +365,7 @@ select {
   flex: 1;
   border-radius: 4px;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .btn-admin {
@@ -374,5 +378,6 @@ select {
   border-radius: 4px;
   margin-top: 5px;
   font-weight: bold;
+  box-sizing: border-box;
 }
 </style>

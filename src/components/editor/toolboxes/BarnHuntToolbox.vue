@@ -136,6 +136,7 @@ button {
   text-align: left;
   transition: all 0.2s;
   font-size: 0.9rem;
+  box-sizing: border-box;
 }
 
 button:hover {
