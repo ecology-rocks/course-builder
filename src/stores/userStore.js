@@ -39,6 +39,7 @@ export const useUserStore = defineStore('user', () => {
   const clubName = ref('') // <--- NEW
   // Club Data (If user is a Club)
   const sponsoredEmails = ref([]) 
+  const seatLimit = ref(4)
 
   // Sponsorship Data (If user is a Sponsored Judge)
   const sponsoringClubName = ref(null)
@@ -57,8 +58,10 @@ export const useUserStore = defineStore('user', () => {
       clubName.value = data.clubName || '' // <--- NEW
       
       // If I am a CLUB, load my roster
-      if (tier.value === 'club') {
+if (tier.value === 'club') {
         sponsoredEmails.value = data.sponsoredEmails || []
+        // Load custom limit from DB, or default to 5
+        seatLimit.value = data.seatLimit || 5
       }
 
       // If I am FREE, check if a Club sponsors me
@@ -118,6 +121,10 @@ async function updateClubName(newName) {
 
   async function addSponsoredJudge(targetEmail) {
     if (tier.value !== 'club') return
+    if (sponsoredEmails.value.length >= seatLimit.value) {
+      alert(`You have used all ${seatLimit.value} seats. Please contact support to add more.`)
+      return
+    }
     try {
       const docRef = doc(db, "users", user.value.uid)
       await updateDoc(docRef, {
@@ -298,5 +305,6 @@ async function updateClubName(newName) {
     removeSponsoredJudge,
     clubName,
     updateClubName,
+    seatLimit,
   }
 })

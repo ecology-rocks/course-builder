@@ -100,17 +100,6 @@ function handleMergeChange(event) {
         </div>
       </div>
 
-      <div class="config-group">
-        <label>Class Level</label>
-        <select v-model="store.classLevel">
-          <option>Novice</option>
-          <option>Open</option>
-          <option>Senior</option>
-          <option>Master</option>
-          <option>Crazy8s</option>
-        </select>
-      </div>
-
       <div v-if="store.sport === 'barnhunt'" class="config-group">
         <button @click="showCourseSettingsModal = true" class="btn-secondary" style="width:100%; font-weight:bold;">
           ⚙️ Course Settings
@@ -131,6 +120,20 @@ function handleMergeChange(event) {
 
           <input type="file" ref="fileInput" @change="handleFileChange" accept=".json" style="display: none" />
           <input type="file" ref="mergeInput" @change="handleMergeChange" accept=".json" style="display: none" />
+          <hr />
+          <div class="print-actions">
+            <label>Print:</label>
+            <div class="btn-group-sm">
+              <button @click="handlePrint(true)" title="Print with Hides/Answers">👨‍⚖️ Judge</button>
+              <button @click="handlePrint(false)" title="Print Clean Map">🏃 Exhibitor</button>
+            </div>
+
+          </div>
+          <div class="print-info">
+            <i>When you select one of the print options, a printable version will pop up in a new window. To save to
+              PDF, on the print dialog, select "Save to PDF" or "Print to PDF" as your printer. Exhibitor maps will not
+              show rat hides, but Judge maps will.</i>
+          </div>
         </div>
 
         <div class="panel">
@@ -156,16 +159,7 @@ function handleMergeChange(event) {
 
       <hr />
 
-      <div class="print-actions">
-        <label>Print:</label>
-        <div class="btn-group-sm">
-          <button @click="handlePrint(true)" title="Print with Hides/Answers">👨‍⚖️ Judge</button>
-          <button @click="handlePrint(false)" title="Print Clean Map">🏃 Exhibitor</button>
-        </div>
-       
-      </div>
-      <div class="print-info">
-       <i>When you select one of the print options, a printable version will pop up in a new window. To save to PDF, on the print dialog, select "Save to PDF" or "Print to PDF" as your printer. Exhibitor maps will not show rat hides, but Judge maps will.</i>      </div>
+
     </div>
   </aside>
 </template>
@@ -351,12 +345,13 @@ select {
   border-radius: 4px;
 }
 
-.print-info { 
-  font-size: 0.8rem; 
-  color: #666; 
-  text-align: center; 
-  padding-top: 5px; 
-  border-top: 1px solid #eee; }
+.print-info {
+  font-size: 0.8rem;
+  color: #666;
+  text-align: center;
+  padding-top: 5px;
+  border-top: 1px solid #eee;
+}
 
 .btn-primary {
   background: #2196f3;

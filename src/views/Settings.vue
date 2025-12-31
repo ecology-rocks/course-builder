@@ -2,7 +2,7 @@
 import { ref, onMounted } from 'vue'
 import { useUserStore } from '../stores/userStore'
 import { useRouter } from 'vue-router'
-import { functions, auth } from '../firebase' 
+import { functions, auth } from '../firebase'
 import { httpsCallable } from 'firebase/functions'
 
 const userStore = useUserStore()
@@ -20,7 +20,7 @@ const PRICE_ID_CLUB = import.meta.env.VITE_STRIPE_PRICE_CLUB
 async function handleLogoUpload(event) {
   const file = event.target.files[0]
   if (!file) return
-  
+
   // Basic validation
   if (file.size > 1024 * 1024) { // 1MB limit
     return alert("File is too large. Please use an image under 1MB.")
@@ -36,7 +36,7 @@ onMounted(() => {
   if (userStore.user) {
     newName.value = userStore.judgeName
   } else {
-    router.push('/') 
+    router.push('/')
   }
 })
 
@@ -69,7 +69,7 @@ async function handleUpgrade(targetTier) {
   // 2. Select Price ID based on button clicked
   let priceId = null
   if (targetTier === 'solo') priceId = PRICE_ID_SOLO
-  if (targetTier === 'pro')  priceId = PRICE_ID_PRO
+  if (targetTier === 'pro') priceId = PRICE_ID_PRO
   if (targetTier === 'club') priceId = PRICE_ID_CLUB
 
   if (!priceId) return alert("Invalid tier selection.")
@@ -86,12 +86,12 @@ async function handleUpgrade(targetTier) {
   try {
     // 4. Call Backend
     const createSession = httpsCallable(functions, 'createCheckoutSession')
-    
+
     const response = await createSession({
       priceId: priceId,
       tierName: targetTier, // 'solo' or 'club'
-      successUrl: window.location.origin + '/dashboard', 
-      cancelUrl: window.location.origin + '/settings'    
+      successUrl: window.location.origin + '/dashboard',
+      cancelUrl: window.location.origin + '/settings'
     })
 
     // 5. Redirect to Stripe
@@ -114,7 +114,7 @@ async function handleManageBilling() {
 
   try {
     const createPortal = httpsCallable(functions, 'createPortalSession')
-    
+
     // 2. Call Backend
     const response = await createPortal({
       returnUrl: window.location.href // Come back to this exact page
@@ -149,7 +149,7 @@ async function handleRemoveJudge(email) {
 
 <template>
   <div class="settings-page">
-    
+
     <nav class="navbar">
       <div class="logo" @click="router.push('/dashboard')">
         🐾 K9CourseBuilder.com
@@ -160,7 +160,7 @@ async function handleRemoveJudge(email) {
     <div class="container">
       <h1>Account Settings</h1>
 
-<section class="card highlight-card">
+      <section class="card highlight-card">
         <div class="card-header">
           <h2>Subscription</h2>
           <span class="badge" :class="userStore.tier">{{ userStore.tier.toUpperCase() }}</span>
@@ -169,10 +169,10 @@ async function handleRemoveJudge(email) {
           <div v-if="userStore.sponsoringClubName" class="sponsor-msg">
             🎉 You have <strong>Pro Access</strong> courtesy of <strong>{{ userStore.sponsoringClubName }}</strong>.
           </div>
-          
+
           <div v-if="userStore.tier === 'free'">
             <p>Upgrade to unlock Cloud Saves, Sharing, and Export.</p>
-            
+
             <div class="pricing-grid">
               <div class="plan-col">
                 <h3>Solo</h3>
@@ -208,13 +208,13 @@ async function handleRemoveJudge(email) {
             </p>
             <button class="btn-outline" @click="handleManageBilling">Manage Billing</button>
           </div>
-          
+
         </div>
       </section>
-     <section v-if="userStore.tier === 'club'" class="card">
-<h2>Club Branding</h2>
+      <section v-if="userStore.tier === 'club'" class="card">
+        <h2>Club Branding</h2>
         <p class="hint">Customize your printouts with your Club Name and Logo.</p>
-        
+
         <div class="form-row">
           <label>Official Club Name:</label>
           <div class="input-group">
@@ -227,23 +227,41 @@ async function handleRemoveJudge(email) {
             <img v-if="userStore.clubLogoUrl" :src="userStore.clubLogoUrl" alt="Club Logo" />
             <div v-else class="placeholder">No Logo</div>
           </div>
-          
+
           <div class="upload-controls">
             <input type="file" accept="image/png, image/jpeg" @change="handleLogoUpload" />
             <small>Recommended: Transparent PNG, 300px wide.</small>
           </div>
         </div>
-      </section> 
-<section v-if="userStore.tier === 'club'" class="card">
-        <h2>Club Roster</h2>
+      </section>
+      <section v-if="userStore.tier === 'club'" class="card">
+        <div class="card-header">
+          <h2>Club Roster</h2>
+          <span class="badge" :class="userStore.sponsoredEmails.length >= userStore.seatLimit ? 'solo' : 'club'">
+            {{ userStore.sponsoredEmails.length }} / {{ userStore.seatLimit }} Seats Used
+          </span>
+        </div>
+
         <p class="hint">
-          Add email addresses of judges you want to sponsor. They will get <strong>Pro</strong> access instantly when they log in.
+          Add email addresses of judges you want to sponsor. They will get <strong>Pro</strong> access instantly when
+          they log in.
         </p>
 
         <div class="roster-add-row">
-          <input v-model="newJudgeEmail" placeholder="judge@example.com" @keyup.enter="handleAddJudge" />
-          <button @click="handleAddJudge" class="btn-primary">Add Judge</button>
+          <input v-model="newJudgeEmail" placeholder="judge@example.com" @keyup.enter="handleAddJudge"
+            :disabled="userStore.sponsoredEmails.length >= userStore.seatLimit" />
+          <button @click="handleAddJudge" class="btn-primary"
+            :disabled="userStore.sponsoredEmails.length >= userStore.seatLimit"
+            :style="userStore.sponsoredEmails.length >= userStore.seatLimit ? { opacity: 0.5, cursor: 'not-allowed' } : {}">
+            {{ userStore.sponsoredEmails.length >= userStore.seatLimit ? 'Full' : 'Add Judge' }}
+          </button>
         </div>
+
+        <p v-if="userStore.sponsoredEmails.length >= userStore.seatLimit"
+          style="font-size: 0.8rem; color: #d32f2f; margin-top: -10px; margin-bottom: 15px;">
+          Need more seats? <a href="mailto:support@k9coursebuilder.com?subject=Add%20Seats"
+            style="color: #d32f2f; font-weight: bold;">Contact us</a> to expand your club roster.
+        </p>
 
         <ul class="roster-list">
           <li v-for="email in userStore.sponsoredEmails" :key="email">
@@ -251,15 +269,15 @@ async function handleRemoveJudge(email) {
             <button @click="handleRemoveJudge(email)" class="btn-xs delete">Remove</button>
           </li>
         </ul>
-        
+
         <div v-if="userStore.sponsoredEmails.length === 0" class="empty-roster">
-          No judges added yet. You have 5 seats available.
+          No judges added yet. You have {{ userStore.seatLimit }} seats available.
         </div>
       </section>
       <section class="card">
         <h2>Judge Profile</h2>
         <p class="hint">This name will appear on all your printed maps.</p>
-        
+
         <div class="form-group">
           <label>Judge Name:</label>
           <div class="input-row">
@@ -276,7 +294,7 @@ async function handleRemoveJudge(email) {
           <input :value="userStore.user?.email" disabled class="disabled-input" />
           <small>To change your email, please contact support.</small>
         </div>
-        
+
         <div class="form-group" style="margin-top: 20px;">
           <label>Password:</label>
           <button @click="handlePasswordReset" class="btn-outline">Send Password Reset Email</button>
@@ -288,86 +306,401 @@ async function handleRemoveJudge(email) {
 </template>
 
 <style scoped>
-.settings-page { max-width: 800px; margin: 0 auto; padding-bottom: 50px; }
-
-/* NAV */
-.navbar { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #eee; margin-bottom: 30px; background: white; }
-.logo { font-weight: 800; font-size: 1.2rem; color: #2c3e50; cursor: pointer; }
-.btn-text { background: none; border: none; color: #666; cursor: pointer; font-weight: bold; }
-.btn-text:hover { text-decoration: underline; color: #333; }
-
-/* CONTAINER & CARDS */
-.container { padding: 0 20px; }
-.card { background: white; border: 1px solid #ddd; border-radius: 8px; padding: 25px; margin-bottom: 20px; }
-.card h2 { margin-top: 0; font-size: 1.2rem; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
-.hint { color: #666; font-size: 0.9em; margin-bottom: 15px; }
-
-/* HIGHLIGHT CARD (Subscription) */
-.highlight-card { border-color: #4CAF50; border-width: 2px; }
-.card-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
-.card-header h2 { border: none; margin: 0; padding: 0; }
-.badge { background: #eee; padding: 4px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8em; }
-.badge.pro, .badge.solo { background: #ffd700; color: #000; }
-.badge.club { background: #9c27b0; color: white; }
-
-/* PRICING BUTTONS */
-.pricing-buttons { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-
-/* FORMS */
-.form-group { margin-bottom: 15px; }
-.form-group label { display: block; font-weight: bold; margin-bottom: 5px; color: #444; }
-.input-row { display: flex; gap: 10px; }
-.input-row input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
-.input-row button { padding: 8px 20px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; }
-.disabled-input { width: 100%; padding: 8px; border: 1px solid #eee; background: #f9f9f9; color: #888; border-radius: 4px; }
-
-/* BUTTONS */
-.btn-primary { background-color: #4CAF50; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-.btn-primary:hover { background-color: #43a047; }
-.btn-club { background-color: #9c27b0; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-.btn-club:hover { background-color: #7b1fa2; }
-
-.btn-outline { background: white; border: 2px solid #ccc; color: #333; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; }
-.btn-outline:hover { border-color: #333; }
-/* NEW PRICING GRID */
-.pricing-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 20px; }
-.plan-col { border: 1px solid #ddd; border-radius: 8px; padding: 15px; text-align: center; position: relative; }
-.plan-col h3 { margin: 0 0 5px 0; font-size: 1.1rem; }
-.plan-col .price { font-size: 1.4rem; font-weight: 800; color: #2c3e50; margin-bottom: 5px; }
-.plan-col .price span { font-size: 0.8rem; font-weight: normal; color: #666; }
-.plan-col .desc { font-size: 0.85rem; color: #666; margin-bottom: 15px; min-height: 40px; } /* Min-height aligns buttons */
-.plan-col button { width: 100%; }
-
-/* HIGHLIGHT PRO */
-.best-value { border: 2px solid #4CAF50; background: #f1f8e9; }
-.badge-pop { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #4CAF50; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: bold; }
-
-@media (max-width: 600px) {
-  .pricing-grid { grid-template-columns: 1fr; }
+.settings-page {
+  max-width: 800px;
+  margin: 0 auto;
+  padding-bottom: 50px;
 }
 
-.roster-add-row { display: flex; gap: 10px; margin-bottom: 20px; }
-.roster-add-row input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+/* NAV */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  margin-bottom: 30px;
+  background: white;
+}
 
-.roster-list { list-style: none; padding: 0; margin: 0; }
-.roster-list li { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; background: #f9f9f9; border-radius: 4px; margin-bottom: 5px; }
-.roster-list li:last-child { border-bottom: none; }
+.logo {
+  font-weight: 800;
+  font-size: 1.2rem;
+  color: #2c3e50;
+  cursor: pointer;
+}
 
-.empty-roster { text-align: center; color: #999; padding: 20px; font-style: italic; border: 2px dashed #eee; border-radius: 8px; }
+.btn-text {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-weight: bold;
+}
 
-.sponsor-msg { background: #e8f5e9; color: #2e7d32; padding: 10px; border-radius: 6px; margin-bottom: 15px; border: 1px solid #c8e6c9; }
+.btn-text:hover {
+  text-decoration: underline;
+  color: #333;
+}
 
-.btn-xs.delete { background: white; color: #d32f2f; border: 1px solid #ffcdd2; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
-.btn-xs.delete:hover { background: #ffebee; }
+/* CONTAINER & CARDS */
+.container {
+  padding: 0 20px;
+}
 
-.logo-upload-area { display: flex; gap: 20px; align-items: center; margin-top: 15px; }
-.logo-preview { width: 100px; height: 100px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center; background: #f9f9f9; border-radius: 8px; overflow: hidden; }
-.logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.logo-preview .placeholder { color: #999; font-size: 0.8rem; }
-.upload-controls { display: flex; flex-direction: column; gap: 5px; }
-.form-row { margin-bottom: 20px; }
-.form-row label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
-.input-group { display: flex; gap: 10px; }
-.input-group input { flex: 1; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-.btn-primary.small { padding: 0 20px; }
+.card {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 25px;
+  margin-bottom: 20px;
+}
+
+.card h2 {
+  margin-top: 0;
+  font-size: 1.2rem;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.hint {
+  color: #666;
+  font-size: 0.9em;
+  margin-bottom: 15px;
+}
+
+/* HIGHLIGHT CARD (Subscription) */
+.highlight-card {
+  border-color: #4CAF50;
+  border-width: 2px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
+  margin-bottom: 15px;
+}
+
+.card-header h2 {
+  border: none;
+  margin: 0;
+  padding: 0;
+}
+
+.badge {
+  background: #eee;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.8em;
+}
+
+.badge.pro,
+.badge.solo {
+  background: #ffd700;
+  color: #000;
+}
+
+.badge.club {
+  background: #9c27b0;
+  color: white;
+}
+
+/* PRICING BUTTONS */
+.pricing-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 15px;
+  flex-wrap: wrap;
+}
+
+/* FORMS */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  font-weight: bold;
+  margin-bottom: 5px;
+  color: #444;
+}
+
+.input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.input-row input {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.input-row button {
+  padding: 8px 20px;
+  background: #2c3e50;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.disabled-input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #eee;
+  background: #f9f9f9;
+  color: #888;
+  border-radius: 4px;
+}
+
+/* BUTTONS */
+.btn-primary {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-primary:hover {
+  background-color: #43a047;
+}
+
+.btn-club {
+  background-color: #9c27b0;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-club:hover {
+  background-color: #7b1fa2;
+}
+
+.btn-outline {
+  background: white;
+  border: 2px solid #ccc;
+  color: #333;
+  padding: 8px 15px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-outline:hover {
+  border-color: #333;
+}
+
+/* NEW PRICING GRID */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.plan-col {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+  position: relative;
+}
+
+.plan-col h3 {
+  margin: 0 0 5px 0;
+  font-size: 1.1rem;
+}
+
+.plan-col .price {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.plan-col .price span {
+  font-size: 0.8rem;
+  font-weight: normal;
+  color: #666;
+}
+
+.plan-col .desc {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 15px;
+  min-height: 40px;
+}
+
+/* Min-height aligns buttons */
+.plan-col button {
+  width: 100%;
+}
+
+/* HIGHLIGHT PRO */
+.best-value {
+  border: 2px solid #4CAF50;
+  background: #f1f8e9;
+}
+
+.badge-pop {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #4CAF50;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: bold;
+}
+
+@media (max-width: 600px) {
+  .pricing-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.roster-add-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.roster-add-row input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.roster-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.roster-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+  background: #f9f9f9;
+  border-radius: 4px;
+  margin-bottom: 5px;
+}
+
+.roster-list li:last-child {
+  border-bottom: none;
+}
+
+.empty-roster {
+  text-align: center;
+  color: #999;
+  padding: 20px;
+  font-style: italic;
+  border: 2px dashed #eee;
+  border-radius: 8px;
+}
+
+.sponsor-msg {
+  background: #e8f5e9;
+  color: #2e7d32;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+  border: 1px solid #c8e6c9;
+}
+
+.btn-xs.delete {
+  background: white;
+  color: #d32f2f;
+  border: 1px solid #ffcdd2;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.btn-xs.delete:hover {
+  background: #ffebee;
+}
+
+.logo-upload-area {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  margin-top: 15px;
+}
+
+.logo-preview {
+  width: 100px;
+  height: 100px;
+  border: 1px dashed #ccc;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f9f9f9;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.logo-preview img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.logo-preview .placeholder {
+  color: #999;
+  font-size: 0.8rem;
+}
+
+.upload-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-row {
+  margin-bottom: 20px;
+}
+
+.form-row label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+  color: #555;
+}
+
+.input-group {
+  display: flex;
+  gap: 10px;
+}
+
+.input-group input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.btn-primary.small {
+  padding: 0 20px;
+}
 </style>

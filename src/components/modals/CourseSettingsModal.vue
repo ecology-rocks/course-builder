@@ -9,9 +9,21 @@
       <div class="settings-section">
         <h4>Trial Information</h4>
         <div class="form-grid">
-          <div class="form-group">
+          <div class="form-group-row">
+            <div class="form-group">
+              <label>Class Level</label>
+              <select v-model="store.classLevel">
+                <option>Novice</option>
+                <option>Open</option>
+                <option>Senior</option>
+                <option>Master</option>
+                <option>Crazy8s</option>
+              </select>
+            </div>
+            <div class="form-group">
             <label>Club / Location</label>
             <input v-model="store.trialLocation" placeholder="e.g. Happy Dogs Club" />
+            </div>
           </div>
           <div class="form-group-row">
             <div class="form-group">
@@ -135,45 +147,193 @@ function formatCorner(c) {
 </script>
 
 <style scoped>
-.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 3000; }
-.modal { background: white; padding: 20px; border-radius: 8px; width: 400px; max-width: 90vw; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; }
-.settings-section { margin-bottom: 20px; }
-.settings-section h4 { margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase; color: #666; }
-.hint { font-size: 0.8rem; text-align: center; color: #666; margin-top: 5px; }
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+
+.modal {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  width: 400px;
+  max-width: 90vw;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.settings-section {
+  margin-bottom: 20px;
+}
+
+.settings-section h4 {
+  margin: 0 0 10px 0;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  color: #666;
+}
+
+.hint {
+  font-size: 0.8rem;
+  text-align: center;
+  color: #666;
+  margin-top: 5px;
+}
 
 /* FORMS */
-.form-grid { display: flex; flex-direction: column; gap: 10px; }
-.form-group { display: flex; flex-direction: column; }
-.form-group label { font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 4px; }
+.form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #555;
+  margin-bottom: 4px;
+}
 
 /* --- FIX: Added width: 100% and box-sizing --- */
-.form-group input { 
-  padding: 6px; 
-  border: 1px solid #ddd; 
-  border-radius: 4px; 
-  width: 100%; 
-  box-sizing: border-box; 
+.form-group input {
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Ensure flex items can shrink below default content size */
-.form-group-row { display: flex; gap: 10px; }
-.form-group-row .form-group { flex: 1; min-width: 0; } 
+.form-group-row {
+  display: flex;
+  gap: 10px;
+}
 
-.corner-selector { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.corner-selector .row { display: flex; gap: 60px; } 
-.corner-selector button { width: 60px; padding: 5px; border: 1px solid #ddd; background: #f9f9f9; cursor: pointer; border-radius: 4px; font-size: 0.8rem; }
-.corner-selector button.active { background: #2196f3; color: white; border-color: #1565c0; font-weight: bold; }
-.preview-box { height: 40px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #aaa; font-weight: bold; }
+.form-group-row .form-group {
+  flex: 1;
+  min-width: 0;
+}
 
-.wall-grid { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.middle-row { display: flex; align-items: center; gap: 10px; }
-.wall-control { display: flex; flex-direction: column; align-items: center; }
-.wall-control label { font-size: 0.75rem; font-weight: bold; color: #555; }
-.wall-control select { padding: 2px; font-size: 0.8rem; }
-.wall-preview-box { width: 60px; height: 60px; background: #f5f5f5; }
+.form-group select {
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
 
-.actions { text-align: center; margin-top: 20px; }
-.btn-primary { background: #2196f3; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.corner-selector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.corner-selector .row {
+  display: flex;
+  gap: 60px;
+}
+
+.corner-selector button {
+  width: 60px;
+  padding: 5px;
+  border: 1px solid #ddd;
+  background: #f9f9f9;
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 0.8rem;
+}
+
+.corner-selector button.active {
+  background: #2196f3;
+  color: white;
+  border-color: #1565c0;
+  font-weight: bold;
+}
+
+.preview-box {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: #aaa;
+  font-weight: bold;
+}
+
+.wall-grid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.middle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wall-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.wall-control label {
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: #555;
+}
+
+.wall-control select {
+  padding: 2px;
+  font-size: 0.8rem;
+}
+
+.wall-preview-box {
+  width: 60px;
+  height: 60px;
+  background: #f5f5f5;
+}
+
+.actions {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.btn-primary {
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 8px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
 </style>
