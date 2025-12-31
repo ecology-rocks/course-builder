@@ -76,6 +76,27 @@ export const useMapStore = defineStore('map', () => {
     // History reset happens inside history module logic if we exposed a clear method, but usually it clears on reload
   }
 
+
+function toggleAnchor() {
+    if (selection.value.length === 0) return
+    
+    // Only allow on Layer 1 (per requirements)
+    if (currentLayer.value !== 1) {
+      showNotification("Anchor bales must be on Layer 1.", "error")
+      return
+    }
+
+    bales.value.forEach(b => {
+      if (selection.value.includes(b.id)) {
+        // Toggle property
+        b.isAnchor = !b.isAnchor
+      }
+    })
+    
+    // Trigger reactivity for canvas update
+    bales.value = [...bales.value]
+  }
+
   // Ring resize affects all objects, so we keep it here as a coordinator
   function resizeRing(width, height) {
     const w = Math.max(10, parseInt(width)); const h = Math.max(10, parseInt(height))
@@ -139,7 +160,7 @@ export const useMapStore = defineStore('map', () => {
     savedMaps, currentMapId, mapName, isShared,
     classLevel, sport, folders, currentFolderId, previousClassCount,
     selection, isDraggingSelection, wallTypes, gridStartCorner, clipboard,
-    trialLocation, trialDay, trialNumber, baleConfig,
+    trialLocation, trialDay, trialNumber, baleConfig, toggleAnchor,
     // Core
     setTool, reset, showNotification, resizeRing, currentGuidelines,
 
