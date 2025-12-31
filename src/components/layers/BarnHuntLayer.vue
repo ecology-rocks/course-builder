@@ -37,9 +37,13 @@ function getOpacity(layer) { return layer === store.currentLayer ? 1 : 0.5 }
 
 // Dimensions based on orientation
 function getBaleDims(bale) {
-  if (bale.orientation === 'pillar') return { width: 1.5, height: 1.0 }
-  if (bale.orientation === 'tall') return { width: 3.0, height: 1.0 }
-  return { width: 3.0, height: 1.5 } // Flat
+  const L = store.baleConfig.length
+  const W = store.baleConfig.width
+  const H = store.baleConfig.height
+
+if (bale.orientation === 'pillar') return { width: W, height: H }
+  if (bale.orientation === 'tall') return { width: L, height: H }
+  return { width: L, height: W } // Flat
 }
 
 function getArrowPoints(width, height, direction) {
@@ -62,10 +66,14 @@ function baleDragBoundFunc(pos) {
   if (!bale) return pos 
 
   // 1. Determine Visual Dimensions (Is it rotated?)
-  let w = 3.0
-  let h = 1.5
-  if (bale.orientation === 'pillar') { w = 1.5; h = 1.0 }
-  else if (bale.orientation === 'tall') { w = 3.0; h = 1.0 }
+const L = store.baleConfig.length
+  const W = store.baleConfig.width
+  const H = store.baleConfig.height
+
+  let w, h
+  if (bale.orientation === 'pillar') { w = W; h = H }
+  else if (bale.orientation === 'tall') { w = L; h = H }
+  else { w = L; h = W } // Flat
   
   const isRotated = bale.rotation % 180 !== 0
   

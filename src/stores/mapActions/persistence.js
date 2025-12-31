@@ -34,6 +34,7 @@ export function useMapPersistence(state, userStore, notifications) {
       trialLocation: state.trialLocation.value || '',
       trialDay: state.trialDay.value || '',
       trialNumber: state.trialNumber.value || '',
+      baleConfig: state.baleConfig.value,
     }
   }
 
@@ -173,7 +174,10 @@ export function useMapPersistence(state, userStore, notifications) {
     if (state.trialLocation) state.trialLocation.value = data.data?.trialLocation || data.trialLocation || ''
     if (state.trialDay) state.trialDay.value = data.data?.trialDay || data.trialDay || ''
     if (state.trialNumber) state.trialNumber.value = data.data?.trialNumber || data.trialNumber || ''
-
+    if (state.baleConfig) { 
+       const def = { length: 3, width: 1.5, height: 1 }
+       state.baleConfig.value = data.data?.baleConfig || data.baleConfig || def
+    }
     if (state.validateAllBales) state.validateAllBales()
   }
 
@@ -204,7 +208,10 @@ export function useMapPersistence(state, userStore, notifications) {
     state.previousClassCount.value = mapData.previousClassCount || 0
     if (state.wallTypes && mapData.wallTypes) { state.wallTypes.value = mapData.wallTypes }
     if (state.gridStartCorner) state.gridStartCorner.value = mapData.gridStartCorner || 'top-left'
-    
+    if (state.baleConfig) {
+       const def = { length: 3, width: 1.5, height: 1 }
+       state.baleConfig.value = mapData.baleConfig || def
+    }
     // --- NEW FIELDS ---
     if (state.trialLocation) state.trialLocation.value = mapData.trialLocation || ''
     if (state.trialDay) state.trialDay.value = mapData.trialDay || ''

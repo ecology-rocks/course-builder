@@ -107,19 +107,23 @@ function copySelection() {
 
   // Calculates the true bounding box of a bale based on orientation/rotation
   function getBaleRect(bale) {
+    const L = state.baleConfig.value.length
+    const W = state.baleConfig.value.width
+    const H = state.baleConfig.value.height
+
     let w, h
     const isRotated = bale.rotation % 180 !== 0
     
     if (bale.orientation === 'tall') { 
-      w = isRotated ? 1 : 3
-      h = isRotated ? 3 : 1 
+      w = isRotated ? H : L
+      h = isRotated ? L : H 
     } else if (bale.orientation === 'pillar') { 
-      w = isRotated ? 1 : 1.5
-      h = isRotated ? 1.5 : 1 
+      w = isRotated ? H : W
+      h = isRotated ? W : H 
     } else { 
       // Flat
-      w = isRotated ? 1.5 : 3
-      h = isRotated ? 3 : 1.5 
+      w = isRotated ? W : L
+      h = isRotated ? L : W 
     }
     return { x: bale.x, y: bale.y, w, h }
   }

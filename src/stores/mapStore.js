@@ -50,6 +50,7 @@ export const useMapStore = defineStore('map', () => {
   const trialLocation = ref('') // Club/Location Name
   const trialDay = ref('')      // e.g. "Saturday"
   const trialNumber = ref('')   // e.g. "T1"
+  const baleConfig = ref({ length: 3, width: 1.5, height: 1 })
 
   // ==========================================
   // 2. SHARED HELPERS
@@ -100,7 +101,7 @@ export const useMapStore = defineStore('map', () => {
     isShared, classLevel, sport, scentWorkObjects, 
     masterBlinds, startBox, previousClassCount, savedMaps, folders,
     isDrawingBoard, currentLayer, selectedBaleId, gridStartCorner, clipboard,
-    trialLocation, trialDay, trialNumber,
+    trialLocation, trialDay, trialNumber, baleConfig,
     // Methods
     reset
   }
@@ -138,7 +139,7 @@ export const useMapStore = defineStore('map', () => {
     savedMaps, currentMapId, mapName, isShared,
     classLevel, sport, folders, currentFolderId, previousClassCount,
     selection, isDraggingSelection, wallTypes, gridStartCorner, clipboard,
-    trialLocation, trialDay, trialNumber,
+    trialLocation, trialDay, trialNumber, baleConfig,
     // Core
     setTool, reset, showNotification, resizeRing, currentGuidelines,
 

@@ -36,14 +36,21 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
 function getBaleRect(bale) {
     // 1. Determine "Unrotated" Dimensions (How the bale is stored in memory)
     // These must match the visual offsets used in your Layer component
-    let uw, uh
+    const L = state.baleConfig.value.length
+    const W = state.baleConfig.value.width
+    const H = state.baleConfig.value.height
+
+
+let uw, uh
     if (bale.orientation === 'tall') { 
-      uw = 3; uh = 1 
+      // On side: Length x Height
+      uw = L; uh = H 
     } else if (bale.orientation === 'pillar') { 
-      uw = 1.5; uh = 1 
+      // On end: Width x Height
+      uw = W; uh = H 
     } else { 
-      // Flat
-      uw = 3; uh = 1.5 
+      // Flat: Length x Width
+      uw = L; uh = W 
     }
 
     // 2. Determine Center Point (Rotation happens around this point)

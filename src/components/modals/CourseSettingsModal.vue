@@ -7,48 +7,59 @@
       </div>
 
       <div class="settings-section">
-        <h4>1. Trial Information</h4>
+        <h4>Trial Information</h4>
         <div class="form-grid">
           <div class="form-group">
             <label>Club / Location</label>
             <input v-model="store.trialLocation" placeholder="e.g. Happy Dogs Club" />
           </div>
           <div class="form-group-row">
-             <div class="form-group">
-                <label>Day</label>
-                <input v-model="store.trialDay" placeholder="e.g. Saturday" />
-             </div>
-             <div class="form-group">
-                <label>Trial #</label>
-                <input v-model="store.trialNumber" placeholder="e.g. T1" />
-             </div>
+            <div class="form-group">
+              <label>Day</label>
+              <input v-model="store.trialDay" placeholder="e.g. Saturday" />
+            </div>
+            <div class="form-group">
+              <label>Trial #</label>
+              <input v-model="store.trialNumber" placeholder="e.g. T1" />
+            </div>
           </div>
         </div>
       </div>
 
+      <div class="settings-section" v-if="store.sport === 'barnhunt'">
+        <h4>Bale Dimensions (ft)</h4>
+        <div class="form-group-row">
+          <div class="form-group">
+            <label>Length</label>
+            <input type="number" v-model.number="store.baleConfig.length" step="0.1" />
+          </div>
+          <div class="form-group">
+            <label>Width (Flat)</label>
+            <input type="number" v-model.number="store.baleConfig.width" step="0.1" />
+          </div>
+          <div class="form-group">
+            <label>Height (Tall)</label>
+            <input type="number" v-model.number="store.baleConfig.height" step="0.1" />
+          </div>
+        </div>
+        <p class="hint">Standard: 3.0 x 1.5 x 1.0</p>
+      </div>
+
       <div class="settings-section">
-        <h4>2. Grid Numbering Start</h4>
+        <h4>Grid Numbering Start</h4>
         <div class="corner-selector">
           <div class="row">
-            <button 
-              :class="{ active: store.gridStartCorner === 'top-left' }" 
-              @click="store.gridStartCorner = 'top-left'"
-            >↖ TL</button>
-            <button 
-              :class="{ active: store.gridStartCorner === 'top-right' }" 
-              @click="store.gridStartCorner = 'top-right'"
-            >TR ↗</button>
+            <button :class="{ active: store.gridStartCorner === 'top-left' }"
+              @click="store.gridStartCorner = 'top-left'">↖ TL</button>
+            <button :class="{ active: store.gridStartCorner === 'top-right' }"
+              @click="store.gridStartCorner = 'top-right'">TR ↗</button>
           </div>
           <div class="preview-box">Ring</div>
           <div class="row">
-            <button 
-              :class="{ active: store.gridStartCorner === 'bottom-left' }" 
-              @click="store.gridStartCorner = 'bottom-left'"
-            >↙ BL</button>
-            <button 
-              :class="{ active: store.gridStartCorner === 'bottom-right' }" 
-              @click="store.gridStartCorner = 'bottom-right'"
-            >BR ↘</button>
+            <button :class="{ active: store.gridStartCorner === 'bottom-left' }"
+              @click="store.gridStartCorner = 'bottom-left'">↙ BL</button>
+            <button :class="{ active: store.gridStartCorner === 'bottom-right' }"
+              @click="store.gridStartCorner = 'bottom-right'">BR ↘</button>
           </div>
         </div>
         <p class="hint">Current: <strong>{{ formatCorner(store.gridStartCorner) }}</strong></p>
@@ -57,7 +68,7 @@
       <hr />
 
       <div class="settings-section" v-if="store.sport === 'barnhunt'">
-        <h4>3. Wall Types</h4>
+        <h4>Wall Types</h4>
         <div class="wall-grid">
           <div class="wall-control">
             <label>Top</label>
@@ -76,14 +87,12 @@
               </select>
             </div>
 
-            <div class="wall-preview-box" 
-              :style="{
-                borderTop: getBorderStyle(store.wallTypes.top),
-                borderRight: getBorderStyle(store.wallTypes.right),
-                borderBottom: getBorderStyle(store.wallTypes.bottom),
-                borderLeft: getBorderStyle(store.wallTypes.left)
-              }"
-            ></div>
+            <div class="wall-preview-box" :style="{
+              borderTop: getBorderStyle(store.wallTypes.top),
+              borderRight: getBorderStyle(store.wallTypes.right),
+              borderBottom: getBorderStyle(store.wallTypes.bottom),
+              borderLeft: getBorderStyle(store.wallTypes.left)
+            }"></div>
 
             <div class="wall-control">
               <label>Right</label>
@@ -134,28 +143,36 @@ function formatCorner(c) {
 .settings-section h4 { margin: 0 0 10px 0; font-size: 0.9rem; text-transform: uppercase; color: #666; }
 .hint { font-size: 0.8rem; text-align: center; color: #666; margin-top: 5px; }
 
-/* CORNER SELECTOR */
+/* FORMS */
+.form-grid { display: flex; flex-direction: column; gap: 10px; }
+.form-group { display: flex; flex-direction: column; }
+.form-group label { font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 4px; }
+
+/* --- FIX: Added width: 100% and box-sizing --- */
+.form-group input { 
+  padding: 6px; 
+  border: 1px solid #ddd; 
+  border-radius: 4px; 
+  width: 100%; 
+  box-sizing: border-box; 
+}
+
+/* Ensure flex items can shrink below default content size */
+.form-group-row { display: flex; gap: 10px; }
+.form-group-row .form-group { flex: 1; min-width: 0; } 
+
 .corner-selector { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-.corner-selector .row { display: flex; gap: 60px; } /* Gap creates space for the box */
+.corner-selector .row { display: flex; gap: 60px; } 
 .corner-selector button { width: 60px; padding: 5px; border: 1px solid #ddd; background: #f9f9f9; cursor: pointer; border-radius: 4px; font-size: 0.8rem; }
 .corner-selector button.active { background: #2196f3; color: white; border-color: #1565c0; font-weight: bold; }
 .preview-box { height: 40px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; color: #aaa; font-weight: bold; }
 
-/* WALL GRID */
 .wall-grid { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 .middle-row { display: flex; align-items: center; gap: 10px; }
 .wall-control { display: flex; flex-direction: column; align-items: center; }
 .wall-control label { font-size: 0.75rem; font-weight: bold; color: #555; }
 .wall-control select { padding: 2px; font-size: 0.8rem; }
 .wall-preview-box { width: 60px; height: 60px; background: #f5f5f5; }
-
-.form-grid { display: flex; flex-direction: column; gap: 10px; }
-.form-group { display: flex; flex-direction: column; }
-.form-group label { font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 4px; }
-.form-group input { padding: 6px; border: 1px solid #ddd; border-radius: 4px; }
-.form-group-row { display: flex; gap: 10px; }
-.form-group-row .form-group { flex: 1; }
-
 
 .actions { text-align: center; margin-top: 20px; }
 .btn-primary { background: #2196f3; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }

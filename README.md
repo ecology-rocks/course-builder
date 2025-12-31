@@ -2,8 +2,8 @@
 
 
 ## Planned Updates (Short Term)
- - Add a "Trial" at "Club" indicator to the print info (by Class Level). 
- - Allow judges to set bale sizes (instead of worrying about 3 stringers)
+ - [x] DONE - Add a "Trial" at "Club" indicator to the print info (by Class Level). 
+ - [x] DONE - Allow judges to set bale sizes (instead of worrying about 3 stringers)
  - [x] DONE - Copy/paste keyboard shortcuts
  - Numbered rat spots for Master
  - Anchor bale marking and anchor bale measurements from walls

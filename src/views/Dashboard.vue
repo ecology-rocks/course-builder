@@ -201,7 +201,7 @@ watch(() => userStore.user, async (newUser) => {
               :class="{ disabled: !userStore.canAccessSport('agility') }"
             >
               <span class="emoji">🐕</span>
-              <span class="label">Agility</span>
+              <span class="label">Agility (α version)</span>
               <span v-if="!userStore.canAccessSport('agility')" class="lock-icon">🔒</span>
             </button>
 
@@ -211,7 +211,7 @@ watch(() => userStore.user, async (newUser) => {
               :class="{ disabled: !userStore.canAccessSport('scentwork') }"
             >
               <span class="emoji">👃</span>
-              <span class="label">Scent Work</span>
+              <span class="label">Scent Work (α version)</span>
               <span v-if="!userStore.canAccessSport('scentwork')" class="lock-icon">🔒</span>
             </button>
 
