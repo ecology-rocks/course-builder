@@ -30,7 +30,10 @@ export function useMapPersistence(state, userStore, notifications) {
       hides: state.hides.value,
       startBox: state.startBox.value,
       wallTypes: state.wallTypes ? state.wallTypes.value : {},
-      gridStartCorner: state.gridStartCorner.value
+      gridStartCorner: state.gridStartCorner.value,
+      trialLocation: state.trialLocation.value || '',
+      trialDay: state.trialDay.value || '',
+      trialNumber: state.trialNumber.value || '',
     }
   }
 
@@ -167,8 +170,11 @@ export function useMapPersistence(state, userStore, notifications) {
     state.boardEdges.value = data.data?.boardEdges || data.boardEdges || []
     state.hides.value = data.data?.hides || data.hides || []
     state.startBox.value = data.data?.startBox || null
-    
-    state.validateAllBales()
+    if (state.trialLocation) state.trialLocation.value = data.data?.trialLocation || data.trialLocation || ''
+    if (state.trialDay) state.trialDay.value = data.data?.trialDay || data.trialDay || ''
+    if (state.trialNumber) state.trialNumber.value = data.data?.trialNumber || data.trialNumber || ''
+
+    if (state.validateAllBales) state.validateAllBales()
   }
 
   // --- LOAD FROM CLOUD DATA ---
@@ -197,7 +203,12 @@ export function useMapPersistence(state, userStore, notifications) {
     state.startBox.value = mapData.startBox || null
     state.previousClassCount.value = mapData.previousClassCount || 0
     if (state.wallTypes && mapData.wallTypes) { state.wallTypes.value = mapData.wallTypes }
+    if (state.gridStartCorner) state.gridStartCorner.value = mapData.gridStartCorner || 'top-left'
     
+    // --- NEW FIELDS ---
+    if (state.trialLocation) state.trialLocation.value = mapData.trialLocation || ''
+    if (state.trialDay) state.trialDay.value = mapData.trialDay || ''
+    if (state.trialNumber) state.trialNumber.value = mapData.trialNumber || ''
     state.validateAllBales()
   }
 

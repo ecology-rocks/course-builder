@@ -5,9 +5,29 @@
         <h3>⚙️ Course Settings</h3>
         <button class="close-btn" @click="$emit('close')">×</button>
       </div>
-      
+
       <div class="settings-section">
-        <h4>1. Grid Numbering Start</h4>
+        <h4>1. Trial Information</h4>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Club / Location</label>
+            <input v-model="store.trialLocation" placeholder="e.g. Happy Dogs Club" />
+          </div>
+          <div class="form-group-row">
+             <div class="form-group">
+                <label>Day</label>
+                <input v-model="store.trialDay" placeholder="e.g. Saturday" />
+             </div>
+             <div class="form-group">
+                <label>Trial #</label>
+                <input v-model="store.trialNumber" placeholder="e.g. T1" />
+             </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h4>2. Grid Numbering Start</h4>
         <div class="corner-selector">
           <div class="row">
             <button 
@@ -37,7 +57,7 @@
       <hr />
 
       <div class="settings-section" v-if="store.sport === 'barnhunt'">
-        <h4>2. Wall Types</h4>
+        <h4>3. Wall Types</h4>
         <div class="wall-grid">
           <div class="wall-control">
             <label>Top</label>
@@ -128,6 +148,14 @@ function formatCorner(c) {
 .wall-control label { font-size: 0.75rem; font-weight: bold; color: #555; }
 .wall-control select { padding: 2px; font-size: 0.8rem; }
 .wall-preview-box { width: 60px; height: 60px; background: #f5f5f5; }
+
+.form-grid { display: flex; flex-direction: column; gap: 10px; }
+.form-group { display: flex; flex-direction: column; }
+.form-group label { font-size: 0.8rem; font-weight: bold; color: #555; margin-bottom: 4px; }
+.form-group input { padding: 6px; border: 1px solid #ddd; border-radius: 4px; }
+.form-group-row { display: flex; gap: 10px; }
+.form-group-row .form-group { flex: 1; }
+
 
 .actions { text-align: center; margin-top: 20px; }
 .btn-primary { background: #2196f3; color: white; border: none; padding: 8px 20px; border-radius: 4px; cursor: pointer; font-weight: bold; }

@@ -11,7 +11,28 @@ export function usePrinter(store, userStore, stageRef, scale) {
 
     const d = new Date().toLocaleDateString()
     const logoHtml = userStore.clubLogoUrl ? `<img src="${userStore.clubLogoUrl}" class="print-logo" />` : ''
-    const clubHtml = userStore.clubName ? `<div class="meta"><strong>Club:</strong> ${userStore.clubName}</div>` : ''
+    
+    // --- UPDATED: Use Trial Location if available, else fallback to user profile club name ---
+    const clubName = store.trialLocation || userStore.clubName
+    const clubHtml = clubName ? `<div class="meta"><strong>Club:</strong> ${clubName}</div>` : ''
+
+    // --- UPDATED: Construct Subtitle ---
+    // If we have Trial info, use the requested format: "{{Class}} Trial {{Number}}, {{Day}} - {{Layer}}"
+    // Otherwise fall back to the old format.
+    const getSubtitle = (layerName) => {
+      if (store.trialNumber || store.trialDay) {
+        let text = `${store.classLevel}`
+        if (store.trialNumber) text += ` Trial ${store.trialNumber}`
+        if (store.trialDay) text += `, ${store.trialDay}`
+        
+        // Append Layer info
+        if (layerName) text += ` - ${layerName.replace('• ', '')}` 
+        return text
+      } else {
+        // Fallback
+        return `${store.classLevel} ${store.sport === 'agility' ? 'Agility' : 'Barn Hunt'} ${layerName || ''}`
+      }
+    }
 
     // Shared Header
     const getHeader = (subtitleSuffix = '') => `
@@ -20,7 +41,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
           ${logoHtml}
           <div class="title-block">
             <h1>${store.mapName}</h1>
-            <h2>${store.classLevel} ${store.sport === 'agility' ? 'Agility' : 'Barn Hunt'} ${subtitleSuffix}</h2>
+            <h2>${getSubtitle(subtitleSuffix)}</h2>
           </div>
         </div>
         <div class="header-right">
@@ -32,7 +53,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
       </div>
     `
 
-    // Shared CSS
     const printStyles = `
       @page { size: landscape; margin: 0.25in; }
       html, body { margin: 0; padding: 0; width: 100%; }
@@ -57,54 +77,39 @@ export function usePrinter(store, userStore, stageRef, scale) {
       scale.value = originalScale 
       
       const win = window.open('', '_blank')
-      win.document.write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>${printStyles}</style></head><body><div class="print-page">${getHeader()}<div class="map-container"><img src="${dataUrl}" class="map-img"/></div></div></body></html>`)
+      win.document.write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>${printStyles}</style></head><body><div class="print-page">${getHeader('')}<div class="map-container"><img src="${dataUrl}" class="map-img"/></div></div></body></html>`)
       win.document.close()
       setTimeout(() => { win.focus(); win.print(); }, 500);
       return
     }
 
-// BARN HUNT (Multi-Page)
-    // For printing, we temporarily toggle the layer view
+    // BARN HUNT (Multi-Page)
     const originalLayer = store.currentLayer
     const pages = []
 
-    // Helper: always print Layer 1, but check content for others
     const shouldPrintLayer = (layerNum) => {
       if (layerNum === 1) return true
       return store.bales.some(b => b.layer === layerNum)
     }
     
-    // Capture Layer 1
     if (shouldPrintLayer(1)) {
       store.currentLayer = 1; await wait(150);
-      pages.push({ 
-        title: '• Layer 1', 
-        img: stageRef.value.getStage().toDataURL({ pixelRatio: 3 }) 
-      })
+      pages.push({ title: '• Layer 1', img: stageRef.value.getStage().toDataURL({ pixelRatio: 3 }) })
     }
     
-    // Capture Layer 2
     if (shouldPrintLayer(2)) {
       store.currentLayer = 2; await wait(150);
-      pages.push({ 
-        title: '• Layer 2', 
-        img: stageRef.value.getStage().toDataURL({ pixelRatio: 3 }) 
-      })
+      pages.push({ title: '• Layer 2', img: stageRef.value.getStage().toDataURL({ pixelRatio: 3 }) })
     }
     
-    // Capture Layer 3
     if (shouldPrintLayer(3)) {
       store.currentLayer = 3; await wait(150);
-      pages.push({ 
-        title: '• Layer 3', 
-        img: stageRef.value.getStage().toDataURL({ pixelRatio: 3 }) 
-      })
+      pages.push({ title: '• Layer 3', img: stageRef.value.getStage().toDataURL({ pixelRatio: 3 }) })
     }
 
     store.currentLayer = originalLayer
     scale.value = originalScale
 
-    // Generate HTML for valid pages only
     const pagesHtml = pages.map(p => `
       <div class="print-page">
         ${getHeader(p.title)}
@@ -119,9 +124,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
       <!DOCTYPE html>
       <html>
         <head><title>${store.mapName}</title><style>${printStyles}</style></head>
-        <body>
-          ${pagesHtml}
-        </body>
+        <body>${pagesHtml}</body>
       </html>
     `)
     win.document.close()

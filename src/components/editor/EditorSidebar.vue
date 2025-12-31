@@ -162,8 +162,10 @@ function handleMergeChange(event) {
           <button @click="handlePrint(true)" title="Print with Hides/Answers">👨‍⚖️ Judge</button>
           <button @click="handlePrint(false)" title="Print Clean Map">🏃 Exhibitor</button>
         </div>
+       
       </div>
-
+      <div class="print-info">
+       <i>When you select one of the print options, a printable version will pop up in a new window. To save to PDF, on the print dialog, select "Save to PDF" or "Print to PDF" as your printer. Exhibitor maps will not show rat hides, but Judge maps will.</i>      </div>
     </div>
   </aside>
 </template>
@@ -348,6 +350,13 @@ select {
   flex: 1;
   border-radius: 4px;
 }
+
+.print-info { 
+  font-size: 0.8rem; 
+  color: #666; 
+  text-align: center; 
+  padding-top: 5px; 
+  border-top: 1px solid #eee; }
 
 .btn-primary {
   background: #2196f3;

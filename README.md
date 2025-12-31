@@ -4,11 +4,11 @@
 ## Planned Updates (Short Term)
  - Add a "Trial" at "Club" indicator to the print info (by Class Level). 
  - Allow judges to set bale sizes (instead of worrying about 3 stringers)
- - Copy/paste keyboard shortcuts
+ - [x] DONE - Copy/paste keyboard shortcuts
  - Numbered rat spots for Master
  - Anchor bale marking and anchor bale measurements from walls
  - Official Barn Hunt maps require legends - need to add a legend. 
- - [x]  Toast notification after successful save
+ - [x] DONE - Toast notification after successful save
  - [x] DONE -  Need to be able to label the type of wall/fencing. 
 
 ## Feature Requests & Future Updates (Long Term)

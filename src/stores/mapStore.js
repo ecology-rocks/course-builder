@@ -47,6 +47,9 @@ export const useMapStore = defineStore('map', () => {
   const isDraggingSelection = ref(false)
   const activeTool = ref('bale')
   const nextNumber = ref(1) 
+  const trialLocation = ref('') // Club/Location Name
+  const trialDay = ref('')      // e.g. "Saturday"
+  const trialNumber = ref('')   // e.g. "T1"
 
   // ==========================================
   // 2. SHARED HELPERS
@@ -66,6 +69,9 @@ export const useMapStore = defineStore('map', () => {
     ringDimensions.value = { width: 24, height: 24 }; previousClassCount.value = 0; currentLayer.value = 1; activeTool.value = 'bale'
     wallTypes.value = { top: 'fence', right: 'fence', bottom: 'fence', left: 'fence' }
     gridStartCorner.value = 'top-left'
+    trialLocation.value = ''
+    trialDay.value = ''
+    trialNumber.value = ''
     // History reset happens inside history module logic if we exposed a clear method, but usually it clears on reload
   }
 
@@ -94,6 +100,7 @@ export const useMapStore = defineStore('map', () => {
     isShared, classLevel, sport, scentWorkObjects, 
     masterBlinds, startBox, previousClassCount, savedMaps, folders,
     isDrawingBoard, currentLayer, selectedBaleId, gridStartCorner, clipboard,
+    trialLocation, trialDay, trialNumber,
     // Methods
     reset
   }
@@ -131,7 +138,7 @@ export const useMapStore = defineStore('map', () => {
     savedMaps, currentMapId, mapName, isShared,
     classLevel, sport, folders, currentFolderId, previousClassCount,
     selection, isDraggingSelection, wallTypes, gridStartCorner, clipboard,
-
+    trialLocation, trialDay, trialNumber,
     // Core
     setTool, reset, showNotification, resizeRing, currentGuidelines,
 
