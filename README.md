@@ -20,6 +20,7 @@
  - Changelog between levels (for nested course design)
  - Need a gate marker
  - Need a step marker
+ - Need an obstruction marker
  - Premade tunnels should indicate EastCoast/WestCoast dimensions
  - Numbered rat spots for Master
  - Ability to modify subscriptions, add extra seats to club sub, etc. 

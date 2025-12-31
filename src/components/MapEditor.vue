@@ -443,6 +443,22 @@ function getGridLabelY(index) {
   // Otherwise count forwards (Top is 0)
   return index.toString()
 }
+
+function getXAxisY() {
+  return store.gridStartCorner.includes('bottom') 
+    ? (store.ringDimensions.height * scale.value) + 10 
+    : -20
+}
+
+function getYAxisX() {
+  return store.gridStartCorner.includes('right') 
+    ? (store.ringDimensions.width * scale.value) + 5 
+    : -25
+}
+
+function getYAxisAlign() {
+  return store.gridStartCorner.includes('right') ? 'left' : 'right'
+}
 </script>
 
 <template>
@@ -481,21 +497,21 @@ function getGridLabelY(index) {
 <template v-for="n in store.ringDimensions.width + 1" :key="'lx'+n">
             <v-text v-if="store.sport === 'agility' && (n-1) % 10 === 0" 
               :config="{ 
-                x: (n-1)*scale, y: -20, 
+                x: (n-1)*scale, y: getXAxisY(),
                 text: getGridLabelX(n-1), 
                 fontSize: 12, fill: '#666', align: 'center', width: 30, offsetX: 15 
               }" 
             />
             <v-text v-if="store.sport === 'barnhunt' && (n-1) % 2 === 0" 
               :config="{ 
-                x: (n-1)*scale, y: -20, 
+                x: (n-1)*scale, y: getXAxisY(),
                 text: getGridLabelX(n-1), 
                 fontSize: 10, fill: '#666', align: 'center', width: 30, offsetX: 15 
               }" 
             />
             <v-text v-if="store.sport === 'scentwork' && (n-1) % 5 === 0" 
               :config="{ 
-                x: (n-1)*scale, y: -20, 
+                x: (n-1)*scale, y: getXAxisY(),
                 text: getGridLabelX(n-1), 
                 fontSize: 12, fill: '#666', align: 'center', width: 30, offsetX: 15 
               }" 
@@ -505,21 +521,21 @@ function getGridLabelY(index) {
           <template v-for="n in store.ringDimensions.height + 1" :key="'ly'+n">
             <v-text v-if="store.sport === 'agility' && (n-1) % 10 === 0" 
               :config="{ 
-                x: -25, y: (n-1)*scale-6, 
+                x: getYAxisX(), y: (n-1)*scale-6,
                 text: getGridLabelY(n-1), 
                 fontSize: 12, fill: '#666', align: 'right', width: 20 
               }" 
             />
             <v-text v-if="store.sport === 'barnhunt' && (n-1) % 2 === 0" 
               :config="{ 
-                x: -25, y: (n-1)*scale-6, 
+                x: getYAxisX(), y: (n-1)*scale-6, 
                 text: getGridLabelY(n-1), 
                 fontSize: 10, fill: '#666', align: 'right', width: 20 
               }" 
             />
             <v-text v-if="store.sport === 'scentwork' && (n-1) % 5 === 0" 
               :config="{ 
-                x: -25, y: (n-1)*scale-6, 
+                x: getYAxisX(), y: (n-1)*scale-6,
                 text: getGridLabelY(n-1), 
                 fontSize: 12, fill: '#666', align: 'right', width: 20 
               }" 
