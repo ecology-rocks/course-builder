@@ -19,9 +19,14 @@
  - Add a variety of SENIOR and MASTER tunnels to Tunnel Library.
  - Changelog between levels (for nested course design)
  - Need a gate marker
+ - Need a step marker
  - Premade tunnels should indicate EastCoast/WestCoast dimensions
  - Numbered rat spots for Master
  - Ability to modify subscriptions, add extra seats to club sub, etc. 
+ - Documentation + Guides
+ - Fix validation over tunnel boards
+ - Increase line thickness on tall bale slash marks so they're visible when printing
+ 
  
 
 ## Bug Reports

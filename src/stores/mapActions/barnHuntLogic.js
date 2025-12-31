@@ -92,7 +92,7 @@ let uw, uh
     return totalSupportArea >= 1.0
   }
 
-  function isValidPlacement(newBale) {
+function isValidPlacement(newBale) {
     const r1 = getBaleRect(newBale)
     
     // 1. Check Ring Bounds
@@ -100,21 +100,16 @@ let uw, uh
       return false
     }
 
-    // 2. Check Collision with SAME layer
-    return !state.bales.value.some(existing => {
-      if (existing.id === newBale.id) return false
-      if (existing.layer !== newBale.layer) return false
-      
-      const r2 = getBaleRect(existing)
-      return (r1.x < r2.x + r2.w && r1.x + r1.w > r2.x && r1.y < r2.y + r2.h && r1.y + r1.h > r2.y)
-    })
+    // 2. Collision Check REMOVED
+    return true
   }
 
-  function validateAllBales() {
+function validateAllBales() {
     state.bales.value.forEach(bale => {
       const r = getBaleRect(bale)
       const outOfBounds = r.x < 0 || r.y < 0 || r.x + r.w > state.ringDimensions.value.width || r.y + r.h > state.ringDimensions.value.height
-      bale.supported = !outOfBounds && hasSupport(bale)
+      // Logic stripped: Bale is supported if it is not out of bounds
+      bale.supported = !outOfBounds
     })
   }
 
