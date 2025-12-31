@@ -21,6 +21,7 @@
  - Need a gate marker
  - Premade tunnels should indicate EastCoast/WestCoast dimensions
  - Numbered rat spots for Master
+ - Ability to modify subscriptions, add extra seats to club sub, etc. 
  
 
 ## Bug Reports

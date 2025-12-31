@@ -190,12 +190,12 @@ export function useMapPersistence(state, userStore, notifications) {
     state.sport.value = data.sport || 'barnhunt'
     state.isShared.value = data.isShared || false
     state.currentFolderId.value = data.folderId || null
-    if (state.gridStartCorner) {
-       state.gridStartCorner.value = mapData.gridStartCorner || 'top-left'
-    }
-    // Support legacy and new data structures
-    const mapData = data.data || data
     
+    // --- FIX: DEFINE mapData AT THE VERY TOP ---
+    const mapData = data.data || data 
+    // -------------------------------------------
+
+    // Now it is safe to access mapData for everything below
     state.ringDimensions.value = mapData.dimensions || { width: 24, height: 24 }
     state.bales.value = mapData.bales || []
     state.agilityObstacles.value = mapData.agilityObstacles || []
@@ -206,17 +206,23 @@ export function useMapPersistence(state, userStore, notifications) {
     state.masterBlinds.value = data.masterBlinds || []
     state.startBox.value = mapData.startBox || null
     state.previousClassCount.value = mapData.previousClassCount || 0
-    if (state.wallTypes && mapData.wallTypes) { state.wallTypes.value = mapData.wallTypes }
+    
+    if (state.wallTypes && mapData.wallTypes) state.wallTypes.value = mapData.wallTypes
     if (state.gridStartCorner) state.gridStartCorner.value = mapData.gridStartCorner || 'top-left'
+    
+    // Trial Info
+    if (state.trialLocation) state.trialLocation.value = mapData.trialLocation || ''
+    if (state.trialDay) state.trialDay.value = mapData.trialDay || ''
+    if (state.trialNumber) state.trialNumber.value = mapData.trialNumber || ''
+
+    // Bale Config
     if (state.baleConfig) {
        const def = { length: 3, width: 1.5, height: 1 }
        state.baleConfig.value = mapData.baleConfig || def
     }
-    // --- NEW FIELDS ---
-    if (state.trialLocation) state.trialLocation.value = mapData.trialLocation || ''
-    if (state.trialDay) state.trialDay.value = mapData.trialDay || ''
-    if (state.trialNumber) state.trialNumber.value = mapData.trialNumber || ''
-    state.validateAllBales()
+    
+    // Run Validation
+    if (state.validateAllBales) state.validateAllBales()
   }
 
   // --- MERGE (Combine files) ---

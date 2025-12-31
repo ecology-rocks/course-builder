@@ -29,7 +29,16 @@ export const useMapStore = defineStore('map', () => {
   const classLevel = ref('Novice') 
   const sport = ref('barnhunt')
   const notification = ref(null)
+  
+  // Settings
   const wallTypes = ref({ top: 'fence', right: 'fence', bottom: 'fence', left: 'fence' })
+  const gridStartCorner = ref('top-left')
+  const trialLocation = ref('') 
+  const trialDay = ref('')      
+  const trialNumber = ref('')   
+  const baleConfig = ref({ length: 3, width: 1.5, height: 1 }) // <--- Ensure this is here
+
+  // Objects
   const bales = ref([])
   const agilityObstacles = ref([]) 
   const scentWorkObjects = ref([]) 
@@ -39,7 +48,8 @@ export const useMapStore = defineStore('map', () => {
   const startBox = ref(null) 
   const masterBlinds = ref([]) 
   const savedMaps = ref([])
-  const gridStartCorner = ref('top-left') // options: 'top-left', 'top-right', 'bottom-left', 'bottom-right'
+  
+  // Editor State
   const clipboard = ref([])
   const currentLayer = ref(1)
   const selectedBaleId = ref(null)
@@ -47,69 +57,30 @@ export const useMapStore = defineStore('map', () => {
   const isDraggingSelection = ref(false)
   const activeTool = ref('bale')
   const nextNumber = ref(1) 
-  const trialLocation = ref('') // Club/Location Name
-  const trialDay = ref('')      // e.g. "Saturday"
-  const trialNumber = ref('')   // e.g. "T1"
-  const baleConfig = ref({ length: 3, width: 1.5, height: 1 })
 
   // ==========================================
-  // 2. SHARED HELPERS
+  // 2. INTERNAL HELPERS (Dependencies for Modules)
   // ==========================================
 
   function showNotification(message, type = 'info') {
     notification.value = { message, type }
     setTimeout(() => { notification.value = null }, 3000)
   }
-  
-  function setTool(tool) { activeTool.value = tool }
 
   function reset() {
     bales.value = []; boardEdges.value = []; hides.value = []; dcMats.value = []; masterBlinds.value = []; startBox.value = null
     agilityObstacles.value = []; scentWorkObjects.value = []; nextNumber.value = 1; 
     currentMapId.value = null; mapName.value = "Untitled Map"; classLevel.value = "Novice"; sport.value = 'barnhunt'
     ringDimensions.value = { width: 24, height: 24 }; previousClassCount.value = 0; currentLayer.value = 1; activeTool.value = 'bale'
+    
+    // Reset Settings
     wallTypes.value = { top: 'fence', right: 'fence', bottom: 'fence', left: 'fence' }
     gridStartCorner.value = 'top-left'
     trialLocation.value = ''
     trialDay.value = ''
     trialNumber.value = ''
-    // History reset happens inside history module logic if we exposed a clear method, but usually it clears on reload
+    baleConfig.value = { length: 3, width: 1.5, height: 1 }
   }
-
-
-function toggleAnchor() {
-    if (selection.value.length === 0) return
-    
-    // Only allow on Layer 1 (per requirements)
-    if (currentLayer.value !== 1) {
-      showNotification("Anchor bales must be on Layer 1.", "error")
-      return
-    }
-
-    bales.value.forEach(b => {
-      if (selection.value.includes(b.id)) {
-        // Toggle property
-        b.isAnchor = !b.isAnchor
-      }
-    })
-    
-    // Trigger reactivity for canvas update
-    bales.value = [...bales.value]
-  }
-
-  // Ring resize affects all objects, so we keep it here as a coordinator
-  function resizeRing(width, height) {
-    const w = Math.max(10, parseInt(width)); const h = Math.max(10, parseInt(height))
-    ringDimensions.value = { width: w, height: h }
-    bales.value.forEach(b => { if (b.x >= w) b.x = w - 3.5; if (b.y >= h) b.y = h - 3.5 })
-    agilityObstacles.value.forEach(o => { if (o.x >= w) o.x = w - 5; if (o.y >= h) o.y = h - 5 })
-    scentWorkObjects.value.forEach(o => { if (o.x >= w) o.x = w - 3; if (o.y >= h) o.y = h - 3 })
-    boardEdges.value.forEach(b => { if (b.x1 > w) b.x1 = w; if (b.x2 > w) b.x2 = w; if (b.y1 > h) b.y1 = h; if (b.y2 > h) b.y2 = h })
-    // Re-validate logic is handled by the attached module below
-    if (stateRefs.validateAllBales) stateRefs.validateAllBales()
-  }
-
-  const currentGuidelines = computed(() => sport.value === 'agility' ? (AGILITY_RULES[classLevel.value] || AGILITY_RULES['Other']) : (BH_RULES[classLevel.value] || BH_RULES['Other']))
 
   // ==========================================
   // 3. INITIALIZE MODULES
@@ -118,17 +89,18 @@ function toggleAnchor() {
   // Package state for modules
   const stateRefs = {
     ringDimensions, bales, agilityObstacles, selection, boardEdges, 
-    dcMats, hides, mapName, currentMapId, currentFolderId, wallTypes,
+    dcMats, hides, mapName, currentMapId, currentFolderId, 
     isShared, classLevel, sport, scentWorkObjects, 
     masterBlinds, startBox, previousClassCount, savedMaps, folders,
-    isDrawingBoard, currentLayer, selectedBaleId, gridStartCorner, clipboard,
+    isDrawingBoard, currentLayer, selectedBaleId,
+    wallTypes, gridStartCorner, clipboard,
+    // New Fields
     trialLocation, trialDay, trialNumber, baleConfig,
-    // Methods
+    // Methods passed to modules
     reset
   }
   
-  // A. Initialize History (Undo/Redo)
-  // Pass a placeholder function for validation that we will fill later
+  // A. Initialize History 
   const historyModule = useHistory(stateRefs, () => {
     if (stateRefs.validateAllBales) stateRefs.validateAllBales()
   })
@@ -141,8 +113,7 @@ function toggleAnchor() {
   const agLogic = useAgilityLogic(stateRefs, historyModule.snapshot)
   const swLogic = useScentWorkLogic(stateRefs, historyModule.snapshot)
 
-  // C. Link Validation (The Missing Link)
-  // Now that BarnHuntLogic is created, we expose its validation function to the others
+  // C. Link Validation
   stateRefs.validateAllBales = bhLogic.validateAllBales
 
   // D. Initialize Persistence & Selection
@@ -150,7 +121,41 @@ function toggleAnchor() {
   const selectionLogic = useSelectionLogic(stateRefs, historyModule.snapshot, bhLogic.validateAllBales)
 
   // ==========================================
-  // 4. EXPORTS
+  // 4. EXTERNAL ACTIONS (Depend on Modules/State)
+  // ==========================================
+
+  function setTool(tool) { activeTool.value = tool }
+
+  function toggleAnchor() {
+    if (selection.value.length === 0) return
+    if (currentLayer.value !== 1) {
+      showNotification("Anchor bales must be on Layer 1.", "error")
+      return
+    }
+    bales.value.forEach(b => {
+      if (selection.value.includes(b.id)) {
+        b.isAnchor = !b.isAnchor
+      }
+    })
+    bales.value = [...bales.value]
+  }
+
+  function resizeRing(width, height) {
+    const w = Math.max(10, parseInt(width)); const h = Math.max(10, parseInt(height))
+    ringDimensions.value = { width: w, height: h }
+    bales.value.forEach(b => { if (b.x >= w) b.x = w - 3.5; if (b.y >= h) b.y = h - 3.5 })
+    agilityObstacles.value.forEach(o => { if (o.x >= w) o.x = w - 5; if (o.y >= h) o.y = h - 5 })
+    scentWorkObjects.value.forEach(o => { if (o.x >= w) o.x = w - 3; if (o.y >= h) o.y = h - 3 })
+    boardEdges.value.forEach(b => { if (b.x1 > w) b.x1 = w; if (b.x2 > w) b.x2 = w; if (b.y1 > h) b.y1 = h; if (b.y2 > h) b.y2 = h })
+    
+    // Now safe to call validation
+    if (stateRefs.validateAllBales) stateRefs.validateAllBales()
+  }
+
+  const currentGuidelines = computed(() => sport.value === 'agility' ? (AGILITY_RULES[classLevel.value] || AGILITY_RULES['Other']) : (BH_RULES[classLevel.value] || BH_RULES['Other']))
+
+  // ==========================================
+  // 5. EXPORTS
   // ==========================================
   return {
     // State
@@ -159,17 +164,23 @@ function toggleAnchor() {
     agilityObstacles, scentWorkObjects, nextNumber, notification,
     savedMaps, currentMapId, mapName, isShared,
     classLevel, sport, folders, currentFolderId, previousClassCount,
-    selection, isDraggingSelection, wallTypes, gridStartCorner, clipboard,
-    trialLocation, trialDay, trialNumber, baleConfig, toggleAnchor,
-    // Core
-    setTool, reset, showNotification, resizeRing, currentGuidelines,
+    selection, isDraggingSelection, clipboard,
+    
+    // Settings
+    wallTypes, gridStartCorner, trialLocation, trialDay, trialNumber, baleConfig,
+
+    // Actions
+    setTool, reset, showNotification, resizeRing, toggleAnchor, 
+    
+    // Computed
+    currentGuidelines,
 
     // Modules
-    ...historyModule,   // undo, redo, snapshot
-    ...bhLogic,         // addBale, inventory, etc
-    ...agLogic,         // addAgilityObstacle, etc
-    ...swLogic,         // addScentWorkObject, etc
-    ...persistence,     // saveToCloud, loadUserMaps
-    ...selectionLogic   // selectArea, moveSelection
+    ...historyModule,
+    ...bhLogic,
+    ...agLogic,
+    ...swLogic,
+    ...persistence,
+    ...selectionLogic
   }
 })
