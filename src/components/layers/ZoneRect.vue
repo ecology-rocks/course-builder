@@ -1,33 +1,46 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps(['zone', 'isSelected', 'scale'])
 const emit = defineEmits(['select', 'update', 'dragend'])
 
-const shapeRef = ref(null)
+const groupRef = ref(null)
+
+// 1. Determine Label Text
+const labelText = computed(() => {
+  return props.zone.type === 'dead' ? 'DEAD ZONE' : 'OBSTRUCTION'
+})
+
+// 2. Determine Text Color
+const textColor = computed(() => {
+  return props.zone.type === 'dead' ? '#b71c1c' : '#424242'
+})
 
 const handleTransformEnd = () => {
-  const node = shapeRef.value.getNode()
-  const scaleX = node.scaleX()
-  const scaleY = node.scaleY()
+  const group = groupRef.value.getNode()
+  const scaleX = group.scaleX()
+  const scaleY = group.scaleY()
 
-  // Reset scale to 1 to avoid compounding
-  node.scaleX(1)
-  node.scaleY(1)
+  // 3. Reset Group scale to 1 immediately to prevent distortion
+  group.scaleX(1)
+  group.scaleY(1)
 
-  // CONVERT PIXELS -> GRID UNITS
+  // 4. Calculate new Dimensions based on the scale that WAS applied
+  // New Grid Width = Old Grid Width * Scale Factor
+  const newGridWidth = props.zone.width * scaleX
+  const newGridHeight = props.zone.height * scaleY
+
   emit('update', {
     id: props.zone.id,
-    x: node.x() / props.scale,
-    y: node.y() / props.scale,
-    rotation: node.rotation(),
-    width: (node.width() * scaleX) / props.scale,
-    height: (node.height() * scaleY) / props.scale
+    x: group.x() / props.scale,
+    y: group.y() / props.scale,
+    rotation: group.rotation(),
+    width: newGridWidth,
+    height: newGridHeight
   })
 }
 
 const handleDragEnd = (e) => {
-  // CONVERT PIXELS -> GRID UNITS
   emit('update', { 
     id: props.zone.id, 
     x: e.target.x() / props.scale, 
@@ -37,31 +50,51 @@ const handleDragEnd = (e) => {
 </script>
 
 <template>
-  <v-rect
-    ref="shapeRef"
+  <v-group
+    ref="groupRef"
     :config="{
-      x: zone.x * scale,          // GRID -> PIXELS
-      y: zone.y * scale,          // GRID -> PIXELS
-      width: zone.width * scale,  // GRID -> PIXELS
-      height: zone.height * scale,// GRID -> PIXELS
+      x: zone.x * scale,
+      y: zone.y * scale,
       rotation: zone.rotation,
-      fill: zone.type === 'dead' ? 'rgba(255, 0, 0, 0.3)' : 'rgba(100, 100, 100, 0.5)',
-      stroke: zone.type === 'dead' ? 'red' : 'black',
-      strokeWidth: 2,
-      dash: [10, 5],
       draggable: true,
-      name: 'zone'
+      name: 'zone-group'
     }"
     @click="emit('select', zone.id)"
     @tap="emit('select', zone.id)"
     @dragend="handleDragEnd"
     @transformend="handleTransformEnd"
-  />
+  >
+    <v-rect
+      :config="{
+        width: zone.width * scale,
+        height: zone.height * scale,
+        fill: zone.type === 'dead' ? 'rgba(255, 0, 0, 0.3)' : 'rgba(100, 100, 100, 0.5)',
+        stroke: zone.type === 'dead' ? 'red' : 'black',
+        strokeWidth: 2,
+        dash: [10, 5]
+      }"
+    />
+
+    <v-text
+      :config="{
+        text: labelText,
+        width: zone.width * scale,
+        height: zone.height * scale,
+        fontSize: 14,
+        fontFamily: 'Arial',
+        fontStyle: 'bold',
+        fill: textColor,
+        align: 'center',
+        verticalAlign: 'middle',
+        listening: false // Allows clicks to pass through to the group for selection
+      }"
+    />
+  </v-group>
   
   <v-transformer
     v-if="isSelected"
     :config="{
-      nodes: shapeRef ? [shapeRef.getNode()] : [],
+      nodes: groupRef ? [groupRef.getNode()] : [],
       rotateEnabled: true,
       ignoreStroke: true,
       keepRatio: false

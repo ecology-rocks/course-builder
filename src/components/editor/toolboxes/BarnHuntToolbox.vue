@@ -77,7 +77,7 @@ const store = useMapStore()
       <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">↗️ Lean
         (Ctrl+Click)</button>
       <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">🗑️ Delete Tool
-        (Double Click)</button>
+        </button>
     </div>
   </div>
 </template>

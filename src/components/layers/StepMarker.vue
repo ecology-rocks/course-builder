@@ -2,14 +2,27 @@
 import { ref } from 'vue'
 
 const props = defineProps(['step', 'isSelected', 'scale', 'ringDimensions', 'GRID_OFFSET'])
-const emit = defineEmits(['select', 'update', 'dragend'])
+const emit = defineEmits(['select', 'update', 'dragend', 'rotate'])
 
 const groupRef = ref(null)
 const width = 30 
 const height = 20
 
+// 1. Handle Click (LEFT CLICK ONLY)
+const handleClick = (e) => {
+  // Only select if it's a Left Click (button 0)
+  if (e.evt.button === 0) {
+    emit('select', props.step.id)
+  }
+}
+
+// 2. Handle Context Menu (RIGHT CLICK)
+const handleContextMenu = (e) => {
+  e.evt.preventDefault() // Stop browser menu
+  emit('rotate', props.step.id) // Rotate immediately
+}
+
 const handleDragEnd = (e) => {
-  // CONVERT PIXELS -> GRID UNITS
   emit('dragend', {
     id: props.step.id,
     x: e.target.x() / props.scale,
@@ -41,16 +54,17 @@ const dragBoundFunc = (pos) => {
   <v-group
     ref="groupRef"
     :config="{
-      x: step.x * scale, // CONVERT GRID -> PIXELS
-      y: step.y * scale, // CONVERT GRID -> PIXELS
+      x: step.x * scale, 
+      y: step.y * scale, 
       rotation: step.rotation,
       draggable: true,
       id: step.id,
       dragBoundFunc: dragBoundFunc
     }"
-    @click="emit('select', step.id)"
-    @tap="emit('select', step.id)"
+    @click="handleClick"
+    @tap="handleClick"
     @dragend="handleDragEnd"
+    @contextmenu="handleContextMenu"
   >
     <v-rect :config="{
       width: width,

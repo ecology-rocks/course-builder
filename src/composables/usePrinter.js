@@ -10,11 +10,9 @@ export function usePrinter(store, userStore, stageRef, scale) {
     await wait(100)
 
     const logoHtml = userStore.clubLogoUrl ? `<img src="${userStore.clubLogoUrl}" class="print-logo" />` : ''
-    // Use Trial Location if available, else fallback
     const clubName = store.trialLocation || userStore.clubName
     const clubHtml = clubName ? `<div class="meta"><strong>Club:</strong> ${clubName}</div>` : ''
 
-    // Shared Header
     const getSubtitle = (layerName) => {
       if (store.trialNumber || store.trialDay) {
         let text = `${store.classLevel}`
@@ -45,19 +43,15 @@ export function usePrinter(store, userStore, stageRef, scale) {
       </div>
     `
 
-    // --- Diffs Helper ---
     const diffs = store.differentials
     const getDiffHtml = () => {
       if (!diffs) return ''
-
       const fmt = (l) => {
         const d = diffs[l]
         const sign = d.net > 0 ? '+' : ''
         const movedText = d.moved > 0 ? `, ${d.moved} moved` : '' 
-        
         return `<div><strong>L${l}:</strong> ${sign}${d.net}${movedText}</div>`
       }
-
       return `
         <div class="legend-sub-section">
           <h4 style="margin-bottom: 2px;">Changes vs. Previous</h4>
@@ -70,7 +64,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
       `
     }
 
-    // --- Legend HTML ---
+    // --- UPDATED LEGEND HTML ---
     const getLegendHtml = () => `
       <div class="legend-sidebar">
         <h3>Legend</h3>
@@ -111,6 +105,9 @@ export function usePrinter(store, userStore, stageRef, scale) {
             
             <div class="legend-item"><span class="symbol start"></span> Start</div>
             <div class="legend-item"><span class="symbol dc"></span> DC Mat</div>
+
+            <div class="legend-item"><span class="symbol obstruction"></span> Obstr.</div>
+            <div class="legend-item"><span class="symbol dead-zone"></span> Dead Zone</div>
             
             <div class="legend-item full-width"><span class="symbol anchor">⚓</span> Anchor Bale</div>
           </div>
@@ -129,7 +126,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
       </div>
     `
 
-    // --- CSS ---
+    // --- UPDATED CSS ---
     const printStyles = `
       @page { size: landscape; margin: 0.25in; }
       
@@ -201,6 +198,10 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .leaner { border: none; font-size: 12px; font-weight: bold; width: auto; height: auto; }
       .start { border: 1px dashed black; background: #eee; }
       .dc { background: #d1c4e9; }
+      
+      /* [ADDED] Styles for Obstruction and Dead Zone */
+      .obstruction { border: 1px dashed black; background: rgba(100, 100, 100, 0.5); }
+      .dead-zone { border: 1px dashed red; background: rgba(255, 0, 0, 0.3); }
 
       .fence { height: 1px; background: black; border: none; }
       .wall { height: 6px; background: black; border: none; }
@@ -220,7 +221,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .hide-empty { background: white; color: black; }
     `
 
-    // AGILITY
     if (store.sport === 'agility') {
       const dataUrl = stageRef.value.getStage().toDataURL({ pixelRatio: 3 })
       scale.value = originalScale
@@ -239,7 +239,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
       return
     }
 
-    // BARN HUNT
     const originalLayer = store.currentLayer
     const pages = []
 
