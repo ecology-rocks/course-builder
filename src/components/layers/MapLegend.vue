@@ -14,7 +14,8 @@ const diffs = computed(() => store.differentials)
 
 const dragBoundFunc = (pos) => {
   const boxWidth = 140
-  const boxHeight = 110
+  // FIX: Make height dynamic to match the template logic
+  const boxHeight = diffs.value ? 170 : 110
   
   // Calculate boundaries in Stage Pixels
   // The Grid starts at GRID_OFFSET and extends by (width * scale)
