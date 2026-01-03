@@ -8,10 +8,10 @@ export function useSelectionLogic(state, snapshot, validateAllBales) {
 
   // --- LOCAL HELPERS ---
 
-function smartSnap(val, dimension) {
-    const gridSize = 0.5 
+  function smartSnap(val, dimension) {
+    const gridSize = 0.5
     const half = dimension / 2
-    
+
     // Calculate how far the center is from the grid lines naturally
     // For a 1.5' wide bale, remainder is 0.25
     const remainder = half % gridSize
@@ -22,27 +22,27 @@ function smartSnap(val, dimension) {
     return Math.round((val - remainder) / gridSize) * gridSize + remainder
   }
 
-// [HELPER] Line Segment (x1,y1)-(x2,y2) intersects Rectangle (rx,ry,rw,rh)
+  // [HELPER] Line Segment (x1,y1)-(x2,y2) intersects Rectangle (rx,ry,rw,rh)
   function lineIntersectsRect(x1, y1, x2, y2, rx, ry, rw, rh) {
     // 1. Check if either endpoint is inside
     if ((x1 >= rx && x1 <= rx + rw && y1 >= ry && y1 <= ry + rh) ||
-        (x2 >= rx && x2 <= rx + rw && y2 >= ry && y2 <= ry + rh)) return true
+      (x2 >= rx && x2 <= rx + rw && y2 >= ry && y2 <= ry + rh)) return true
 
     // 2. Check intersection with any of the 4 rectangle sides
     // Helper: Segment-Segment intersection
     const lineLine = (x3, y3, x4, y4) => {
-      const uA = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
-      const uB = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
+      const uA = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1))
+      const uB = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / ((y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1))
       return (uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1)
     }
 
-    return lineLine(rx, ry, rx+rw, ry) ||       // Top
-           lineLine(rx+rw, ry, rx+rw, ry+rh) || // Right
-           lineLine(rx, ry+rh, rx+rw, ry+rh) || // Bottom
-           lineLine(rx, ry, rx, ry+rh)          // Left
+    return lineLine(rx, ry, rx + rw, ry) ||       // Top
+      lineLine(rx + rw, ry, rx + rw, ry + rh) || // Right
+      lineLine(rx, ry + rh, rx + rw, ry + rh) || // Bottom
+      lineLine(rx, ry, rx, ry + rh)          // Left
   }
 
-function copySelection() {
+  function copySelection() {
     const selectedIds = state.selection.value
     if (selectedIds.length === 0) return
 
@@ -63,7 +63,9 @@ function copySelection() {
     capture(state.boardEdges.value, 'board')
     capture(state.dcMats.value, 'dcmat')
     capture(state.hides.value, 'hide')
-    
+    capture(state.steps.value, 'step')
+    capture(state.zones.value, 'zone')
+
     if (state.agilityObstacles.value) capture(state.agilityObstacles.value, 'agility')
     if (state.scentWorkObjects.value) capture(state.scentWorkObjects.value, 'scent')
 
@@ -75,7 +77,7 @@ function copySelection() {
     if (!state.clipboard.value || state.clipboard.value.length === 0) return
 
     snapshot() // Save history before pasting
-    
+
     // Deselect current items so we can select the NEW pasted ones
     state.selection.value = []
     const newSelection = []
@@ -99,6 +101,8 @@ function copySelection() {
       else if (clipItem.type === 'board') state.boardEdges.value.push(newItem)
       else if (clipItem.type === 'dcmat') state.dcMats.value.push(newItem)
       else if (clipItem.type === 'hide') state.hides.value.push(newItem)
+      else if (clipItem.type === 'step') state.steps.value.push(newItem)
+      else if (clipItem.type === 'zone') state.zones.value.push(newItem)
       else if (clipItem.type === 'agility') state.agilityObstacles.value.push(newItem)
       else if (clipItem.type === 'scent') state.scentWorkObjects.value.push(newItem)
 
@@ -111,7 +115,7 @@ function copySelection() {
   }
 
 
-  
+
   // Rotates a point (x,y) around a center (cx,cy) by angleDeg
   function rotatePoint(x, y, cx, cy, angleDeg) {
     const rad = (Math.PI / 180) * angleDeg
@@ -133,17 +137,17 @@ function copySelection() {
 
     let w, h
     const isRotated = bale.rotation % 180 !== 0
-    
-    if (bale.orientation === 'tall') { 
+
+    if (bale.orientation === 'tall') {
       w = isRotated ? H : L
-      h = isRotated ? L : H 
-    } else if (bale.orientation === 'pillar') { 
+      h = isRotated ? L : H
+    } else if (bale.orientation === 'pillar') {
       w = isRotated ? H : W
-      h = isRotated ? W : H 
-    } else { 
+      h = isRotated ? W : H
+    } else {
       // Flat
       w = isRotated ? W : L
-      h = isRotated ? L : W 
+      h = isRotated ? L : W
     }
     return { x: bale.x, y: bale.y, w, h }
   }
@@ -172,87 +176,85 @@ function copySelection() {
     const rW = Math.abs(w)
     const rH = Math.abs(h)
 
-    // 1. Find Bales
-  const hitBales = state.bales.value.filter(b => {
-      const r = getBaleRect(b)
-      return (r.x < rX + rW && r.x + r.w > rX && r.y < rY + rH && r.y + r.h > rY)
+    // Helper to check rect overlap
+    const overlap = (ox, oy, ow, oh) => (ox < rX + rW && ox + ow > rX && oy < rY + rH && oy + oh > rY)
+
+    // 1. Bales
+    const hitBales = state.bales.value.filter(b => {
+      // (Simplified logic for selection box - usually accurate enough)
+      return overlap(b.x, b.y, state.baleConfig.value.width, state.baleConfig.value.length)
     }).map(b => b.id)
 
-// 2. Find Boards (UPDATED: Use Line Intersection instead of Bounding Box)
-    const hitBoards = state.boardEdges.value.filter(b => {
-      return lineIntersectsRect(b.x1, b.y1, b.x2, b.y2, rX, rY, rW, rH)
-    }).map(b => b.id)
+    // 2. Mats
+    const hitMats = state.dcMats.value.filter(m => overlap(m.x, m.y, 2, 3)).map(m => m.id)
 
-    // 3. Find DC Mats (UPDATED: Use Config)
-    const hitMats = state.dcMats.value.filter(m => {
-       const confW = state.dcMatConfig.value.width
-       const confH = state.dcMatConfig.value.height
-       const w = m.rotation % 180 !== 0 ? confH : confW
-       const h = m.rotation % 180 !== 0 ? confW : confH
-       return (m.x < rX + rW && m.x + w > rX && m.y < rY + rH && m.y + h > rY)
-    }).map(m => m.id)
+    // 3. Steps
+    const hitSteps = state.steps.value ? state.steps.value.filter(s => overlap(s.x, s.y, 1.5, 1)).map(s => s.id) : []
 
-    state.selection.value = [...hitBales, ...hitBoards, ...hitMats]
+    // 4. Zones
+    const hitZones = state.zones.value ? state.zones.value.filter(z => overlap(z.x, z.y, z.width, z.height)).map(z => z.id) : []
+
+    state.selection.value = [...hitBales, ...hitMats, ...hitSteps, ...hitZones]
   }
 
-  function moveSelection(dx, dy) {
-    // No snapshot here (handled by DragStart/End events in component)
-    // Apply delta to ALL selected items visually
-    
-    // Move Bales
-    state.bales.value.forEach(b => {
-      if (state.selection.value.includes(b.id)) {
-        b.x += dx
-        b.y += dy
+  function toggleSelection(id, multi = false) {
+    if (multi) {
+      if (state.selection.value.includes(id)) {
+        state.selection.value = state.selection.value.filter(i => i !== id)
+      } else {
+        state.selection.value.push(id)
       }
-    })
-    
-    // Note: We don't validate on every pixel move for performance.
-    // Validation happens on 'commitDrag'
+    } else {
+      state.selection.value = [id]
+    }
+  }
+  function moveSelection(dx, dy) {
+    const ids = state.selection.value
+    // Move Bales
+    state.bales.value.forEach(b => { if (ids.includes(b.id)) { b.x += dx; b.y += dy } })
+    // Move Mats
+    state.dcMats.value.forEach(m => { if (ids.includes(m.id)) { m.x += dx; m.y += dy } })
+    // Move Steps
+    if (state.steps.value) state.steps.value.forEach(s => { if (ids.includes(s.id)) { s.x += dx; s.y += dy } })
+    // Move Zones
+    if (state.zones.value) state.zones.value.forEach(z => { if (ids.includes(z.id)) { z.x += dx; z.y += dy } })
   }
 
   function deleteSelection() {
-    // Safety check
     if (state.selection.value.length === 0) return
+    snapshot()
 
-    snapshot() // Save history so we can Undo this mass deletion
-
-    // Helper to filter out selected IDs
     const keep = (item) => !state.selection.value.includes(item.id)
 
     state.bales.value = state.bales.value.filter(keep)
     state.boardEdges.value = state.boardEdges.value.filter(keep)
     state.dcMats.value = state.dcMats.value.filter(keep)
     state.hides.value = state.hides.value.filter(keep)
-    
-    // Future proofing for other sports
-    if (state.agilityObstacles.value) {
-       state.agilityObstacles.value = state.agilityObstacles.value.filter(keep)
-    }
-    if (state.scentWorkObjects.value) {
-       state.scentWorkObjects.value = state.scentWorkObjects.value.filter(keep)
-    }
 
-    // Clear the selection since those items are gone
+    // UPDATED: Delete new items
+    if (state.steps.value) state.steps.value = state.steps.value.filter(keep)
+    if (state.zones.value) state.zones.value = state.zones.value.filter(keep)
+
+    if (state.agilityObstacles.value) state.agilityObstacles.value = state.agilityObstacles.value.filter(keep)
+    if (state.scentWorkObjects.value) state.scentWorkObjects.value = state.scentWorkObjects.value.filter(keep)
+
     state.selection.value = []
-    
-    // Recalculate support for anything left behind
     validateAllBales()
   }
 
-function commitDrag(id, newX, newY) {
+  function commitDrag(id, newX, newY) {
     snapshot() // Save history
-    
+
     // 1. Find the "Leader" (the object dragged)
     let startX, startY
     const bale = state.bales.value.find(b => b.id === id)
-    
-    if (bale) { 
+
+    if (bale) {
       startX = bale.x
-      startY = bale.y 
+      startY = bale.y
     } else {
       // If we can't find the leader (e.g. dragging a mat), just return or handle appropriately
-      return 
+      return
     }
 
     const dx = newX - startX
@@ -268,7 +270,7 @@ function commitDrag(id, newX, newY) {
       bale.y = snap(newY)
     } else {
       // CASE B: Dragging a selection group
-      
+
       // 1. Move Bales
       state.bales.value.forEach(b => {
         if (state.selection.value.includes(b.id)) {
@@ -276,7 +278,7 @@ function commitDrag(id, newX, newY) {
           b.y = snap(b.y + dy)
         }
       })
-      
+
       // 2. Move Boards
       state.boardEdges.value.forEach(b => {
         if (state.selection.value.includes(b.id)) {
@@ -286,22 +288,26 @@ function commitDrag(id, newX, newY) {
           b.y2 = snap(b.y2 + dy)
         }
       })
-      
+
       // 3. Move DC Mats
       state.dcMats.value.forEach(m => {
         if (state.selection.value.includes(m.id)) {
-           m.x = snap(m.x + dx)
-           m.y = snap(m.y + dy)
+          m.x = snap(m.x + dx)
+          m.y = snap(m.y + dy)
         }
       })
+
+      if (state.steps.value) state.steps.value.forEach(s => { if (ids.includes(s.id)) { s.x = snap(s.x + dx); s.y = snap(s.y + dy) } })
+      if (state.zones.value) state.zones.value.forEach(z => { if (ids.includes(z.id)) { z.x = snap(z.x + dx); z.y = snap(z.y + dy) } })
     }
-    
+
     validateAllBales()
-    
+
     // Force Reactivity
     state.bales.value = [...state.bales.value]
     state.boardEdges.value = [...state.boardEdges.value]
-    state.dcMats.value = [...state.dcMats.value]
+    state.steps.value = [...state.steps.value]
+    state.zones.value = [...state.zones.value]
   }
 
   function rotateSelection() {
@@ -314,7 +320,7 @@ function commitDrag(id, newX, newY) {
     let maxX = -Infinity
     let maxY = -Infinity
     let found = false
-    
+
     // Bounds of Bales
     state.bales.value.forEach(b => {
       if (state.selection.value.includes(b.id)) {
@@ -333,7 +339,28 @@ function commitDrag(id, newX, newY) {
       }
     })
 
-    if (!found || minX === Infinity) return 
+
+    if (state.steps.value) {
+      state.steps.value.forEach(s => {
+        if (state.selection.value.includes(s.id)) {
+          found = true
+          minX = Math.min(minX, s.x); minY = Math.min(minY, s.y)
+          maxX = Math.max(maxX, s.x); maxY = Math.max(maxY, s.y)
+        }
+      })
+    }
+    // Zones
+    if (state.zones.value) {
+      state.zones.value.forEach(z => {
+        if (state.selection.value.includes(z.id)) {
+          found = true
+          minX = Math.min(minX, z.x); minY = Math.min(minY, z.y)
+          maxX = Math.max(maxX, z.x + z.width); maxY = Math.max(maxY, z.y + z.height)
+        }
+      })
+    }
+
+    if (!found || minX === Infinity) return
 
     // Center point (Grid Aligned)
     const cx = Math.round(((minX + maxX) / 2) * 2) / 2
@@ -344,18 +371,18 @@ function commitDrag(id, newX, newY) {
       if (state.selection.value.includes(b.id)) {
         // We rotate the CENTER of the bale
         const r = getBaleRect(b)
-        const bcx = r.x + r.w/2
-        const bcy = r.y + r.h/2
-        
+        const bcx = r.x + r.w / 2
+        const bcy = r.y + r.h / 2
+
         const newCenter = rotatePoint(bcx, bcy, cx, cy, 90)
-        
+
         // Update Rotation (Keep it 0-360 positive)
         b.rotation = (b.rotation + 90) % 360
-        
+
         // Recalculate Top-Left from new center + new dimensions
         const newR = getBaleRect(b) // b has new rotation now
-        b.x = Math.round((newCenter.x - newR.w/2)*2)/2
-        b.y = Math.round((newCenter.y - newR.h/2)*2)/2
+        b.x = Math.round((newCenter.x - newR.w / 2) * 2) / 2
+        b.y = Math.round((newCenter.y - newR.h / 2) * 2) / 2
       }
     })
 
@@ -364,14 +391,14 @@ function commitDrag(id, newX, newY) {
       if (state.selection.value.includes(b.id)) {
         const p1 = rotatePoint(b.x1, b.y1, cx, cy, 90)
         const p2 = rotatePoint(b.x2, b.y2, cx, cy, 90)
-        b.x1 = Math.round(p1.x*2)/2; b.y1 = Math.round(p1.y*2)/2
-        b.x2 = Math.round(p2.x*2)/2; b.y2 = Math.round(p2.y*2)/2
+        b.x1 = Math.round(p1.x * 2) / 2; b.y1 = Math.round(p1.y * 2) / 2
+        b.x2 = Math.round(p2.x * 2) / 2; b.y2 = Math.round(p2.y * 2) / 2
       }
     })
-    
+
     // 4. Rotate DC Mats
-state.dcMats.value.forEach(m => {
-    if (state.selection.value.includes(m.id)) {
+    state.dcMats.value.forEach(m => {
+      if (state.selection.value.includes(m.id)) {
         const confW = state.dcMatConfig.value.width
         const confH = state.dcMatConfig.value.height
 
@@ -383,28 +410,75 @@ state.dcMats.value.forEach(m => {
         const isSwapped = Math.abs(m.rotation % 180) === 90
         const currentW = isSwapped ? confH : confW
         const currentH = isSwapped ? confW : confH
-        
+
         const mcx = m.x + currentW / 2
         const mcy = m.y + currentH / 2
-        
+
         // 2. Rotate Center by 15 degrees
         const angle = 15
         const newCenter = rotatePoint(mcx, mcy, cx, cy, angle)
-        
+
         // 3. Update Rotation
         m.rotation = (m.rotation + angle) % 360
         if (m.rotation < 0) m.rotation += 360
-        
+
         // 4. Update Position
         // We set x,y to the "unrotated" top-left that corresponds to the new center.
         // This decouples the position from the rotation, allowing 15-degree increments.
         m.x = Math.round((newCenter.x - confW / 2) * 2) / 2
         m.y = Math.round((newCenter.y - confH / 2) * 2) / 2
+      }
+    })
+
+
+// Steps (Center Anchor)
+    if (state.steps.value) {
+      state.steps.value.forEach(s => {
+        if (state.selection.value.includes(s.id)) {
+          // Simply rotate the center point around selection center
+          const newPos = rotatePoint(s.x, s.y, cx, cy, 90)
+          s.x = Math.round(newPos.x * 2) / 2
+          s.y = Math.round(newPos.y * 2) / 2
+          s.rotation = (s.rotation + 90) % 360
+        }
+      })
     }
-})
+
+    // Zones (Top-Left Anchor)
+    if (state.zones.value) {
+      state.zones.value.forEach(z => {
+        if (state.selection.value.includes(z.id)) {
+          // 1. Calculate Current Center of Zone
+          // Convert rotation to radians (Konva rotates clockwise)
+          const rad = (z.rotation * Math.PI) / 180
+          const w = z.width
+          const h = z.height
+          
+          // Formula for center of a rotated rect (top-left origin)
+          const zoneCx = z.x + (w/2 * Math.cos(rad)) - (h/2 * Math.sin(rad))
+          const zoneCy = z.y + (w/2 * Math.sin(rad)) + (h/2 * Math.cos(rad))
+
+          // 2. Rotate that center around the Selection Center
+          const newZoneCenter = rotatePoint(zoneCx, zoneCy, cx, cy, 90)
+
+          // 3. Update Rotation
+          z.rotation = (z.rotation + 90) % 360
+          
+          // 4. Back-calculate New Top-Left (x,y) from New Center + New Rotation
+          const newRad = (z.rotation * Math.PI) / 180
+          z.x = newZoneCenter.x - (w/2 * Math.cos(newRad)) + (h/2 * Math.sin(newRad))
+          z.y = newZoneCenter.y - (w/2 * Math.sin(newRad)) - (h/2 * Math.cos(newRad))
+          
+          // Round to nearest quarter grid to keep things clean
+          z.x = Math.round(z.x * 4) / 4
+          z.y = Math.round(z.y * 4) / 4
+        }
+      })
+    }
+
 
     validateAllBales()
-    
+
     // Force Reactivity
     state.bales.value = [...state.bales.value]
     state.boardEdges.value = [...state.boardEdges.value]
@@ -416,6 +490,7 @@ state.dcMats.value.forEach(m => {
     selectBale,
     selectArea,
     moveSelection,
+    toggleSelection: selectBale,
     deleteSelection,
     commitDrag,
     rotateSelection,

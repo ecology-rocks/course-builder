@@ -53,6 +53,9 @@ export const useMapStore = defineStore('map', () => {
   const savedMaps = ref([])
   const comparisonMapName = ref(null)
   const markers = ref([])
+  const steps = ref([])
+  const gate = ref(null) // { x, y, rotation }
+  const zones = ref([])
   
   // Editor State
   const clipboard = ref([])
@@ -75,6 +78,7 @@ export const useMapStore = defineStore('map', () => {
   function reset() {
     bales.value = []; boardEdges.value = []; hides.value = []; dcMats.value = []; masterBlinds.value = []; startBox.value = null
     agilityObstacles.value = []; scentWorkObjects.value = []; nextNumber.value = 1; 
+    steps.value = []; gate.value = null; zones.value = [];
     currentMapId.value = null; mapName.value = "Untitled Map"; classLevel.value = "Novice"; sport.value = 'barnhunt'
     ringDimensions.value = { width: 24, height: 24 }; previousClassCount.value = 0; currentLayer.value = 1; activeTool.value = 'bale'
     previousBales.value = []; markers.value = []; comparisonMapName.value = null
@@ -102,6 +106,7 @@ export const useMapStore = defineStore('map', () => {
     masterBlinds, startBox, previousClassCount, savedMaps, folders,
     isDrawingBoard, currentLayer, selectedBaleId,
     wallTypes, gridStartCorner, clipboard, previousBales, markers, 
+    steps, gate, zones,
     // New Fields
     trialLocation, trialDay, trialNumber, baleConfig, dcMatConfig,
     // Methods passed to modules
@@ -149,6 +154,9 @@ export const useMapStore = defineStore('map', () => {
     bales.value = [...bales.value]
   }
 
+
+
+
   function resizeRing(width, height) {
     const w = Math.max(10, parseInt(width)); const h = Math.max(10, parseInt(height))
     ringDimensions.value = { width: w, height: h }
@@ -180,6 +188,7 @@ function setComparisonBales(bales, name = "Custom Map") { // <--- ADD THIS FUNCT
     boardEdges, isDrawingBoard, dcMats, startBox, hides, masterBlinds,
     agilityObstacles, scentWorkObjects, nextNumber, notification,
     savedMaps, currentMapId, mapName, isShared, markers,
+    steps, gate, zones,
     classLevel, sport, folders, currentFolderId, previousClassCount,
     selection, isDraggingSelection, clipboard, previousBales, setComparisonBales,
     
@@ -189,6 +198,7 @@ function setComparisonBales(bales, name = "Custom Map") { // <--- ADD THIS FUNCT
 
     // Actions
     setTool, reset, showNotification, resizeRing, toggleAnchor, 
+
     
     // Computed
     currentGuidelines,

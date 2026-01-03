@@ -97,6 +97,23 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
 
   // --- PHYSICS & VALIDATION HELPERS ---
 
+// --- ADD THESE DELETION FUNCTIONS ---
+  function removeStep(id) {
+    snapshot()
+    state.steps.value = state.steps.value.filter(s => s.id !== id)
+  }
+
+  function removeZone(id) {
+    snapshot()
+    state.zones.value = state.zones.value.filter(z => z.id !== id)
+  }
+
+  function removeGate() {
+    snapshot()
+    state.gate.value = null
+  }
+
+  
 function getBaleRect(bale) {
     // 1. Determine "Unrotated" Dimensions (How the bale is stored in memory)
     // These must match the visual offsets used in your Layer component
@@ -180,6 +197,43 @@ function validateAllBales() {
     })
   }
 
+
+function addStep(x, y) {
+    snapshot()
+    // Default rotation 0, ID based on time
+    state.steps.value.push({ id: Date.now().toString(), x, y, rotation: 0 })
+  }
+
+  function updateStep(id, attrs) {
+    const s = state.steps.value.find(i => i.id === id)
+    if (s) {
+      snapshot()
+      Object.assign(s, attrs)
+    }
+  }
+
+  function setGate(gateData) {
+    snapshot()
+    // gateData should be { x, y, rotation }
+    state.gate.value = gateData
+  }
+
+  function addZone(x, y, type) {
+    snapshot()
+    state.zones.value.push({
+      id: Date.now().toString(),
+      x, y, width: 5, height: 5, type, rotation: 0
+    })
+  }
+
+  function updateZone(id, attrs) {
+    const z = state.zones.value.find(i => i.id === id)
+    if (z) {
+      // We don't snapshot on every drag pixel usually, but you can if you want
+      Object.assign(z, attrs)
+    }
+  }
+  
   // --- BALE ACTIONS ---
 
   function addBale(x, y) {
@@ -346,6 +400,8 @@ function rotateDCMat(id) {
     addDCMat, removeDCMat, rotateDCMat,
     addStartBox, removeStartBox, generateMasterBlinds,
     startDrawingBoard, updateDrawingBoard, stopDrawingBoard, removeBoardEdge, updateBoardEndpoint, rotateBoard, differentials,
+    addStep, updateStep, setGate, addZone, updateZone,
+    removeStep, removeZone, removeGate,
     // Exports computed stats
     balesByLayer, baleCounts, inventory
   }

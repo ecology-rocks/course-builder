@@ -45,8 +45,11 @@ const store = useMapStore()
       <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🏁 Start</button>
       <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Hide</button>
       <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟨 Mat</button>
+      <button @click="store.setTool('step')" :class="{ active: store.activeTool === 'step' }">🪜 Step</button>
+      <button @click="store.setTool('gate')" :class="{ active: store.activeTool === 'gate' }">🚪 Gate</button>
+      <button @click="store.setTool('dead')" :class="{ active: store.activeTool === 'dead' }">🚫 Dead Zone</button>
+      <button @click="store.setTool('obstruction')" :class="{ active: store.activeTool === 'obstruction' }">🧱 Obstruction</button>
     </div>
-
     <h3>Actions</h3>
     <div class="action-tools">
       <button @click="store.setTool('select')" :class="{ active: store.activeTool === 'select' }">⬜ Select Area (Click +
