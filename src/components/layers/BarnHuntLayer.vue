@@ -239,7 +239,17 @@ function dragBoundFunc(pos) {
 }
 
 // --- HANDLERS ---
-function handleRightClick(e, id) { e.evt.preventDefault(); store.rotateBale(id) }
+// In BarnHuntLayer.vue
+
+function handleRightClick(e, id) { 
+  e.evt.preventDefault()
+  
+  // [FIX] Do not rotate if we are using the Lean tool
+  if (store.activeTool === 'lean') return 
+  if (e.evt.ctrlKey) return
+  if (e.evt.altKey) return
+  store.rotateBale(id) 
+}
 
 function handleLeftClick(e, id) {
   const evt = e.evt

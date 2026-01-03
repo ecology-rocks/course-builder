@@ -1,6 +1,10 @@
 # 🗺️ Project Roadmap: K9 Course Builder
 This is my one-true-copy of the project roadmap.
 
+## Updates in Progress
+
+ 
+
 ## Feature Requests & Future Updates (Long Term)
  - Offline caching, offline version, local storage options (very long term)
  - Validation for class level guidelines
@@ -18,21 +22,17 @@ This is my one-true-copy of the project roadmap.
  - Consider adding a zoom function beyond the scale function at the bottom
  - Perimeter distances and hide locations very small and hard to read. Maybe a menu item to increase/decrease size?
  - Add "Cut" in addition to Copy/Paste. Add buttons for all three.
+ - "Select Area" selects things that are merely close to the selection box
 
- 
- ## Logic Changes
-  - "Select Area" selects things that are merely close to the selection box
-  - Prevent Map Statistics Box from moving off grid.
-  - Remove double click to delete, it is confusing. Stick to select and delete. 
-  - Consider adjusting placement grid to 2" instead of 3"
-
-
-## Updates in Progress
- - [x] DONE - Changelog between levels (for nested course design)
- - [x] DONE - CSS change to prevent scrolling in sidebar
- - Need markers for gate, step, dead zone, and obstruction
- - Move map statistics box to legend sidebar for printing
- - [x] DONE - DC Mats need more flexibility on rotation and sizing
+## New Year, New Editor Update (2026-01-03)
+ - Nested course design: Now you can select a previously saved map to compare to in Course Settings! Comparison will show up in Map Statistics.
+ - CSS change to prevent scrolling in sidebar
+ - Prevent Map Statistics Box from moving off grid. Moves Map Statistics to printable legend instead of on the map.
+ - Remove double click to delete, it is confusing. You can still select and hit Delete key or button.
+ - Adjusted placement grid to 2" instead of 3"
+ - DC Mat size can now be set in Course Settings. DC Mats can be rotated in 15 degree intervals.
+ - All rotateable items should be rotateable in 15 degree increments. "Rotate Group" still only rotates at 90 degrees.
+ - Created markers for gate, step, dead zone, and obstruction.
 
 ## EOY Update (2025-12-31)
  - Add a "Trial" at "Club" indicator to the print info (by Class Level). 
@@ -44,7 +44,7 @@ This is my one-true-copy of the project roadmap.
  - Need to be able to label the type of wall/fencing. 
  - Provide options for choosing where grid numbering starts (lower/top left/right)
  - Lock down club seats to max 5.
- - Validation is blocking bale placemen
+ - Validation is blocking bale placement
 
 
 

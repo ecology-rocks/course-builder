@@ -142,9 +142,16 @@ export function useBales(state, snapshot, notifications) {
     }
   }
 
-  function cycleLean(id) {
+function cycleLean(id) {
     const bale = state.bales.value.find(b => b.id === id)
-    if (bale && bale.orientation === 'flat') {
+    
+    if (bale) {
+      // [IMPROVED] Provide feedback if trying to lean a non-flat bale
+      if (bale.orientation !== 'flat') {
+        notifications.show("Only FLAT bales can have a lean.", 'error')
+        return
+      }
+
       snapshot()
       if (bale.lean === null) bale.lean = 'right'
       else if (bale.lean === 'right') bale.lean = 'left'
