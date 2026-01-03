@@ -7,6 +7,13 @@
       </div>
 
       <div class="settings-section" v-if="store.sport === 'barnhunt'">
+        <h4>Map View Options</h4>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <input type="checkbox" id="chkStats" v-model="store.showMapStats" style="width: auto;" />
+          <p for="chkStats" class="hint">Show Map Statistics</p>
+        </div>
+      </div>
+      <div class="settings-section" v-if="store.sport === 'barnhunt'">
         <h4>Comparison Baseline</h4>
         <p class="hint">Compare your current map against a saved map.</p>
 
@@ -92,6 +99,8 @@
         </div>
         <p class="hint">Standard: 2.0 x 3.0</p>
       </div>
+
+
 
       <div class="settings-section">
         <h4>Grid Numbering Start</h4>

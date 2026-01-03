@@ -51,10 +51,13 @@ export function usePrinter(store, userStore, stageRef, scale) {
     const getDiffHtml = () => {
       if (!diffs) return ''
 
-      const fmt = (l) => {
+const fmt = (l) => {
         const d = diffs[l]
         const sign = d.net > 0 ? '+' : ''
-        return `<div><strong>L${l}:</strong> ${sign}${d.net} bales, ${d.moved} moved</div>`
+        // LOGIC CHANGE: Only show "moved" if > 0, matching MapLegend.vue
+        const movedText = d.moved > 0 ? `, ${d.moved} moved` : '' 
+        
+        return `<div><strong>L${l}:</strong> ${sign}${d.net} bales${movedText}</div>`
       }
 
       return `
@@ -72,36 +75,46 @@ export function usePrinter(store, userStore, stageRef, scale) {
     // --- NEW: Legend HTML (Matches BarnHuntLayer.vue visuals) ---
     const getLegendHtml = () => `
       <div class="legend-sidebar">
-        <h3>Legend</h3>
         
-        <div class="legend-section">
-          <h4>Bales (Layers)</h4>
-          <div class="legend-item"><span class="symbol layer-1"></span> Layer 1 (Base)</div>
-          <div class="legend-item"><span class="symbol layer-2"></span> Layer 2</div>
-          <div class="legend-item"><span class="symbol layer-3"></span> Layer 3</div>
-        </div>
+      <div class="legend-section">
+        <h4>Map Statistics</h4>
+        <div class="legend-item"><strong>Total Bales: ${store.inventory.total}</strong></div>
+        <div class="legend-item" style="color:#e6c200">Layer 1: ${store.inventory.base}</div>
+        <div class="legend-item" style="color:#4caf50">Layer 2: ${store.inventory.layer2}</div>
+        <div class="legend-item" style="color:#2196f3">Layer 3: ${store.inventory.layer3}</div>
+${getDiffHtml()}
+      </div>
 
-        <div class="legend-section">
-          <h4>Boundaries</h4>
-          <div class="legend-item"><span class="symbol fence"></span> Fence</div>
-          <div class="legend-item"><span class="symbol wall"></span> Solid Wall</div>
-        </div>
-        <div class="legend-section">
-          <h4>Orientation</h4>
-          <div class="legend-item"><span class="symbol flat"></span> Flat</div>
-          <div class="legend-item"><span class="symbol tall"></span> Tall (On Side)</div>
-          <div class="legend-item"><span class="symbol pillar"></span> Pillar (On End)</div>
-        </div>
+      
 
-        <div class="legend-section">
-          <h4>Features</h4>
-          <div class="legend-item"><span class="symbol anchor">⚓</span> Anchor Bale</div>
-          <div class="legend-item"><span class="symbol tunnel"></span> Tunnel Board</div>
-          <div class="legend-item"><span class="symbol leaner">↗</span> Leaner</div>
-          <div class="legend-item"><span class="symbol start"></span> Start Box</div>
-          <div class="legend-item"><span class="symbol dc"></span> DC Mat</div>
-        </div>
-        ${getDiffHtml()}
+      <div class="legend-section">
+        <h4>Bales (Layers)</h4>
+        <div class="legend-item"><span class="symbol layer-1"></span> Layer 1 (Base)</div>
+        <div class="legend-item"><span class="symbol layer-2"></span> Layer 2</div>
+        <div class="legend-item"><span class="symbol layer-3"></span> Layer 3</div>
+      </div>
+
+      <div class="legend-section">
+        <h4>Boundaries</h4>
+        <div class="legend-item"><span class="symbol fence"></span> Fence</div>
+        <div class="legend-item"><span class="symbol wall"></span> Solid Wall</div>
+      </div>
+
+      <div class="legend-section">
+        <h4>Orientation</h4>
+        <div class="legend-item"><span class="symbol flat"></span> Flat</div>
+        <div class="legend-item"><span class="symbol tall"></span> Tall (On Side)</div>
+        <div class="legend-item"><span class="symbol pillar"></span> Pillar (On End)</div>
+      </div>
+
+      <div class="legend-section">
+        <h4>Features</h4>
+        <div class="legend-item"><span class="symbol anchor">⚓</span> Anchor Bale</div>
+        <div class="legend-item"><span class="symbol tunnel"></span> Tunnel Board</div>
+        <div class="legend-item"><span class="symbol leaner">↗</span> Leaner</div>
+        <div class="legend-item"><span class="symbol start"></span> Start Box</div>
+        <div class="legend-item"><span class="symbol dc"></span> DC Mat</div>
+      </div>
         ${withHides ? `
         <div class="legend-section">
           <h4>Hides</h4>

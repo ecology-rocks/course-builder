@@ -30,6 +30,7 @@ export const useMapStore = defineStore('map', () => {
   const classLevel = ref('Novice') 
   const sport = ref('barnhunt')
   const notification = ref(null)
+  const showMapStats = ref(true)
   
   // Settings
   const wallTypes = ref({ top: 'fence', right: 'fence', bottom: 'fence', left: 'fence' })
@@ -184,7 +185,7 @@ function setComparisonBales(bales, name = "Custom Map") { // <--- ADD THIS FUNCT
     
     // Settings
     wallTypes, gridStartCorner, trialLocation, trialDay, 
-    trialNumber, baleConfig, comparisonMapName, dcMatConfig,
+    trialNumber, baleConfig, comparisonMapName, dcMatConfig, showMapStats,
 
     // Actions
     setTool, reset, showNotification, resizeRing, toggleAnchor, 

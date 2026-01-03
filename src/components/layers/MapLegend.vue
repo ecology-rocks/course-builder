@@ -11,10 +11,28 @@ const y = computed(() => props.GRID_OFFSET)
 
 const inventory = computed(() => store.inventory)
 const diffs = computed(() => store.differentials)
+
+const dragBoundFunc = (pos) => {
+  const boxWidth = 140
+  const boxHeight = 110
+  
+  // Calculate boundaries in Stage Pixels
+  // The Grid starts at GRID_OFFSET and extends by (width * scale)
+  const minX = props.GRID_OFFSET
+  const minY = props.GRID_OFFSET
+  const maxX = minX + (store.ringDimensions.width * props.scale) - boxWidth
+  const maxY = minY + (store.ringDimensions.height * props.scale) - boxHeight
+
+  return {
+    x: Math.max(minX, Math.min(pos.x, maxX)),
+    y: Math.max(minY, Math.min(maxY, pos.y))
+  }
+}
+
 </script>
 
 <template>
-  <v-group :config="{ draggable: true, x: 20, y: 20 }">
+  <v-group :config="{ draggable: true, x: 20, y: 20, dragBoundFunc: dragBoundFunc }">
 
     <v-rect :config="{
       width: 140,

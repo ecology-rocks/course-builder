@@ -6,6 +6,11 @@ import { computed } from 'vue'
  */
 export function useBarnHuntLogic(state, snapshot, notifications) {
 
+
+  function snapToGrid(val) {
+  return Math.round(val * 6) / 6
+}
+
   // --- STATISTICS (Moved from Main Store) ---
   const balesByLayer = computed(() => ({
       1: state.bales.value.filter(b => b.layer === 1),
@@ -178,8 +183,8 @@ function validateAllBales() {
   // --- BALE ACTIONS ---
 
   function addBale(x, y) {
-    const snappedX = Math.round(x * 2) / 2
-    const snappedY = Math.round(y * 2) / 2
+    const snappedX = snapToGrid(x)
+    const snappedY = snapToGrid(y)
     const newBale = {
       id: crypto.randomUUID(), x: snappedX, y: snappedY,
       rotation: 0, layer: state.currentLayer.value, orientation: 'flat', lean: null, supported: true 
@@ -203,8 +208,8 @@ function validateAllBales() {
   function updateBalePosition(id, newX, newY) {
     const bale = state.bales.value.find(b => b.id === id)
     if (bale) {
-      bale.x = Math.round(newX * 2) / 2
-      bale.y = Math.round(newY * 2) / 2
+      bale.x = snapToGrid(newX)
+      bale.y = snapToGrid(newY)
     }
     validateAllBales()
   }
@@ -245,8 +250,8 @@ function rotateBale(id) {
   function startDrawingBoard(x, y) {
     snapshot()
     const id = crypto.randomUUID()
-    const snappedX = Math.round(x * 2) / 2
-    const snappedY = Math.round(y * 2) / 2
+    const snappedX = snapToGrid(x)
+    const snappedY = snapToGrid(y)
     state.boardEdges.value.push({ id, x1: snappedX, y1: snappedY, x2: snappedX, y2: snappedY })
     state.isDrawingBoard.value = id
   }
@@ -255,8 +260,8 @@ function rotateBale(id) {
     if (!state.isDrawingBoard.value) return
     const board = state.boardEdges.value.find(b => b.id === state.isDrawingBoard.value)
     if (board) {
-      board.x2 = Math.round(x * 2) / 2
-      board.y2 = Math.round(y * 2) / 2
+      board.x2 = snapToGrid(x)
+      board.y2 = snapToGrid(y)
     }
   }
 
@@ -273,7 +278,8 @@ function rotateBale(id) {
   
   function updateBoardEndpoint(id, p, x, y) {
     const b = state.boardEdges.value.find(b => b.id === id)
-    if (b) { if(p==='start'){b.x1=Math.round(x*2)/2; b.y1=Math.round(y*2)/2}else{b.x2=Math.round(x*2)/2; b.y2=Math.round(y*2)/2} }
+    if (b) { if(p==='start'){ b.x1=snapToGrid(x); b.y1=snapToGrid(y) }
+      else{ b.x2=snapToGrid(x); b.y2=snapToGrid(y) } }
   }
   
   function rotateBoard(id) {
@@ -284,7 +290,8 @@ function rotateBale(id) {
       const rad = (45 * Math.PI) / 180; const cos = Math.cos(rad); const sin = Math.sin(rad)
       const dx1 = board.x1 - mx; const dy1 = board.y1 - my; const rx1 = (dx1 * cos - dy1 * sin) + mx; const ry1 = (dx1 * sin + dy1 * cos) + my
       const dx2 = board.x2 - mx; const dy2 = board.y2 - my; const rx2 = (dx2 * cos - dy2 * sin) + mx; const ry2 = (dx2 * sin + dy2 * cos) + my
-      board.x1 = Math.round(rx1*2)/2; board.y1 = Math.round(ry1*2)/2; board.x2 = Math.round(rx2*2)/2; board.y2 = Math.round(ry2*2)/2
+      board.x1 = snapToGrid(rx1); board.y1 = snapToGrid(ry1); 
+    board.x2 = snapToGrid(rx2); board.y2 = snapToGrid(ry2)
     }
   }
 
@@ -292,7 +299,7 @@ function rotateBale(id) {
 
   function addHide(x, y) {
     snapshot()
-    state.hides.value.push({ id: crypto.randomUUID(), x: Math.round(x*2)/2, y: Math.round(y*2)/2, type: 'rat' })
+    state.hides.value.push({ id: crypto.randomUUID(), x: snapToGrid(x), y: snapToGrid(y), type: 'rat' })
   }
   function removeHide(id) { snapshot(); state.hides.value = state.hides.value.filter(h => h.id !== id) }
   function cycleHideType(id) { 
@@ -305,7 +312,7 @@ function rotateBale(id) {
 
   function addDCMat(x, y) {
     snapshot()
-    state.dcMats.value.push({ id: crypto.randomUUID(), x: Math.round(x*2)/2, y: Math.round(y*2)/2, rotation: 0 })
+    state.dcMats.value.push({ id: crypto.randomUUID(), x: snapToGrid(x), y: snapToGrid(y), rotation: 0 })
   }
   function removeDCMat(id) { snapshot(); state.dcMats.value = state.dcMats.value.filter(m => m.id !== id) }
 function rotateDCMat(id) {
@@ -316,7 +323,7 @@ function rotateDCMat(id) {
     }
   }
 
-  function addStartBox(x, y) { snapshot(); state.startBox.value = { x: Math.round(x*2)/2, y: Math.round(y*2)/2 } }
+  function addStartBox(x, y) { snapshot(); state.startBox.value = { x: snapToGrid(x), y: snapToGrid(y) } }
   function removeStartBox() { snapshot(); state.startBox.value = null }
 
   function generateMasterBlinds(count) {

@@ -58,7 +58,7 @@ function dcMatDragBoundFunc(pos) {
   const layerAbs = node.getLayer().getAbsolutePosition()
   const relX = pos.x - layerAbs.x
   const relY = pos.y - layerAbs.y
-  const step = props.scale / 4 // 3-inch snapping
+  const step = props.scale / 6 // 3-inch snapping
 
   let snappedRelX = Math.round(relX / step) * step
   let snappedRelY = Math.round(relY / step) * step
@@ -220,7 +220,7 @@ function baleDragBoundFunc(pos) {
   const layerAbs = node.getLayer().getAbsolutePosition()
   const relX = pos.x - layerAbs.x
   const relY = pos.y - layerAbs.y
-  const step = props.scale / 4
+  const step = props.scale / 6
 
   let snappedRelX = Math.round(relX / step) * step
   let snappedRelY = Math.round(relY / step) * step
@@ -233,14 +233,13 @@ function baleDragBoundFunc(pos) {
 
 
 function dragBoundFunc(pos) {
-  const node = this; const layerAbs = node.getLayer().getAbsolutePosition(); const step = props.scale / 2
+  const node = this; const layerAbs = node.getLayer().getAbsolutePosition(); const step = props.scale / 6
   let x = Math.round((pos.x - layerAbs.x) / step) * step; let y = Math.round((pos.y - layerAbs.y) / step) * step
   return { x: x + layerAbs.x, y: y + layerAbs.y }
 }
 
 // --- HANDLERS ---
 function handleRightClick(e, id) { e.evt.preventDefault(); store.rotateBale(id) }
-function handleDblClick(e, id) { if (e.evt.button === 0) store.removeBale(id) }
 
 function handleLeftClick(e, id) {
   const evt = e.evt
@@ -406,7 +405,7 @@ function handleHideClick(e, id) { if (e.evt.button !== 0) return; if (store.acti
       opacity: getOpacity(bale.layer),
       offsetX: 1.5 * scale,
       offsetY: 0.75 * scale
-    }" @contextmenu="handleRightClick($event, bale.id)" @dblclick="handleDblClick($event, bale.id)"
+    }" @contextmenu="handleRightClick($event, bale.id)"
       @click="handleLeftClick($event, bale.id)" @dragstart="handleDragStart($event, bale.id)"
       @dragmove="handleDragMove($event, bale.id)" @dragend="handleDragEnd($event, bale.id, 'bale')">
       <v-rect :config="{

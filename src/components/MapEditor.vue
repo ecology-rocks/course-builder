@@ -25,6 +25,7 @@ const selectionRect = ref(null)
 const dragStart = ref(null)
 // Tracks if we are "thinking about" placing an item but waiting to see if you drag instead
 const maybePlacing = ref(false)
+const isPrinting = ref(false)
 
 // --- KEYBOARD SHORTCUTS ---
 // src/components/MapEditor.vue
@@ -233,9 +234,13 @@ watch(() => [store.sport, store.ringDimensions.width], () => { nextTick(fitToScr
 
 // Printer
 const { handlePrint: printLogic } = usePrinter(store, userStore, stageRef, scale)
-function handlePrint(withHides) {
+async function handlePrint(withHides) {
+  isPrinting.value = true
   showHides.value = withHides
-  printLogic(withHides)
+  await nextTick()
+  await printLogic(withHides)
+
+  isPrinting.value = false
   setTimeout(() => { showHides.value = true }, 2000)
 }
 
@@ -581,7 +586,7 @@ function getYAxisAlign() {
            }"
         />
 <MapLegend 
-          v-if="store.sport === 'barnhunt'" 
+          v-if="store.sport === 'barnhunt' && store.showMapStats && !isPrinting" 
           :scale="scale" 
           :GRID_OFFSET="GRID_OFFSET" 
         />
