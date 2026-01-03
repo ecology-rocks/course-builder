@@ -37,7 +37,8 @@ export const useMapStore = defineStore('map', () => {
   const trialLocation = ref('') 
   const trialDay = ref('')      
   const trialNumber = ref('')   
-  const baleConfig = ref({ length: 3, width: 1.5, height: 1 }) // <--- Ensure this is here
+  const baleConfig = ref({ length: 3, width: 1.5, height: 1 }) 
+  const dcMatConfig = ref({ width: 2, height: 3 }) 
 
   // Objects
   const bales = ref([])
@@ -50,6 +51,7 @@ export const useMapStore = defineStore('map', () => {
   const masterBlinds = ref([]) 
   const savedMaps = ref([])
   const comparisonMapName = ref(null)
+  const markers = ref([])
   
   // Editor State
   const clipboard = ref([])
@@ -74,8 +76,7 @@ export const useMapStore = defineStore('map', () => {
     agilityObstacles.value = []; scentWorkObjects.value = []; nextNumber.value = 1; 
     currentMapId.value = null; mapName.value = "Untitled Map"; classLevel.value = "Novice"; sport.value = 'barnhunt'
     ringDimensions.value = { width: 24, height: 24 }; previousClassCount.value = 0; currentLayer.value = 1; activeTool.value = 'bale'
-    previousBales.value = [] // <--- ADD THIS
-  comparisonMapName.value = null
+    previousBales.value = []; markers.value = []; comparisonMapName.value = null
     
     // Reset Settings
     wallTypes.value = { top: 'fence', right: 'fence', bottom: 'fence', left: 'fence' }
@@ -84,6 +85,7 @@ export const useMapStore = defineStore('map', () => {
     trialDay.value = ''
     trialNumber.value = ''
     baleConfig.value = { length: 3, width: 1.5, height: 1 }
+    dcMatConfig.value = { width: 2, height: 3 } // [NEW]
   }
 
   
@@ -98,9 +100,9 @@ export const useMapStore = defineStore('map', () => {
     isShared, classLevel, sport, scentWorkObjects, 
     masterBlinds, startBox, previousClassCount, savedMaps, folders,
     isDrawingBoard, currentLayer, selectedBaleId,
-    wallTypes, gridStartCorner, clipboard, previousBales,
+    wallTypes, gridStartCorner, clipboard, previousBales, markers, 
     // New Fields
-    trialLocation, trialDay, trialNumber, baleConfig,
+    trialLocation, trialDay, trialNumber, baleConfig, dcMatConfig,
     // Methods passed to modules
     reset
   }
@@ -131,6 +133,7 @@ export const useMapStore = defineStore('map', () => {
 
   function setTool(tool) { activeTool.value = tool }
 
+  
   function toggleAnchor() {
     if (selection.value.length === 0) return
     if (currentLayer.value !== 1) {
@@ -175,12 +178,13 @@ function setComparisonBales(bales, name = "Custom Map") { // <--- ADD THIS FUNCT
     ringDimensions, gridSize, bales, currentLayer, selectedBaleId, activeTool,
     boardEdges, isDrawingBoard, dcMats, startBox, hides, masterBlinds,
     agilityObstacles, scentWorkObjects, nextNumber, notification,
-    savedMaps, currentMapId, mapName, isShared,
+    savedMaps, currentMapId, mapName, isShared, markers,
     classLevel, sport, folders, currentFolderId, previousClassCount,
     selection, isDraggingSelection, clipboard, previousBales, setComparisonBales,
     
     // Settings
-    wallTypes, gridStartCorner, trialLocation, trialDay, trialNumber, baleConfig, comparisonMapName,
+    wallTypes, gridStartCorner, trialLocation, trialDay, 
+    trialNumber, baleConfig, comparisonMapName, dcMatConfig,
 
     // Actions
     setTool, reset, showNotification, resizeRing, toggleAnchor, 

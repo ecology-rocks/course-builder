@@ -25,6 +25,50 @@ const isDraggable = computed(() => {
   return store.activeTool === 'select' || store.activeTool === 'bale'
 })
 
+function dcMatDragBoundFunc(pos) {
+  const node = this
+  const matId = node.attrs.id
+  const mat = store.dcMats.find(m => m.id === matId)
+
+  if (!mat) return pos
+
+  // 1. Get Dimensions from Course Settings
+  const W = store.dcMatConfig.width
+  const H = store.dcMatConfig.height
+
+  // 2. Calculate Rotated Bounding Box (AABB)
+  const rad = (mat.rotation * Math.PI) / 180
+  const absCos = Math.abs(Math.cos(rad))
+  const absSin = Math.abs(Math.sin(rad))
+
+  // Calculate visual width/height in pixels
+  const visualW = ((W * absCos) + (H * absSin)) * props.scale
+  const visualH = ((W * absSin) + (H * absCos)) * props.scale
+
+  // 3. Define Constraints (Node position is the center)
+  const halfW = visualW / 2
+  const halfH = visualH / 2
+
+  const minX = halfW
+  const maxX = (store.ringDimensions.width * props.scale) - halfW
+  const minY = halfH
+  const maxY = (store.ringDimensions.height * props.scale) - halfH
+
+  // 4. Snap & Clamp
+  const layerAbs = node.getLayer().getAbsolutePosition()
+  const relX = pos.x - layerAbs.x
+  const relY = pos.y - layerAbs.y
+  const step = props.scale / 4 // 3-inch snapping
+
+  let snappedRelX = Math.round(relX / step) * step
+  let snappedRelY = Math.round(relY / step) * step
+
+  snappedRelX = Math.max(minX, Math.min(snappedRelX, maxX))
+  snappedRelY = Math.max(minY, Math.min(snappedRelY, maxY))
+
+  return { x: snappedRelX + layerAbs.x, y: snappedRelY + layerAbs.y }
+}
+
 // --- HELPERS ---
 function getBaleColor(bale) {
   if (bale.supported === false) return '#ef5350'
@@ -144,7 +188,7 @@ function baleDragBoundFunc(pos) {
 
   if (!bale) return pos
 
-  // 1. Determine Visual Dimensions (Is it rotated?)
+  // 1. Get Base Dimensions
   const L = store.baleConfig.length
   const W = store.baleConfig.width
   const H = store.baleConfig.height
@@ -154,13 +198,16 @@ function baleDragBoundFunc(pos) {
   else if (bale.orientation === 'tall') { w = L; h = H }
   else { w = L; h = W } // Flat
 
-  const isRotated = bale.rotation % 180 !== 0
+  // 2. Calculate Rotated Bounding Box (AABB)
+  // We need this to know exactly where the visual edges hit the walls
+  const rad = (bale.rotation * Math.PI) / 180
+  const absCos = Math.abs(Math.cos(rad))
+  const absSin = Math.abs(Math.sin(rad))
 
-  // Swap dimensions if rotated
-  const visualW = (isRotated ? h : w) * props.scale
-  const visualH = (isRotated ? w : h) * props.scale
+  const visualW = ((w * absCos) + (h * absSin)) * props.scale
+  const visualH = ((w * absSin) + (h * absCos)) * props.scale
 
-  // 2. Define Constraints (Based on the Center point)
+  // 3. Define Constraints
   const halfW = visualW / 2
   const halfH = visualH / 2
 
@@ -169,25 +216,22 @@ function baleDragBoundFunc(pos) {
   const minY = halfH
   const maxY = (store.ringDimensions.height * props.scale) - halfH
 
-  // 3. Snap Logic (3-inch / 0.25ft intervals)
+  // 4. Snap & Clamp
   const layerAbs = node.getLayer().getAbsolutePosition()
   const relX = pos.x - layerAbs.x
   const relY = pos.y - layerAbs.y
-
-  const step = props.scale / 4 // <--- 3-inch snapping
+  const step = props.scale / 4
 
   let snappedRelX = Math.round(relX / step) * step
   let snappedRelY = Math.round(relY / step) * step
 
-  // 4. Clamp to boundaries
   snappedRelX = Math.max(minX, Math.min(snappedRelX, maxX))
   snappedRelY = Math.max(minY, Math.min(snappedRelY, maxY))
 
-  return {
-    x: snappedRelX + layerAbs.x,
-    y: snappedRelY + layerAbs.y
-  }
+  return { x: snappedRelX + layerAbs.x, y: snappedRelY + layerAbs.y }
 }
+
+
 function dragBoundFunc(pos) {
   const node = this; const layerAbs = node.getLayer().getAbsolutePosition(); const step = props.scale / 2
   let x = Math.round((pos.x - layerAbs.x) / step) * step; let y = Math.round((pos.y - layerAbs.y) / step) * step
@@ -257,17 +301,40 @@ function handleDragMove(e, id) {
 
 function handleDragEnd(e, id, type) {
   const node = e.target
-  const layerAbs = node.getLayer().getAbsolutePosition(); const absPos = node.getAbsolutePosition()
-  const rawX = (absPos.x - layerAbs.x) / props.scale; const rawY = (absPos.y - layerAbs.y) / props.scale
+  const layerAbs = node.getLayer().getAbsolutePosition()
+  const absPos = node.getAbsolutePosition()
+  
+  // Convert pixels to Grid Coordinates
+  const rawX = (absPos.x - layerAbs.x) / props.scale
+  const rawY = (absPos.y - layerAbs.y) / props.scale
 
   if (type === 'bale') {
-    const finalX = rawX - 1.5; const finalY = rawY - 0.75
+    // Existing logic for bales (already accounts for the 1.5/0.75 offset)
+    const finalX = rawX - 1.5
+    const finalY = rawY - 0.75
     nextTick(() => { store.commitDrag(id, finalX, finalY) })
   }
-  else if (type === 'hide') { const h = store.hides.find(h => h.id === id); if (h) { h.x = rawX; h.y = rawY } }
-  else if (type === 'dcmat') { const m = store.dcMats.find(m => m.id === id); if (m) { m.x = rawX; m.y = rawY } }
-  else if (type === 'startbox') { if (store.startBox) { store.startBox.x = rawX; store.startBox.y = rawY } }
+  else if (type === 'hide') { 
+    const h = store.hides.find(h => h.id === id)
+    if (h) { h.x = rawX; h.y = rawY } 
+  }
+  else if (type === 'dcmat') { 
+    const m = store.dcMats.find(m => m.id === id)
+    if (m) { 
+      // [FIX] Subtract the half-width/height offset so we save the Top-Left corner
+      // This matches the logic used in the <template> :x calculation
+      const halfW = store.dcMatConfig.width / 2
+      const halfH = store.dcMatConfig.height / 2
+      
+      m.x = rawX - halfW
+      m.y = rawY - halfH
+    } 
+  }
+  else if (type === 'startbox') { 
+    if (store.startBox) { store.startBox.x = rawX; store.startBox.y = rawY } 
+  }
 }
+
 
 function handleBoardClick(e, id) {
   if (store.activeTool === 'rotate') store.rotateBoard(id)
@@ -279,7 +346,18 @@ function handleBoardHandleDrag(e, boardId, whichPoint) {
   store.updateBoardEndpoint(boardId, whichPoint, rawX, rawY)
   node.position({ x: (Math.round(rawX * 2) / 2) * props.scale, y: (Math.round(rawY * 2) / 2) * props.scale })
 }
-function handleDCClick(e, id) { if (e.evt.button !== 0) return; if (store.activeTool === 'rotate') store.rotateDCMat(id); if (store.activeTool === 'delete') store.removeDCMat(id) }
+
+// [UPDATED] Handlers for DC Mats (No local functions)
+function handleDCClick(e, id) { 
+  if (e.evt.button !== 0) return; 
+  if (store.activeTool === 'rotate') store.rotateDCMat(id); 
+  if (store.activeTool === 'delete') store.removeDCMat(id) 
+}
+
+function handleDCRightClick(e, id) {
+  e.evt.preventDefault()
+  store.rotateDCMat(id) 
+}
 function handleHideClick(e, id) { if (e.evt.button !== 0) return; if (store.activeTool === 'delete') { store.removeHide(id); return }; store.cycleHideType(id) }
 </script>
 
@@ -294,11 +372,26 @@ function handleHideClick(e, id) { if (e.evt.button !== 0) return; if (store.acti
       <v-text :config="{ text: 'START', width: 4 * scale, padding: 5, align: 'center', fontSize: 14 }" />
     </v-group>
 
-    <v-group v-for="mat in store.dcMats" :key="mat.id"
-      :config="{ draggable: true, dragBoundFunc: dragBoundFunc, x: mat.x * scale, y: mat.y * scale, rotation: mat.rotation }"
-      @dragend="handleDragEnd($event, mat.id, 'dcmat')" @click="handleDCClick($event, mat.id)"
+<v-group v-for="mat in store.dcMats" :key="mat.id"
+      :config="{ 
+        id: mat.id,  draggable: true, 
+        dragBoundFunc: dcMatDragBoundFunc, x: (mat.x * scale) + ((store.dcMatConfig.width / 2) * scale), 
+        y: (mat.y * scale) + ((store.dcMatConfig.height / 2) * scale),
+        offsetX: (store.dcMatConfig.width / 2) * scale,
+        offsetY: (store.dcMatConfig.height / 2) * scale,
+        rotation: mat.rotation 
+      }"
+      @dragend="handleDragEnd($event, mat.id, 'dcmat')" 
+      @click="handleDCClick($event, mat.id)"
       @contextmenu="handleDCRightClick($event, mat.id)">
-      <v-rect :config="{ width: 2 * scale, height: 3 * scale, fill: '#d1c4e9', stroke: 'black' }" />
+      
+      <v-rect :config="{ 
+        width: store.dcMatConfig.width * scale, 
+        height: store.dcMatConfig.height * scale, 
+        fill: '#d1c4e9', 
+        stroke: 'black' 
+      }" />
+      
       <v-text :config="{ text: 'DC', fontSize: 12, x: 5, y: 5 }" />
     </v-group>
 

@@ -22,6 +22,26 @@ function smartSnap(val, dimension) {
     return Math.round((val - remainder) / gridSize) * gridSize + remainder
   }
 
+// [HELPER] Line Segment (x1,y1)-(x2,y2) intersects Rectangle (rx,ry,rw,rh)
+  function lineIntersectsRect(x1, y1, x2, y2, rx, ry, rw, rh) {
+    // 1. Check if either endpoint is inside
+    if ((x1 >= rx && x1 <= rx + rw && y1 >= ry && y1 <= ry + rh) ||
+        (x2 >= rx && x2 <= rx + rw && y2 >= ry && y2 <= ry + rh)) return true
+
+    // 2. Check intersection with any of the 4 rectangle sides
+    // Helper: Segment-Segment intersection
+    const lineLine = (x3, y3, x4, y4) => {
+      const uA = ((x4-x3)*(y1-y3) - (y4-y3)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
+      const uB = ((x2-x1)*(y1-y3) - (y2-y1)*(x1-x3)) / ((y4-y3)*(x2-x1) - (x4-x3)*(y2-y1))
+      return (uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1)
+    }
+
+    return lineLine(rx, ry, rx+rw, ry) ||       // Top
+           lineLine(rx+rw, ry, rx+rw, ry+rh) || // Right
+           lineLine(rx, ry+rh, rx+rw, ry+rh) || // Bottom
+           lineLine(rx, ry, rx, ry+rh)          // Left
+  }
+
 function copySelection() {
     const selectedIds = state.selection.value
     if (selectedIds.length === 0) return
@@ -153,28 +173,22 @@ function copySelection() {
     const rH = Math.abs(h)
 
     // 1. Find Bales
-    const hitBales = state.bales.value.filter(b => {
+  const hitBales = state.bales.value.filter(b => {
       const r = getBaleRect(b)
-      // Check intersection
       return (r.x < rX + rW && r.x + r.w > rX && r.y < rY + rH && r.y + r.h > rY)
     }).map(b => b.id)
 
-    // 2. Find Boards (Check if any part of the line is in the box)
+// 2. Find Boards (UPDATED: Use Line Intersection instead of Bounding Box)
     const hitBoards = state.boardEdges.value.filter(b => {
-      const minBx = Math.min(b.x1, b.x2)
-      const maxBx = Math.max(b.x1, b.x2)
-      const minBy = Math.min(b.y1, b.y2)
-      const maxBy = Math.max(b.y1, b.y2)
-      
-      // Simple bounding box overlap check
-      return (minBx < rX + rW && maxBx > rX && minBy < rY + rH && maxBy > rY)
+      return lineIntersectsRect(b.x1, b.y1, b.x2, b.y2, rX, rY, rW, rH)
     }).map(b => b.id)
 
-    // 3. Find DC Mats
+    // 3. Find DC Mats (UPDATED: Use Config)
     const hitMats = state.dcMats.value.filter(m => {
-       // Mats are approx 2x3 or 3x2
-       const w = m.rotation % 180 !== 0 ? 3 : 2
-       const h = m.rotation % 180 !== 0 ? 2 : 3
+       const confW = state.dcMatConfig.value.width
+       const confH = state.dcMatConfig.value.height
+       const w = m.rotation % 180 !== 0 ? confH : confW
+       const h = m.rotation % 180 !== 0 ? confW : confH
        return (m.x < rX + rW && m.x + w > rX && m.y < rY + rH && m.y + h > rY)
     }).map(m => m.id)
 
@@ -245,7 +259,7 @@ function commitDrag(id, newX, newY) {
     const dy = newY - startY
 
     // Helper: Snaps to nearest 3 inches (0.25 ft)
-    const snap = (val) => Math.round(val * 4) / 4
+    const snap = (val) => Math.round(val * 6) / 6
 
     if (!state.selection.value.includes(id)) {
       // CASE A: Dragging a single unselected item
@@ -356,26 +370,38 @@ function commitDrag(id, newX, newY) {
     })
     
     // 4. Rotate DC Mats
-    state.dcMats.value.forEach(m => {
-       if (state.selection.value.includes(m.id)) {
-          // Mats rotate around their center (width 2/3 depends on rotation)
-          const w = m.rotation % 180 !== 0 ? 3 : 2
-          const h = m.rotation % 180 !== 0 ? 2 : 3
-          const mcx = m.x + w/2
-          const mcy = m.y + h/2
-          
-          const newCenter = rotatePoint(mcx, mcy, cx, cy, 90)
-          
-          m.rotation = (m.rotation + 90) % 180 // Mats only care about 0/90 usually
-          
-          // New dims
-          const newW = m.rotation % 180 !== 0 ? 3 : 2
-          const newH = m.rotation % 180 !== 0 ? 2 : 3
-          
-          m.x = Math.round((newCenter.x - newW/2)*2)/2
-          m.y = Math.round((newCenter.y - newH/2)*2)/2
-       }
-    })
+state.dcMats.value.forEach(m => {
+    if (state.selection.value.includes(m.id)) {
+        const confW = state.dcMatConfig.value.width
+        const confH = state.dcMatConfig.value.height
+
+        // 1. Find current center
+        // Existing logic handled 90-degree swaps. We preserve that check 
+        // to correctly find the center of currently rotated items.
+        // For arbitrary angles (like 15), we assume standard unrotated dimensions 
+        // unless it's exactly 90/270 where previous logic applied.
+        const isSwapped = Math.abs(m.rotation % 180) === 90
+        const currentW = isSwapped ? confH : confW
+        const currentH = isSwapped ? confW : confH
+        
+        const mcx = m.x + currentW / 2
+        const mcy = m.y + currentH / 2
+        
+        // 2. Rotate Center by 15 degrees
+        const angle = 15
+        const newCenter = rotatePoint(mcx, mcy, cx, cy, angle)
+        
+        // 3. Update Rotation
+        m.rotation = (m.rotation + angle) % 360
+        if (m.rotation < 0) m.rotation += 360
+        
+        // 4. Update Position
+        // We set x,y to the "unrotated" top-left that corresponds to the new center.
+        // This decouples the position from the rotation, allowing 15-degree increments.
+        m.x = Math.round((newCenter.x - confW / 2) * 2) / 2
+        m.y = Math.round((newCenter.y - confH / 2) * 2) / 2
+    }
+})
 
     validateAllBales()
     

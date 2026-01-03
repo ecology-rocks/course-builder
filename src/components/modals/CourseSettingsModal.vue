@@ -9,7 +9,7 @@
       <div class="settings-section" v-if="store.sport === 'barnhunt'">
         <h4>Comparison Baseline</h4>
         <p class="hint">Compare your current map against a saved map.</p>
-        
+
         <div class="form-group">
           <label>Compare Against:</label>
           <div class="comparison-row">
@@ -42,8 +42,8 @@
               </select>
             </div>
             <div class="form-group">
-            <label>Club / Location</label>
-            <input v-model="store.trialLocation" placeholder="e.g. Happy Dogs Club" />
+              <label>Club / Location</label>
+              <input v-model="store.trialLocation" placeholder="e.g. Happy Dogs Club" />
             </div>
           </div>
           <div class="form-group-row">
@@ -76,6 +76,21 @@
           </div>
         </div>
         <p class="hint">Standard: 3.0 x 1.5 x 1.0</p>
+      </div>
+
+      <div class="settings-section" v-if="store.sport === 'barnhunt'">
+        <h4>DC Mat Dimensions (ft)</h4>
+        <div class="form-group-row">
+          <div class="form-group">
+            <label>Width</label>
+            <input type="number" v-model.number="store.dcMatConfig.width" step="0.5" />
+          </div>
+          <div class="form-group">
+            <label>Height</label>
+            <input type="number" v-model.number="store.dcMatConfig.height" step="0.5" />
+          </div>
+        </div>
+        <p class="hint">Standard: 2.0 x 3.0</p>
       </div>
 
       <div class="settings-section">
@@ -175,7 +190,7 @@ onMounted(async () => {
 
 function handleMapSelect() {
   if (!selectedMapId.value) return
-  
+
   const map = userMaps.value.find(m => m.id === selectedMapId.value)
   if (map) {
     // The structure might be map.data.bales or map.bales depending on migration
@@ -215,8 +230,10 @@ function formatCorner(c) {
   border-radius: 8px;
   width: 400px;
   max-width: 90vw;
-  max-height: 90vh; /* Added constraint */
-  overflow-y: auto; /* Added scroll */
+  max-height: 90vh;
+  /* Added constraint */
+  overflow-y: auto;
+  /* Added scroll */
 }
 
 .modal-header {
@@ -277,7 +294,8 @@ function formatCorner(c) {
 }
 
 /* --- FIX: Added width: 100% and box-sizing --- */
-.form-group input, .form-group select {
+.form-group input,
+.form-group select {
   padding: 6px;
   border: 1px solid #ddd;
   border-radius: 4px;

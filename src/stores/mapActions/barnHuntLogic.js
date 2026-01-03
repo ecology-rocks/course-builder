@@ -116,12 +116,15 @@ let uw, uh
     const cx = bale.x + (uw / 2)
     const cy = bale.y + (uh / 2)
 
-    // 3. Determine "Rotated" Dimensions (The actual visual bounding box)
-    const isRotated = bale.rotation % 180 !== 0
-    const rw = isRotated ? uh : uw
-    const rh = isRotated ? uw : uh
+    // [UPDATED] Trigonometric Bounding Box (AABB)
+    // This calculates the total width/height needed to encompass the rotated bale
+    const rad = (bale.rotation * Math.PI) / 180
+    const absCos = Math.abs(Math.cos(rad))
+    const absSin = Math.abs(Math.sin(rad))
 
-    // 4. Calculate True Top-Left of the bounding box
+    const rw = (uw * absCos) + (uh * absSin)
+    const rh = (uw * absSin) + (uh * absCos)
+
     const rx = cx - (rw / 2)
     const ry = cy - (rh / 2)
 
@@ -206,11 +209,12 @@ function validateAllBales() {
     validateAllBales()
   }
 
-  function rotateBale(id) {
+function rotateBale(id) {
     const bale = state.bales.value.find(b => b.id === id)
     if (bale) {
       snapshot()
-      bale.rotation = (bale.rotation + 45) % 180
+      // [UPDATED] 15-degree increments, full 360 circle
+      bale.rotation = (bale.rotation + 15) % 360
       validateAllBales()
     }
   }
@@ -304,9 +308,12 @@ function validateAllBales() {
     state.dcMats.value.push({ id: crypto.randomUUID(), x: Math.round(x*2)/2, y: Math.round(y*2)/2, rotation: 0 })
   }
   function removeDCMat(id) { snapshot(); state.dcMats.value = state.dcMats.value.filter(m => m.id !== id) }
-  function rotateDCMat(id) {
+function rotateDCMat(id) {
     const mat = state.dcMats.value.find(m => m.id === id)
-    if (mat) { snapshot(); mat.rotation = (mat.rotation + 90) % 180 }
+    if (mat) { 
+      snapshot()
+      mat.rotation = (mat.rotation + 15) % 360 
+    }
   }
 
   function addStartBox(x, y) { snapshot(); state.startBox.value = { x: Math.round(x*2)/2, y: Math.round(y*2)/2 } }
