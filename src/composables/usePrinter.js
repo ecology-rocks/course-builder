@@ -9,7 +9,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
     const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
     await wait(100)
 
-    const d = new Date().toLocaleDateString()
     const logoHtml = userStore.clubLogoUrl ? `<img src="${userStore.clubLogoUrl}" class="print-logo" />` : ''
     // Use Trial Location if available, else fallback
     const clubName = store.trialLocation || userStore.clubName
@@ -46,24 +45,23 @@ export function usePrinter(store, userStore, stageRef, scale) {
       </div>
     `
 
-
+    // --- Diffs Helper ---
     const diffs = store.differentials
     const getDiffHtml = () => {
       if (!diffs) return ''
 
-const fmt = (l) => {
+      const fmt = (l) => {
         const d = diffs[l]
         const sign = d.net > 0 ? '+' : ''
-        // LOGIC CHANGE: Only show "moved" if > 0, matching MapLegend.vue
         const movedText = d.moved > 0 ? `, ${d.moved} moved` : '' 
         
-        return `<div><strong>L${l}:</strong> ${sign}${d.net} bales${movedText}</div>`
+        return `<div><strong>L${l}:</strong> ${sign}${d.net}${movedText}</div>`
       }
 
       return `
-        <div class="legend-section" style="border-top: 1px solid #ccc; padding-top: 5px; margin-top: 10px;">
+        <div class="legend-sub-section">
           <h4 style="margin-bottom: 2px;">Changes vs. Previous</h4>
-          <div style="font-size: 11px;">
+          <div style="font-size: 10px; line-height: 1.2;">
             ${fmt(1)}
             ${fmt(2)}
             ${fmt(3)}
@@ -72,66 +70,69 @@ const fmt = (l) => {
       `
     }
 
-    // --- NEW: Legend HTML (Matches BarnHuntLayer.vue visuals) ---
+    // --- Legend HTML ---
     const getLegendHtml = () => `
       <div class="legend-sidebar">
+        <h3>Legend</h3>
         
-      <div class="legend-section">
-        <h4>Map Statistics</h4>
-        <div class="legend-item"><strong>Total Bales: ${store.inventory.total}</strong></div>
-        <div class="legend-item" style="color:#e6c200">Layer 1: ${store.inventory.base}</div>
-        <div class="legend-item" style="color:#4caf50">Layer 2: ${store.inventory.layer2}</div>
-        <div class="legend-item" style="color:#2196f3">Layer 3: ${store.inventory.layer3}</div>
-${getDiffHtml()}
-      </div>
+        <div class="legend-section">
+          <h4>Statistics</h4>
+          <div class="stats-grid">
+            <div class="legend-item"><strong>Total: ${store.inventory.total}</strong></div>
+            <div class="legend-item" style="color:#e6c200"><strong>L1:</strong> ${store.inventory.base}</div>
+            <div class="legend-item" style="color:#4caf50"><strong>L2:</strong> ${store.inventory.layer2}</div>
+            <div class="legend-item" style="color:#2196f3"><strong>L3:</strong> ${store.inventory.layer3}</div>
+          </div>
+          ${getDiffHtml()}
+        </div>
 
-      
+        <div class="legend-section">
+          <h4>Bales & Orientation</h4>
+          <div class="legend-grid">
+            <div class="legend-item"><span class="symbol layer-1"></span> L1 (Base)</div>
+            <div class="legend-item"><span class="symbol flat"></span> Flat</div>
+            
+            <div class="legend-item"><span class="symbol layer-2"></span> L2</div>
+            <div class="legend-item"><span class="symbol tall"></span> Tall</div>
+            
+            <div class="legend-item"><span class="symbol layer-3"></span> L3</div>
+            <div class="legend-item"><span class="symbol pillar"></span> Pillar</div>
+          </div>
+        </div>
 
-      <div class="legend-section">
-        <h4>Bales (Layers)</h4>
-        <div class="legend-item"><span class="symbol layer-1"></span> Layer 1 (Base)</div>
-        <div class="legend-item"><span class="symbol layer-2"></span> Layer 2</div>
-        <div class="legend-item"><span class="symbol layer-3"></span> Layer 3</div>
-      </div>
-
-      <div class="legend-section">
-        <h4>Boundaries</h4>
-        <div class="legend-item"><span class="symbol fence"></span> Fence</div>
-        <div class="legend-item"><span class="symbol wall"></span> Solid Wall</div>
-      </div>
-
-      <div class="legend-section">
-        <h4>Orientation</h4>
-        <div class="legend-item"><span class="symbol flat"></span> Flat</div>
-        <div class="legend-item"><span class="symbol tall"></span> Tall (On Side)</div>
-        <div class="legend-item"><span class="symbol pillar"></span> Pillar (On End)</div>
-      </div>
-
-      <div class="legend-section">
-        <h4>Features</h4>
-        <div class="legend-item"><span class="symbol anchor">⚓</span> Anchor Bale</div>
-        <div class="legend-item"><span class="symbol tunnel"></span> Tunnel Board</div>
-        <div class="legend-item"><span class="symbol leaner">↗</span> Leaner</div>
-        <div class="legend-item"><span class="symbol start"></span> Start Box</div>
-        <div class="legend-item"><span class="symbol dc"></span> DC Mat</div>
-      </div>
+        <div class="legend-section">
+          <h4>Features & Bounds</h4>
+          <div class="legend-grid">
+            <div class="legend-item"><span class="symbol fence"></span> Fence</div>
+            <div class="legend-item"><span class="symbol wall"></span> Wall</div>
+            
+            <div class="legend-item"><span class="symbol tunnel"></span> Tunnel</div>
+            <div class="legend-item"><span class="symbol leaner">↗</span> Leaner</div>
+            
+            <div class="legend-item"><span class="symbol start"></span> Start</div>
+            <div class="legend-item"><span class="symbol dc"></span> DC Mat</div>
+            
+            <div class="legend-item full-width"><span class="symbol anchor">⚓</span> Anchor Bale</div>
+          </div>
+        </div>
+        
         ${withHides ? `
         <div class="legend-section">
           <h4>Hides</h4>
-          <div class="legend-item"><span class="symbol hide-rat">R</span> Rat</div>
-          <div class="legend-item"><span class="symbol hide-litter">L</span> Litter</div>
-          <div class="legend-item"><span class="symbol hide-empty">E</span> Empty</div>
+          <div class="legend-grid">
+            <div class="legend-item"><span class="symbol hide-rat">R</span> Rat</div>
+            <div class="legend-item"><span class="symbol hide-litter">L</span> Litter</div>
+            <div class="legend-item"><span class="symbol hide-empty">E</span> Empty</div>
+          </div>
         </div>
         ` : ''}
       </div>
     `
 
-    // --- UPDATED: CSS to include Grid Layout and Legend Styles ---
-    // Shared CSS
+    // --- CSS ---
     const printStyles = `
       @page { size: landscape; margin: 0.25in; }
       
-      /* --- FORCE BACKGROUND PRINTING --- */
       * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -158,14 +159,23 @@ ${getDiffHtml()}
       .map-container { flex: 1; display: flex; justify-content: center; align-items: flex-start; overflow: hidden; }
       img.map-img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #eee; }
 
-      /* Legend Styles */
-      .legend-sidebar { width: 160px; flex-shrink: 0; border-left: 1px solid #ccc; padding-left: 15px; font-size: 12px; }
-      .legend-sidebar h3 { margin: 0 0 10px 0; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #333; display: inline-block; }
-      .legend-section { margin-bottom: 15px; }
-      .legend-section h4 { margin: 0 0 5px 0; font-size: 11px; color: #666; text-transform: uppercase; }
-      .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; line-height: 1.2; }
+      /* Legend Styles - COMPACT MODE */
+      .legend-sidebar { width: 175px; flex-shrink: 0; border-left: 1px solid #ccc; padding-left: 15px; font-size: 11px; }
+      .legend-sidebar h3 { margin: 0 0 8px 0; font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #333; display: inline-block; }
       
-      .symbol { display: inline-block; width: 20px; height: 12px; border: 1px solid black; position: relative; }
+      .legend-section { margin-bottom: 10px; }
+      .legend-section h4 { margin: 0 0 4px 0; font-size: 11px; color: #666; text-transform: uppercase; border-bottom: 1px solid #eee; }
+      
+      .legend-sub-section { border-top: 1px solid #ddd; padding-top: 4px; margin-top: 4px; }
+      
+      /* Grid Layouts for Compactness */
+      .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 5px; }
+      .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 5px; }
+      
+      .legend-item { display: flex; align-items: center; gap: 6px; line-height: 1.2; font-size: 10px; }
+      .full-width { grid-column: 1 / -1; }
+      
+      .symbol { display: inline-block; width: 16px; height: 10px; border: 1px solid black; position: relative; flex-shrink: 0; }
       
       /* Colors */
       .layer-1 { background: #e6c200; }
@@ -186,25 +196,23 @@ ${getDiffHtml()}
       }
 
       /* Items */
-      .anchor { border: 2px solid #d32f2f; color: #d32f2f; font-weight: bold; text-align: center; line-height: 10px; font-size: 14px; border-radius: 2px; background: white; }
+      .anchor { border: 2px solid #d32f2f; color: #d32f2f; font-weight: bold; text-align: center; line-height: 8px; font-size: 10px; border-radius: 2px; background: white; }
       .tunnel { height: 4px; background: #2e7d32; border: none; }
-      .leaner { border: none; font-size: 16px; font-weight: bold; width: auto; height: auto; }
+      .leaner { border: none; font-size: 12px; font-weight: bold; width: auto; height: auto; }
       .start { border: 1px dashed black; background: #eee; }
       .dc { background: #d1c4e9; }
-
 
       .fence { height: 1px; background: black; border: none; }
       .wall { height: 6px; background: black; border: none; }
       
-      /* --- NEW: Hide Styles --- */
       .hide-rat, .hide-litter, .hide-empty {
-        width: 16px; 
-        height: 16px; 
+        width: 14px; 
+        height: 14px; 
         border-radius: 50%; 
         border: 2px solid black;
         text-align: center; 
-        line-height: 12px; 
-        font-size: 10px; 
+        line-height: 10px; 
+        font-size: 9px; 
         font-weight: bold;
       }
       .hide-rat { background: red; color: black; }
@@ -212,7 +220,7 @@ ${getDiffHtml()}
       .hide-empty { background: white; color: black; }
     `
 
-    // AGILITY (Kept standard for now, but wrapped in page-body structure)
+    // AGILITY
     if (store.sport === 'agility') {
       const dataUrl = stageRef.value.getStage().toDataURL({ pixelRatio: 3 })
       scale.value = originalScale
@@ -231,7 +239,7 @@ ${getDiffHtml()}
       return
     }
 
-    // BARN HUNT (Multi-Page with Legend)
+    // BARN HUNT
     const originalLayer = store.currentLayer
     const pages = []
 
