@@ -65,6 +65,51 @@ export function useExportTools(store, stageRef, scale, GRID_OFFSET) {
       }
     })
 
+if (store.agilityObstacles) {
+      store.agilityObstacles.forEach(a => {
+        if (store.selection.includes(a.id)) {
+           // Approximate size for thumbnail cropping (5x5)
+           updateBounds(a.x, a.y, 5, 5)
+        }
+      })
+    }
+
+    // 5. Scent Work Objects
+    if (store.scentWorkObjects) {
+      store.scentWorkObjects.forEach(s => {
+        if (store.selection.includes(s.id)) {
+           updateBounds(s.x, s.y, 2, 2)
+        }
+      })
+    }
+
+    // 6. Steps
+    if (store.steps) {
+      store.steps.forEach(s => {
+        if (store.selection.includes(s.id)) {
+           updateBounds(s.x, s.y, 1.5, 1)
+        }
+      })
+    }
+
+// 7. Zones
+    if (store.zones) {
+      store.zones.forEach(z => {
+        if (store.selection.includes(z.id)) {
+           updateBounds(z.x, z.y, z.width, z.height)
+        }
+      })
+    }
+
+    // 8. Hides
+    if (store.hides) {
+      store.hides.forEach(h => {
+        if (store.selection.includes(h.id)) {
+           updateBounds(h.x, h.y, 1, 1)
+        }
+      })
+    }
+
     if (!found || minX === Infinity) {
       alert("Could not calculate selection bounds.")
       return

@@ -23,7 +23,11 @@ export function useHistory(state, validateFn) {
       dcMats: state.dcMats.value,
       startBox: state.startBox.value,
       ringDimensions: state.ringDimensions.value,
-      masterBlinds: state.masterBlinds.value
+      masterBlinds: state.masterBlinds.value,
+      steps: state.steps.value,
+      zones: state.zones.value,
+      gate: state.gate.value,
+      markers: state.markers.value
     })
     
     history.value.push(snapshotData)
@@ -42,6 +46,10 @@ export function useHistory(state, validateFn) {
     state.startBox.value = data.startBox || null
     state.ringDimensions.value = data.ringDimensions || state.ringDimensions.value
     state.masterBlinds.value = data.masterBlinds || []
+    state.steps.value = data.steps || []
+    state.zones.value = data.zones || []
+    state.gate.value = data.gate || null
+    state.markers.value = data.markers || []
     
     // Run validation to ensure supports are calculated correctly after undo
     if (validateFn) validateFn()

@@ -431,7 +431,7 @@ function handleHideClick(e, id) { if (e.evt.button !== 0) return; if (store.acti
 
       <v-line v-if="bale.orientation === 'tall'" :config="{
         points: [0, 0, getBaleDims(bale).width * scale, getBaleDims(bale).height * scale],
-        stroke: 'black', strokeWidth: 1, opacity: 0.4
+        stroke: 'black', strokeWidth: 2, opacity: 0.4
       }" />
 
       <v-text v-if="bale.isAnchor" :config="{
@@ -444,9 +444,9 @@ function handleHideClick(e, id) { if (e.evt.button !== 0) return; if (store.acti
 
       <v-group v-if="bale.orientation === 'pillar'">
         <v-line
-          :config="{ points: [0, 0, getBaleDims(bale).width * scale, getBaleDims(bale).height * scale], stroke: 'black', strokeWidth: 1, opacity: 0.4 }" />
+          :config="{ points: [0, 0, getBaleDims(bale).width * scale, getBaleDims(bale).height * scale], stroke: 'black', strokeWidth: 2, opacity: 0.4 }" />
         <v-line
-          :config="{ points: [getBaleDims(bale).width * scale, 0, 0, getBaleDims(bale).height * scale], stroke: 'black', strokeWidth: 1, opacity: 0.4 }" />
+          :config="{ points: [getBaleDims(bale).width * scale, 0, 0, getBaleDims(bale).height * scale], stroke: 'black', strokeWidth: 2, opacity: 0.4 }" />
       </v-group>
 
       <v-arrow v-if="bale.lean"

@@ -21,7 +21,11 @@ export function usePrinter(store, userStore, stageRef, scale) {
         if (layerName) text += ` - ${layerName.replace('• ', '')}`
         return text
       } else {
-        return `${store.classLevel} ${store.sport === 'agility' ? 'Agility' : 'Barn Hunt'} ${layerName || ''}`
+        let sportLabel = 'Barn Hunt'
+        if (store.sport === 'agility') sportLabel = 'Agility'
+        if (store.sport === 'scentwork') sportLabel = 'Scent Work'
+        
+        return `${store.classLevel} ${sportLabel} ${layerName || ''}`
       }
     }
 
@@ -101,7 +105,10 @@ export function usePrinter(store, userStore, stageRef, scale) {
             <div class="legend-item"><span class="symbol wall"></span> Wall</div>
             
             <div class="legend-item"><span class="symbol tunnel"></span> Tunnel</div>
+            <div class="legend-item"><span class="symbol gate"></span> Gate</div>
+
             <div class="legend-item"><span class="symbol leaner">↗</span> Leaner</div>
+            <div class="legend-item"><span class="symbol anchor">⚓</span> Anchor Bale</div>
             
             <div class="legend-item"><span class="symbol start"></span> Start</div>
             <div class="legend-item"><span class="symbol dc"></span> DC Mat</div>
@@ -109,7 +116,8 @@ export function usePrinter(store, userStore, stageRef, scale) {
             <div class="legend-item"><span class="symbol obstruction"></span> Obstr.</div>
             <div class="legend-item"><span class="symbol dead-zone"></span> Dead Zone</div>
             
-            <div class="legend-item full-width"><span class="symbol anchor">⚓</span> Anchor Bale</div>
+            <div class="legend-item"><span class="symbol step"></span> Step</div>
+            
           </div>
         </div>
         
@@ -182,13 +190,16 @@ export function usePrinter(store, userStore, stageRef, scale) {
       /* Patterns for Orientation */
       .flat { background: #fff; }
       .tall { 
-        background: linear-gradient(to bottom right, transparent 48%, black 49%, black 51%, transparent 52%); 
+        /* Changed from 49%/51% to 47%/53% */
+        background: linear-gradient(to bottom right, transparent 46%, black 47%, black 53%, transparent 54%); 
         background-color: #fff;
       }
       .pillar { 
         background: 
-          linear-gradient(to bottom right, transparent 48%, black 49%, black 51%, transparent 52%),
-          linear-gradient(to bottom left, transparent 48%, black 49%, black 51%, transparent 52%);
+          /* Bottom Right Diagonal */
+          linear-gradient(to bottom right, transparent 46%, black 47%, black 53%, transparent 54%),
+          /* Bottom Left Diagonal */
+          linear-gradient(to bottom left, transparent 46%, black 47%, black 53%, transparent 54%);
         background-color: #fff;
       }
 
@@ -198,6 +209,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .leaner { border: none; font-size: 12px; font-weight: bold; width: auto; height: auto; }
       .start { border: 1px dashed black; background: #eee; }
       .dc { background: #d1c4e9; }
+      .step { background: #8D6E63; border: 1px;}
       
       /* [ADDED] Styles for Obstruction and Dead Zone */
       .obstruction { border: 1px dashed black; background: rgba(100, 100, 100, 0.5); }
