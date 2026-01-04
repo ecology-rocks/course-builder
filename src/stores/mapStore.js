@@ -106,7 +106,7 @@ export const useMapStore = defineStore('map', () => {
     masterBlinds, startBox, previousClassCount, savedMaps, folders,
     isDrawingBoard, currentLayer, selectedBaleId,
     wallTypes, gridStartCorner, clipboard, previousBales, markers, 
-    steps, gate, zones,
+    steps, gate, zones, comparisonMapName,
     // New Fields
     trialLocation, trialDay, trialNumber, baleConfig, dcMatConfig,
     // Methods passed to modules

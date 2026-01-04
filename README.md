@@ -17,8 +17,6 @@ This is my one-true-copy of the project roadmap.
  - Documentation + Guides, help button, etc.
  - Increase line thickness on tall bale slash marks so they're visible when printing
  - Include Course Builder map. Judge Map: All levels plus hides. CB Map: All levels. Exhib. Map: 1st Level Only
- - Include reset button for Statistics box in case it errors out.
- - Increase rotation interval to 15 deg.
  - Consider adding a zoom function beyond the scale function at the bottom
  - Perimeter distances and hide locations very small and hard to read. Maybe a menu item to increase/decrease size?
  - Add "Cut" in addition to Copy/Paste. Add buttons for all three.
