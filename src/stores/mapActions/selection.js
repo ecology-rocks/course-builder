@@ -170,7 +170,7 @@ export function useSelectionLogic(state, snapshot, validateAllBales) {
     }
   }
 
-  function selectArea(x, y, w, h) {
+function selectArea(x, y, w, h) {
     const rX = w < 0 ? x + w : x
     const rY = h < 0 ? y + h : y
     const rW = Math.abs(w)
@@ -181,11 +181,10 @@ export function useSelectionLogic(state, snapshot, validateAllBales) {
 
     // 1. Bales
     const hitBales = state.bales.value.filter(b => {
-      // (Simplified logic for selection box - usually accurate enough)
       return overlap(b.x, b.y, state.baleConfig.value.width, state.baleConfig.value.length)
     }).map(b => b.id)
 
-    // 2. Mats
+    // 2. Mats (2x3 approx)
     const hitMats = state.dcMats.value.filter(m => overlap(m.x, m.y, 2, 3)).map(m => m.id)
 
     // 3. Steps
@@ -194,7 +193,33 @@ export function useSelectionLogic(state, snapshot, validateAllBales) {
     // 4. Zones
     const hitZones = state.zones.value ? state.zones.value.filter(z => overlap(z.x, z.y, z.width, z.height)).map(z => z.id) : []
 
-    state.selection.value = [...hitBales, ...hitMats, ...hitSteps, ...hitZones]
+    // 5. Board Edges (Line Intersection)
+    const hitBoards = state.boardEdges.value.filter(b => {
+      return lineIntersectsRect(b.x1, b.y1, b.x2, b.y2, rX, rY, rW, rH)
+    }).map(b => b.id)
+
+    // --- NEW ITEMS ---
+
+    // 6. Agility Obstacles (Assumed approx 5x5 hit box for selection)
+    const hitAgility = state.agilityObstacles.value ? state.agilityObstacles.value.filter(a => {
+      return overlap(a.x, a.y, 5, 5) 
+    }).map(a => a.id) : []
+
+    // 7. Scent Work Objects (Assumed 2x2 hit box)
+    const hitScent = state.scentWorkObjects.value ? state.scentWorkObjects.value.filter(s => {
+      return overlap(s.x, s.y, 2, 2)
+    }).map(s => s.id) : []
+
+    // 8. Hides (Assumed 1x1 hit box)
+    const hitHides = state.hides.value.filter(h => overlap(h.x, h.y, 1, 1)).map(h => h.id)
+
+    // 9. Markers
+    const hitMarkers = state.markers.value ? state.markers.value.filter(m => overlap(m.x, m.y, 1, 1)).map(m => m.id) : []
+
+    state.selection.value = [
+      ...hitBales, ...hitMats, ...hitSteps, ...hitZones, ...hitBoards,
+      ...hitAgility, ...hitScent, ...hitHides, ...hitMarkers
+    ]
   }
 
   function toggleSelection(id, multi = false) {
@@ -242,72 +267,93 @@ export function useSelectionLogic(state, snapshot, validateAllBales) {
     validateAllBales()
   }
 
-  function commitDrag(id, newX, newY) {
-    snapshot() // Save history
+function commitDrag(id, newX, newY) {
+    snapshot() 
 
-    // 1. Find the "Leader" (the object dragged)
+    // 1. Find the "Leader" 
+    // (You might need to expand this search if the leader isn't a bale, 
+    // but usually the UI passes the specific ID of what was clicked)
     let startX, startY
-    const bale = state.bales.value.find(b => b.id === id)
-
-    if (bale) {
-      startX = bale.x
-      startY = bale.y
+    
+    // Check all lists to find the start position of the dragged item
+    const allItems = [
+      ...state.bales.value, 
+      ...state.dcMats.value,
+      ...(state.steps.value || []),
+      ...(state.zones.value || []),
+      ...(state.agilityObstacles.value || []),
+      ...(state.scentWorkObjects.value || []),
+      ...state.hides.value,
+      ...(state.markers.value || [])
+    ]
+    
+    // For boards, we handle them separately or use x1/y1, 
+    // but for simple point objects:
+    const leader = allItems.find(i => i.id === id)
+    if (leader) {
+      startX = leader.x
+      startY = leader.y
     } else {
-      // If we can't find the leader (e.g. dragging a mat), just return or handle appropriately
-      return
+       // Check boards if not found yet
+       const board = state.boardEdges.value.find(b => b.id === id)
+       if (board) { startX = board.x1; startY = board.y1 }
+       else return 
     }
 
     const dx = newX - startX
     const dy = newY - startY
-
-    // Helper: Snaps to nearest 3 inches (0.25 ft)
     const snap = (val) => Math.round(val * 6) / 6
 
     if (!state.selection.value.includes(id)) {
-      // CASE A: Dragging a single unselected item
-      // We snap the item's new position directly
-      bale.x = snap(newX)
-      bale.y = snap(newY)
+      // Single Item Drag (logic depends on item type, simplified here)
+      if (leader) { leader.x = snap(newX); leader.y = snap(newY) }
     } else {
-      // CASE B: Dragging a selection group
-
-      // 1. Move Bales
+      // Group Drag
+      
+      // Bales
       state.bales.value.forEach(b => {
-        if (state.selection.value.includes(b.id)) {
-          b.x = snap(b.x + dx)
-          b.y = snap(b.y + dy)
-        }
+        if (state.selection.value.includes(b.id)) { b.x = snap(b.x + dx); b.y = snap(b.y + dy) }
       })
-
-      // 2. Move Boards
+      // Boards
       state.boardEdges.value.forEach(b => {
         if (state.selection.value.includes(b.id)) {
-          b.x1 = snap(b.x1 + dx)
-          b.y1 = snap(b.y1 + dy)
-          b.x2 = snap(b.x2 + dx)
-          b.y2 = snap(b.y2 + dy)
+          b.x1 = snap(b.x1 + dx); b.y1 = snap(b.y1 + dy)
+          b.x2 = snap(b.x2 + dx); b.y2 = snap(b.y2 + dy)
         }
       })
-
-      // 3. Move DC Mats
+      // Mats
       state.dcMats.value.forEach(m => {
-        if (state.selection.value.includes(m.id)) {
-          m.x = snap(m.x + dx)
-          m.y = snap(m.y + dy)
-        }
+        if (state.selection.value.includes(m.id)) { m.x = snap(m.x + dx); m.y = snap(m.y + dy) }
+      })
+      // Steps
+      if (state.steps.value) state.steps.value.forEach(s => {
+        if (state.selection.value.includes(s.id)) { s.x = snap(s.x + dx); s.y = snap(s.y + dy) }
+      })
+      // Zones
+      if (state.zones.value) state.zones.value.forEach(z => {
+        if (state.selection.value.includes(z.id)) { z.x = snap(z.x + dx); z.y = snap(z.y + dy) }
       })
 
-      if (state.steps.value) state.steps.value.forEach(s => { if (ids.includes(s.id)) { s.x = snap(s.x + dx); s.y = snap(s.y + dy) } })
-      if (state.zones.value) state.zones.value.forEach(z => { if (ids.includes(z.id)) { z.x = snap(z.x + dx); z.y = snap(z.y + dy) } })
+      // --- NEW ITEMS ---
+      // Agility
+      if (state.agilityObstacles.value) state.agilityObstacles.value.forEach(a => {
+        if (state.selection.value.includes(a.id)) { a.x = snap(a.x + dx); a.y = snap(a.y + dy) }
+      })
+      // Scent Work
+      if (state.scentWorkObjects.value) state.scentWorkObjects.value.forEach(s => {
+        if (state.selection.value.includes(s.id)) { s.x = snap(s.x + dx); s.y = snap(s.y + dy) }
+      })
+      // Hides
+      state.hides.value.forEach(h => {
+        if (state.selection.value.includes(h.id)) { h.x = snap(h.x + dx); h.y = snap(h.y + dy) }
+      })
+      // Markers
+      if (state.markers.value) state.markers.value.forEach(m => {
+        if (state.selection.value.includes(m.id)) { m.x = snap(m.x + dx); m.y = snap(m.y + dy) }
+      })
     }
 
     validateAllBales()
-
-    // Force Reactivity
-    state.bales.value = [...state.bales.value]
-    state.boardEdges.value = [...state.boardEdges.value]
-    state.steps.value = [...state.steps.value]
-    state.zones.value = [...state.zones.value]
   }
 
   function rotateSelection() {
