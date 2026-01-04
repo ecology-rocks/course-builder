@@ -38,3 +38,5 @@ betatesters.md
 
 # Vitest
 __screenshots__/
+
+docs/.vitepress/cache

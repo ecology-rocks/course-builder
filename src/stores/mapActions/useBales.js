@@ -4,7 +4,8 @@ export function useBales(state, snapshot, notifications) {
   }
 
   // --- PHYSICS & VALIDATION HELPERS ---
-  
+
+  // #region getBaleRect
   function getBaleRect(bale) {
     // 1. Determine "Unrotated" Dimensions
     const L = state.baleConfig.value.length
@@ -12,13 +13,13 @@ export function useBales(state, snapshot, notifications) {
     const H = state.baleConfig.value.height
 
     let uw, uh
-    if (bale.orientation === 'tall') { 
-      uw = L; uh = H 
-    } else if (bale.orientation === 'pillar') { 
-      uw = W; uh = H 
-    } else { 
+    if (bale.orientation === 'tall') {
+      uw = L; uh = H
+    } else if (bale.orientation === 'pillar') {
+      uw = W; uh = H
+    } else {
       // Flat
-      uw = L; uh = W 
+      uw = L; uh = W
     }
 
     // 2. Determine Center Point
@@ -38,40 +39,43 @@ export function useBales(state, snapshot, notifications) {
 
     return { x: rx, y: ry, w: rw, h: rh }
   }
-
+  // #endregion getBaleRect
+  // #region hasSupport
   function hasSupport(newBale) {
     if (newBale.layer === 1) return true
-    
+
     const r1 = getBaleRect(newBale)
     let totalSupportArea = 0
-    
+
     // Find bales on the layer directly below
     const lowerLayer = state.bales.value.filter(b => b.layer === newBale.layer - 1)
-    
+
     lowerLayer.forEach(baseBale => {
       const r2 = getBaleRect(baseBale)
-      
+
       // Calculate Overlap
       const x_overlap = Math.max(0, Math.min(r1.x + r1.w, r2.x + r2.w) - Math.max(r1.x, r2.x))
       const y_overlap = Math.max(0, Math.min(r1.y + r1.h, r2.y + r2.h) - Math.max(r1.y, r2.y))
-      
+
       totalSupportArea += (x_overlap * y_overlap)
     })
-    
+
     // Rule: Needs at least 1 sq ft of support
     return totalSupportArea >= 1.0
   }
-
+  // #endregion hasSupport
+  // #region isValidPlacement
   function isValidPlacement(newBale) {
     const r1 = getBaleRect(newBale)
-    
+
     // Check Ring Bounds
     if (r1.x < 0 || r1.y < 0 || r1.x + r1.w > state.ringDimensions.value.width || r1.y + r1.h > state.ringDimensions.value.height) {
       return false
     }
     return true
   }
-
+  // #endregion isValidPlacement
+  // #region validateAllBales
   function validateAllBales() {
     state.bales.value.forEach(bale => {
       const r = getBaleRect(bale)
@@ -79,23 +83,25 @@ export function useBales(state, snapshot, notifications) {
       bale.supported = !outOfBounds
     })
   }
+  // #endregion validateAllBales
 
   // --- ACTIONS ---
 
+  // #region addBale
   function addBale(x, y) {
     const snappedX = snapToGrid(x)
     const snappedY = snapToGrid(y)
     const newBale = {
-      id: crypto.randomUUID(), 
-      x: snappedX, 
+      id: crypto.randomUUID(),
+      x: snappedX,
       y: snappedY,
-      rotation: 0, 
-      layer: state.currentLayer.value, 
-      orientation: 'flat', 
-      lean: null, 
-      supported: true 
+      rotation: 0,
+      layer: state.currentLayer.value,
+      orientation: 'flat',
+      lean: null,
+      supported: true
     }
-    
+
     if (!isValidPlacement(newBale)) {
       notifications.show("Cannot place here: Obstruction or Out of Bounds", 'error')
       return
@@ -105,14 +111,16 @@ export function useBales(state, snapshot, notifications) {
     state.bales.value.push(newBale)
     validateAllBales()
   }
-
+  // #endregion addBale
+  // #region removeBale
   function removeBale(id) {
     snapshot()
     state.bales.value = state.bales.value.filter(b => b.id !== id)
     if (state.selectedBaleId.value === id) state.selectedBaleId.value = null
     validateAllBales()
   }
-
+  // #endregion removeBale
+  // #region updateBalePosition
   function updateBalePosition(id, newX, newY) {
     const bale = state.bales.value.find(b => b.id === id)
     if (bale) {
@@ -121,7 +129,8 @@ export function useBales(state, snapshot, notifications) {
     }
     validateAllBales()
   }
-
+  // #endregion updateBalePosition
+  // #region rotateBale
   function rotateBale(id) {
     const bale = state.bales.value.find(b => b.id === id)
     if (bale) {
@@ -130,6 +139,8 @@ export function useBales(state, snapshot, notifications) {
       validateAllBales()
     }
   }
+  // #endregion rotateBale
+  // #region cycleOrientation
 
   function cycleOrientation(id) {
     const bale = state.bales.value.find(b => b.id === id)
@@ -141,10 +152,11 @@ export function useBales(state, snapshot, notifications) {
       validateAllBales()
     }
   }
-
-function cycleLean(id) {
+  // #endregion cycleOrientation
+  // #region cycleLean
+  function cycleLean(id) {
     const bale = state.bales.value.find(b => b.id === id)
-    
+
     if (bale) {
       // [IMPROVED] Provide feedback if trying to lean a non-flat bale
       if (bale.orientation !== 'flat') {
@@ -158,7 +170,7 @@ function cycleLean(id) {
       else bale.lean = null
     }
   }
-
+  // #endregion cycleLean
   return {
     getBaleRect,
     hasSupport,
