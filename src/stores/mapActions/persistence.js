@@ -35,6 +35,10 @@ export function useMapPersistence(state, userStore, notifications) {
       trialDay: state.trialDay.value || '',
       trialNumber: state.trialNumber.value || '',
       baleConfig: state.baleConfig.value,
+      steps: state.steps.value || [],
+      zones: state.zones.value || [],
+      gate: state.gate.value || null,
+      markers: state.markers.value || []
     }
   }
 
@@ -154,32 +158,53 @@ export function useMapPersistence(state, userStore, notifications) {
   }
 
   // --- IMPORT DATA (CORE) ---
+// --- IMPORT DATA (CORE) ---
   function importMapFromData(data) {
-    state.reset() // Must ensure 'reset' is passed in the state object
+    state.reset() 
     
     state.mapName.value = data.name || "Imported Map"
     state.classLevel.value = data.level || 'Novice'
     state.sport.value = data.sport || 'barnhunt'
-    state.ringDimensions.value = data.data?.dimensions || data.dimensions || { width: 24, height: 24 }
+    
+    // Handle "nested" data (from DB saves) vs "flat" data (from JSON exports)
+    const source = data.data || data
+
+    state.ringDimensions.value = source.dimensions || { width: 24, height: 24 }
+    
     if (state.gridStartCorner) {
-       state.gridStartCorner.value = data.data?.gridStartCorner || data.gridStartCorner || 'top-left'
+       state.gridStartCorner.value = source.gridStartCorner || 'top-left'
     }
-    state.bales.value = data.data?.bales || data.bales || []
-    state.agilityObstacles.value = data.data?.agilityObstacles || data.agilityObstacles || []
-    state.scentWorkObjects.value = data.data?.scentWorkObjects || data.scentWorkObjects || []
-    state.dcMats.value = data.data?.dcMats || data.dcMats || []
-    state.boardEdges.value = data.data?.boardEdges || data.boardEdges || []
-    state.hides.value = data.data?.hides || data.hides || []
-    state.startBox.value = data.data?.startBox || null
-    if (state.trialLocation) state.trialLocation.value = data.data?.trialLocation || data.trialLocation || ''
-    if (state.trialDay) state.trialDay.value = data.data?.trialDay || data.trialDay || ''
-    if (state.trialNumber) state.trialNumber.value = data.data?.trialNumber || data.trialNumber || ''
+
+    // Core Objects
+    state.bales.value = source.bales || []
+    state.agilityObstacles.value = source.agilityObstacles || []
+    state.scentWorkObjects.value = source.scentWorkObjects || []
+    state.dcMats.value = source.dcMats || []
+    state.boardEdges.value = source.boardEdges || []
+    state.hides.value = source.hides || []
+    state.startBox.value = source.startBox || null
+    
+    // --- NEWLY ADDED FIELDS ---
+    state.steps.value = source.steps || []
+    state.zones.value = source.zones || []
+    state.gate.value = source.gate || null
+    state.markers.value = source.markers || []
+    // --------------------------
+
+    // Meta / Settings
+    if (state.trialLocation) state.trialLocation.value = source.trialLocation || ''
+    if (state.trialDay) state.trialDay.value = source.trialDay || ''
+    if (state.trialNumber) state.trialNumber.value = source.trialNumber || ''
+    
     if (state.baleConfig) { 
        const def = { length: 3, width: 1.5, height: 1 }
-       state.baleConfig.value = data.data?.baleConfig || data.baleConfig || def
+       state.baleConfig.value = source.baleConfig || def
     }
-    state.previousBales.value = JSON.parse(JSON.stringify(data.data?.bales || data.bales || []))
+
+    // Comparison Logic
+    state.previousBales.value = JSON.parse(JSON.stringify(source.bales || []))
     state.comparisonMapName.value = "Original File"
+    
     if (state.validateAllBales) state.validateAllBales()
   }
 
@@ -211,6 +236,10 @@ export function useMapPersistence(state, userStore, notifications) {
     state.previousClassCount.value = mapData.previousClassCount || 0
     state.previousBales.value = JSON.parse(JSON.stringify(mapData.bales || []))
     state.comparisonMapName.value = "Original Save"
+    state.steps.value = mapData.steps || []
+    state.zones.value = mapData.zones || []
+    state.gate.value = mapData.gate || null
+    state.markers.value = mapData.markers || []
     
     if (state.wallTypes && mapData.wallTypes) state.wallTypes.value = mapData.wallTypes
     if (state.gridStartCorner) state.gridStartCorner.value = mapData.gridStartCorner || 'top-left'

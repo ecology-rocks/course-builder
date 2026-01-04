@@ -21,6 +21,8 @@ This is my one-true-copy of the project roadmap.
  - Perimeter distances and hide locations very small and hard to read. Maybe a menu item to increase/decrease size?
  - Add "Cut" in addition to Copy/Paste. Add buttons for all three.
  - "Select Area" selects things that are merely close to the selection box
+ - Rat marker color change to indicate under/over a leaner?
+ - Make a "copy" button on the dashboard for nested map design instead of the export/import feature.
 
 ## New Year, New Editor Update (2026-01-03)
  - Nested course design: Now you can select a previously saved map to compare to in Course Settings! Comparison will show up in Map Statistics.
