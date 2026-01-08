@@ -202,11 +202,12 @@ function getAnchorLines(bale) {
       @dragend="handleDragEnd($event, store.startBox.id)" 
     />
 
-    <DCMatObject v-for="mat in store.dcMats" :key="mat.id" :mat="mat" :scale="scale" 
+<DCMatObject v-for="mat in store.dcMats" :key="mat.id" :mat="mat" :scale="scale" 
       :ref="(el) => setRef(el, mat.id)"
       @dragstart="handleDragStart($event, mat.id)"
       @dragmove="handleDragMove($event, mat.id)"
       @dragend="handleDragEnd($event, mat.id)"
+      @update="(attrs) => store.updateDCMat(mat.id, attrs)"
     />
 
 

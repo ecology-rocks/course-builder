@@ -124,20 +124,6 @@
         <p class="hint">Standard: 3.0 x 1.5 x 1.0</p>
       </div>
 
-      <div class="settings-section" v-if="store.sport === 'barnhunt'">
-        <h4>DC Mat Dimensions (ft)</h4>
-        <div class="form-group-row">
-          <div class="form-group">
-            <label>Width</label>
-            <input type="number" v-model.number="store.dcMatConfig.width" step="0.5" />
-          </div>
-          <div class="form-group">
-            <label>Height</label>
-            <input type="number" v-model.number="store.dcMatConfig.height" step="0.5" />
-          </div>
-        </div>
-        <p class="hint">Standard: 2.0 x 3.0</p>
-      </div>
 
       <div class="settings-section">
         <h4>Grid Numbering Start</h4>

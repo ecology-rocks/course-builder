@@ -6,8 +6,8 @@ const props = defineProps(['step', 'isSelected', 'scale'])
 const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend', 'rotate'])
 
 const groupRef = ref(null)
-const width = 30 
-const height = 20
+const width = 45 
+const height = 30
 
 // Expose node for multi-select
 defineExpose({ getNode: () => groupRef.value?.getNode() })
@@ -63,10 +63,10 @@ function dragBoundFunc(pos) {
     
     <v-text :config="{
       text: 'STEP',
-      fontSize: 8,
+      fontSize: 12,
       fill: 'white',
-      offsetX: 10,
-      offsetY: 4,
+      offsetX: 15,
+      offsetY: 5,
       rotation: 0,
       listening: false
     }" />
