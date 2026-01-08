@@ -116,68 +116,89 @@ function rotateSelection() {
     const ids = state.selection.value
     if (ids.length === 0) return
 
-    // 1. Gather Items
-    const items = []
+    // 1. Prepare items with their CURRENT VISUAL dimensions
+    // We must do this first to calculate the correct Group Center
+    const itemsToRotate = []
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+
     Object.keys(state.mapData.value).forEach(key => {
       const collection = state.mapData.value[key]
-      if (Array.isArray(collection)) {
-        collection.forEach(item => { if (ids.includes(item.id)) items.push(item) })
-      } else if (collection && ids.includes(collection.id)) {
-        items.push(collection)
-      }
+      const list = Array.isArray(collection) ? collection : (collection ? [collection] : [])
+
+      list.forEach(item => {
+        if (ids.includes(item.id)) {
+          // Determine Raw Dimensions (Defaults for Bales)
+          const rawW = item.width !== undefined ? item.width : (key === 'bales' ? 3 : 0)
+          const rawH = item.height !== undefined ? item.height : (key === 'bales' ? 1.5 : 0)
+
+          // Determine Visual Dimensions based on current rotation
+          // If rotated 90 or 270, width and height are visually swapped
+          const isRotatedSides = item.rotation && Math.abs(item.rotation % 180) === 90
+          const visualW = isRotatedSides ? rawH : rawW
+          const visualH = isRotatedSides ? rawW : rawH
+
+          itemsToRotate.push({ item, visualW, visualH })
+
+          // Update Group Bounds
+          if (item.x1 !== undefined) { // Line/Board
+            minX = Math.min(minX, item.x1, item.x2); maxX = Math.max(maxX, item.x1, item.x2)
+            minY = Math.min(minY, item.y1, item.y2); maxY = Math.max(maxY, item.y1, item.y2)
+          } else {
+            minX = Math.min(minX, item.x); maxX = Math.max(maxX, item.x + visualW)
+            minY = Math.min(minY, item.y); maxY = Math.max(maxY, item.y + visualH)
+          }
+        }
+      })
     })
 
-    if (items.length === 0) return
+    if (itemsToRotate.length === 0) return
 
-    // 2. Find Center of Mass
-    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
-    items.forEach(item => {
-      if (item.x1 !== undefined) {
-        minX = Math.min(minX, item.x1, item.x2); maxX = Math.max(maxX, item.x1, item.x2)
-        minY = Math.min(minY, item.y1, item.y2); maxY = Math.max(maxY, item.y1, item.y2)
-      } else {
-        // Approximate center based on x/y
-        minX = Math.min(minX, item.x); maxX = Math.max(maxX, item.x)
-        minY = Math.min(minY, item.y); maxY = Math.max(maxY, item.y)
-      }
-    })
-    const cx = (minX + maxX) / 2
-    const cy = (minY + maxY) / 2
+    // 2. Find Group Pivot Point (Center of the selection)
+    // We round this to the nearest 0.5 to keep rotations aligned with the grid
+    const cx = Math.round(((minX + maxX) / 2) * 2) / 2
+    const cy = Math.round(((minY + maxY) / 2) * 2) / 2
 
-    // 3. Rotate
-    items.forEach(item => {
-      // 90 deg rotation formula: (x, y) -> (cy - (y - cy), cx + (x - cx))
-      // Simplified: x' = cx - (y - cy), y' = cy + (x - cx)
+    // 3. Rotate Every Item around (cx, cy)
+    itemsToRotate.forEach(({ item, visualW, visualH }) => {
       
-      const rot = (x, y) => ({
-        x: cx - (y - cy),
-        y: cy + (x - cx)
+      // Helper: Rotate point (px, py) 90 degrees clockwise around (cx, cy)
+      const rotatePoint = (px, py) => ({
+        x: cx - (py - cy),
+        y: cy + (px - cx)
       })
 
-      if (item.x1 !== undefined) { // Board
-        const p1 = rot(item.x1, item.y1)
-        const p2 = rot(item.x2, item.y2)
+      if (item.x1 !== undefined) { 
+        // --- Handle Lines/Boards ---
+        const p1 = rotatePoint(item.x1, item.y1)
+        const p2 = rotatePoint(item.x2, item.y2)
         item.x1 = Math.round(p1.x * 2) / 2
         item.y1 = Math.round(p1.y * 2) / 2
         item.x2 = Math.round(p2.x * 2) / 2
         item.y2 = Math.round(p2.y * 2) / 2
       } else {
-        // Correct offset for Bales to rotate around their visual center
-        // If it's a bale, it is usually 3x1.5. Visual Center is x+1.5, y+0.75
-        // This simple point rotation rotates the top-left corner.
-        // For 90 degree turns, rotating the top-left corner usually lands it correctly 
-        // relative to the group, provided we also rotate the object itself.
+        // --- Handle Standard Objects (Bales, Zones, etc.) ---
         
-        const p = rot(item.x, item.y)
-        item.x = Math.round(p.x * 2) / 2
-        item.y = Math.round(p.y * 2) / 2
-        
-        if (item.rotation !== undefined) {
-          item.rotation = (item.rotation + 90) % 360
-        }
+        // A. Find the object's CURRENT center
+        const oldCx = item.x + visualW / 2
+        const oldCy = item.y + visualH / 2
+
+        // B. Orbit that center around the Group Center
+        const newCenter = rotatePoint(oldCx, oldCy)
+
+        // C. Update Rotation
+        item.rotation = (item.rotation || 0) + 90
+
+        // D. Calculate new Top-Left (x,y)
+        // Since we rotated 90deg, the New Visual Width is the Old Visual Height
+        const newVisualW = visualH
+        const newVisualH = visualW
+
+        // E. Apply with Grid Snapping
+        item.x = Math.round((newCenter.x - newVisualW / 2) * 2) / 2
+        item.y = Math.round((newCenter.y - newVisualH / 2) * 2) / 2
       }
     })
-    
+
     if (validateFn) validateFn()
   }
 

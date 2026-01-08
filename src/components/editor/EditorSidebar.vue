@@ -78,6 +78,7 @@ function goHome() {
         <div class="map-title-wrapper">
           <input v-model="store.mapName" class="map-title-input" placeholder="Untitled Map" />
         </div>
+        <button @click="emit('save-map')" class="btn-icon" title="Quick Save">💾</button>
         <button @click="showSettingsModal = true" class="btn-icon" title="Settings">⚙️</button>
       </div>
 
@@ -176,7 +177,7 @@ function goHome() {
 }
 
 .map-title-input {
-  width: 100%;
+  width: 90%;
   padding: 6px;
   border: 1px solid #ddd;
   border-radius: 4px;

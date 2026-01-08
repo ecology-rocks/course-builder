@@ -248,6 +248,63 @@ export const useMapStore = defineStore('map', () => {
   // Passed empty function to selection logic too, just in case
   const selectionLogic = useSelectionLogic(stateRefs, historyModule.snapshot, () => {})
 
+
+  function copySelection() {
+    const ids = selection.value
+    if (ids.length === 0) return
+
+    const itemsToCopy = []
+    Object.keys(mapData.value).forEach(key => {
+      const collection = mapData.value[key]
+      if (Array.isArray(collection)) {
+        collection.forEach(item => {
+          if (ids.includes(item.id)) {
+            itemsToCopy.push({ ...item, _type: key })
+          }
+        })
+      }
+    })
+    
+    clipboard.value = itemsToCopy
+    showNotification(`Copied ${itemsToCopy.length} items`)
+  }
+
+  function pasteSelection() {
+    if (clipboard.value.length === 0) return
+    
+    selection.value = [] // Clear selection to focus on new items
+    
+    clipboard.value.forEach(clipItem => {
+      const type = clipItem._type
+      if (!mapData.value[type]) return
+
+      // Clone and assign new ID
+      const newItem = JSON.parse(JSON.stringify(clipItem))
+      newItem.id = crypto.randomUUID()
+      
+      // Offset slightly
+      if (newItem.x !== undefined) newItem.x += 1
+      if (newItem.y !== undefined) newItem.y += 1
+      if (newItem.x1 !== undefined) { 
+        newItem.x1 += 1; newItem.x2 += 1; 
+        newItem.y1 += 1; newItem.y2 += 1; 
+      }
+
+      delete newItem._type
+
+      if (Array.isArray(mapData.value[type])) {
+        mapData.value[type].push(newItem)
+        selection.value.push(newItem.id)
+      }
+    })
+    
+    historyModule.snapshot()
+  }
+
+  function cutSelection() {
+    copySelection()
+    selectionLogic.deleteSelection()
+  }
   // ==========================================
   // 4. EXPORTS
   // ==========================================
@@ -282,6 +339,7 @@ export const useMapStore = defineStore('map', () => {
 
     // Actions
     setTool, reset, showNotification, resizeRing, toggleAnchor, setComparisonBales,
+    copySelection, pasteSelection, cutSelection,
     
     currentGuidelines: computed(() => sport.value === 'agility' ? (AGILITY_RULES[classLevel.value] || AGILITY_RULES['Other']) : (BH_RULES[classLevel.value] || BH_RULES['Other'])),
 
