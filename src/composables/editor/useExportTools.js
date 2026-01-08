@@ -13,12 +13,16 @@ export function useExportTools(store, stageRef, scale, GRID_OFFSET) {
     store.saveToCloud(false, dataURL)
   }
 
-  function handleLibrarySave(name) {
+  function handleLibrarySave(arg) {
     if (!stageRef.value) return
     if (store.selection.length === 0) {
       alert("Nothing selected! Select items to save first.")
       return
     }
+
+    // [FIX] Ensure we have a name. If called from event listener, arg might be undefined or Event.
+    let name = typeof arg === 'string' ? arg : prompt("Enter a name for this library item:")
+    if (!name || name.trim() === "") return // User cancelled
 
     const stage = stageRef.value.getStage()
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
@@ -65,7 +69,7 @@ export function useExportTools(store, stageRef, scale, GRID_OFFSET) {
       }
     })
 
-if (store.agilityObstacles) {
+    if (store.agilityObstacles) {
       store.agilityObstacles.forEach(a => {
         if (store.selection.includes(a.id)) {
            // Approximate size for thumbnail cropping (5x5)
@@ -92,7 +96,7 @@ if (store.agilityObstacles) {
       })
     }
 
-// 7. Zones
+    // 7. Zones
     if (store.zones) {
       store.zones.forEach(z => {
         if (store.selection.includes(z.id)) {
@@ -126,6 +130,7 @@ if (store.agilityObstacles) {
       pixelRatio: 0.5, mimeType: 'image/jpeg', quality: 0.7
     })
 
+    // Now safe to call because name is guaranteed to be a string
     store.saveSelectionToLibrary(name, dataURL)
   }
 

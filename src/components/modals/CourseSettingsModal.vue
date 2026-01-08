@@ -271,7 +271,7 @@ function formatCorner(c) {
   background: white;
   padding: 20px;
   border-radius: 8px;
-  width: 400px;
+  width: 600px;
   max-width: 90vw;
   max-height: 90vh;
   overflow-y: auto;

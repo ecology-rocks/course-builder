@@ -1,11 +1,11 @@
 <script setup>
 import { ref, watch, nextTick } from 'vue'
-import { useMapStore } from '../stores/mapStore'
-import { useUserStore } from '../stores/userStore'
+import { useMapStore } from '@/stores/mapStore'
+import { useUserStore } from '@/stores/userStore'
 import { useAutosave } from '@/composables/useAutosave'
 import { usePrinter } from '@/composables/usePrinter'
 
-// --- COMPOSABLES (New!) ---
+// --- COMPOSABLES ---
 import { useKeyboardShortcuts } from '@/composables/editor/useKeyboardShortcuts'
 import { useCanvasControls } from '@/composables/editor/useCanvasControls'
 import { useGridSystem } from '@/composables/editor/useGridSystem'
@@ -27,6 +27,9 @@ const stageRef = ref(null)
 const GRID_OFFSET = 30
 const showHides = ref(true)
 const isPrinting = ref(false)
+
+// Context Menu State
+const contextMenu = ref({ visible: false, x: 0, y: 0 })
 
 useAutosave(3000)
 
@@ -68,15 +71,31 @@ async function handlePrint(withHides) {
 function handleStageContextMenu(e) {
   e.evt.preventDefault()
   
-  // [FIX] Finish measurement if active
+  // 1. Priority: Finish Measurement (consumes event)
   if (store.activeTool === 'measure' && store.activeMeasurement) {
     store.finishMeasurement()
+    return
   }
+
+  // 2. Only show menu on background click (not on objects)
+  if (e.target !== e.target.getStage()) return
+
+  // 3. Show Menu
+  contextMenu.value = {
+    visible: true,
+    x: e.evt.clientX,
+    y: e.evt.clientY
+  }
+}
+
+// Close menu on any click inside the editor
+function handleGlobalClick() {
+  if (contextMenu.value.visible) contextMenu.value.visible = false
 }
 </script>
 
 <template>
-  <div class="editor-container">
+  <div class="editor-container" @click="handleGlobalClick">
     <EditorSidebar @print="handlePrint" @save-map="handleSaveMap" @save-library="handleLibrarySave" />
 
     <div class="canvas-wrapper" ref="wrapperRef">
@@ -92,6 +111,34 @@ function handleStageContextMenu(e) {
         <button @click="zoom(-5)">-</button>
         <button @click="fitToScreen">Fit</button>
       </div>
+
+      <div 
+        v-if="contextMenu.visible" 
+        class="context-menu" 
+        :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
+      >
+        <button 
+          @click="store.clearSelection()" 
+          :disabled="store.selection.length === 0"
+        >
+          Deselect All
+        </button>
+        <button @click="fitToScreen">Fit to Screen</button>
+      </div>
+
+      <Transition name="slide-up">
+        <div v-if="store.selection.length > 0" class="selection-bar">
+          <span class="sel-count">{{ store.selection.length }} Selected</span>
+          <button v-if="store.selection.length > 1" @click="store.rotateSelection()">🔄 Rotate Group</button>
+          <button v-if="store.sport === 'barnhunt' && store.currentLayer === 1" @click="store.toggleAnchor()">⚓ Anchor</button>
+          
+          <div class="divider"></div>
+
+          <button @click="store.clearSelection()">Deselect</button>
+          
+          <button @click="store.deleteSelection()" class="btn-delete">🗑️ Delete</button>
+        </div>
+      </Transition>
 
       <v-stage ref="stageRef" :config="stageConfig" 
         @mousedown="handleStageMouseDown" 
@@ -143,7 +190,6 @@ function handleStageContextMenu(e) {
           <BarnHuntLayer v-if="store.sport === 'barnhunt'" :scale="scale" :showHides="showHides" :GRID_OFFSET="GRID_OFFSET" />
           <ScentWorkLayer v-if="store.sport === 'scentwork'" :scale="scale" :showHides="showHides" :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale / 2)) * (scale / 2), y: Math.round(pos.y / (scale / 2)) * (scale / 2) })" />
 
-
           <v-group v-if="store.gate" @dblclick="() => { if(store.activeTool === 'delete') store.removeGate() }">
             <v-rect :config="{ x: store.gate.x * scale, y: store.gate.y * scale, width: 3 * scale, height: 6, offsetX: (3 * scale) / 2, offsetY: 3, rotation: store.gate.rotation, fill: 'white', stroke: 'black', strokeWidth: 2 }" />
             <v-text :config="{ x: store.gate.x * scale, y: store.gate.y * scale, text: 'GATE', fontSize: 10, fontStyle: 'bold', offsetX: 15, offsetY: -5, rotation: store.gate.rotation }" />
@@ -160,7 +206,7 @@ function handleStageContextMenu(e) {
 </template>
 
 <style scoped>
-/* (Existing Styles Preserved) */
+/* (Existing Styles) */
 .editor-container { display: flex; height: 100vh; width: 100vw; overflow: hidden; background: #f0f0f0; }
 .canvas-wrapper { flex: 1; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding: 40px; background: #e0e0e0; box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1); position: relative; }
 .toast-notification { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 8px; color: white; font-weight: bold; z-index: 2000; pointer-events: none; }
@@ -169,4 +215,88 @@ function handleStageContextMenu(e) {
 .toast-notification.info { background-color: #2196f3; }
 .zoom-controls { position: fixed; bottom: 20px; right: 20px; background: white; padding: 5px; border-radius: 8px; display: flex; gap: 5px; z-index: 100; }
 .zoom-controls button { width: 30px; height: 30px; cursor: pointer; }
+
+/* CONTEXT MENU */
+.context-menu {
+  position: fixed;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  z-index: 3000;
+  min-width: 120px;
+}
+
+.context-menu button {
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #333;
+}
+
+.context-menu button:hover {
+  background: #f5f5f5;
+}
+
+.context-menu button:disabled {
+  color: #aaa;
+  cursor: default;
+  background: none;
+}
+
+/* FLOATING BAR (Updated) */
+.selection-bar {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 8px 15px;
+  border-radius: 30px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 1000;
+  border: 1px solid #ddd;
+}
+
+.sel-count {
+  font-weight: bold;
+  color: #555;
+  font-size: 0.9rem;
+  padding-right: 5px;
+}
+
+.selection-bar button {
+  background: #f5f5f5;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s;
+  color: #333;
+}
+
+.selection-bar button:hover {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+
+.btn-delete { background: #ffebee !important; color: #c62828 !important; }
+.btn-delete:hover { background: #ffcdd2 !important; }
+
+/* Removed .btn-close style as it's no longer used */
+
+.divider { width: 1px; height: 20px; background: #ddd; }
+
+.slide-up-enter-active, .slide-up-leave-active { transition: all 0.3s ease; }
+.slide-up-enter-from, .slide-up-leave-to { transform: translate(-50%, 20px); opacity: 0; }
 </style>

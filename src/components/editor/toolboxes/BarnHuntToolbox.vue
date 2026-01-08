@@ -5,122 +5,70 @@ const store = useMapStore()
 
 <template>
   <div class="toolbox">
-    <h3>Layers</h3>
-    <div class="layer-controls">
-      <button @click="store.currentLayer = 1" :class="{ active: store.currentLayer === 1 }">1</button>
-      <button @click="store.currentLayer = 2" :class="{ active: store.currentLayer === 2 }">2</button>
-      <button @click="store.currentLayer = 3" :class="{ active: store.currentLayer === 3 }">3</button>
-    </div>
-
-    <div class="panel" v-if="store.sport === 'barnhunt'">
-      <h3>📊 Statistics</h3>
-      <div class="stats-grid">
-        <div class="stat-box">
-          <span class="label">Total</span>
-          <span class="value">{{ store.inventory.total }}</span>
-        </div>
-        <div class="stat-box">
-          <span class="label">Base</span>
-          <span class="value">{{ store.inventory.base }}</span>
-        </div>
-        <div class="stat-box">
-          <span class="label">Layer 2</span>
-          <span class="value">{{ store.inventory.layer2 }}</span>
-        </div>
-        <div class="stat-box">
-          <span class="label">Layer 3</span>
-          <span class="value">{{ store.inventory.layer3 }}</span>
-        </div>
-      </div>
-
-      <div class="nesting-info" :class="{ valid: store.inventory.isNestingValid }">
-        <small>Class Change: <strong>{{ store.inventory.deltaString }}</strong> bales</small>
+    <div class="tool-section">
+      <h3>Structures</h3>
+      <div class="tool-grid">
+        <button @click="store.setTool('bale')" :class="{ active: store.activeTool === 'bale' }">📦 Bale</button>
+        <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Wall</button>
+        <button @click="store.setTool('gate')" :class="{ active: store.activeTool === 'gate' }">🚪 Gate</button>
+        <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟨 Mat</button>
       </div>
     </div>
 
-    <h3>Place Items</h3>
-    <div class="tool-grid">
-      <button @click="store.setTool('bale')" :class="{ active: store.activeTool === 'bale' }">📦 Bale</button>
-      <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Tunnel Board</button>
-      <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🏁 Start</button>
-      <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Hide</button>
-      <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟨 Mat</button>
-      <button @click="store.setTool('step')" :class="{ active: store.activeTool === 'step' }">🪜 Step</button>
-      <button @click="store.setTool('gate')" :class="{ active: store.activeTool === 'gate' }">🚪 Gate</button>
-      <button @click="store.setTool('dead')" :class="{ active: store.activeTool === 'dead' }">🚫 Dead Zone</button>
-      <button @click="store.setTool('obstruction')" :class="{ active: store.activeTool === 'obstruction' }">🧱
-        Obstruction</button>
-      <button class="tool-btn" :class="{ active: store.activeTool === 'measure' }" @click="store.setTool('measure')"
-        title="Measurement Tool (Left Click to Add Points, Right Click to Finish)">
-        📏 Measure
-      </button>
+    <div class="tool-section">
+      <h3>Markers</h3>
+      <div class="tool-grid">
+        <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🏁 Start</button>
+        <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Hide</button>
+        <button @click="store.setTool('step')" :class="{ active: store.activeTool === 'step' }">🪜 Step</button>
+        <button @click="store.setTool('measure')" :class="{ active: store.activeTool === 'measure' }">📏 Measure</button>
+      </div>
     </div>
-    <h3>Actions</h3>
-    <div class="action-tools">
-      <button @click="store.setTool('select')" :class="{ active: store.activeTool === 'select' }">⬜ Select Area (Click +
-        Drag)</button>
 
-      <button v-if="store.currentLayer === 1 && store.selection.length > 0" @click="store.toggleAnchor()"
-        style="background: #e3f2fd; color: #0d47a1; border-color: #90caf9;">
-        ⚓ Mark As Anchor
-      </button>
+    <div class="tool-section">
+      <h3>Zones</h3>
+      <div class="tool-grid">
+        <button @click="store.setTool('dead')" :class="{ active: store.activeTool === 'dead' }">🚫 Dead Zone</button>
+        <button @click="store.setTool('obstruction')" :class="{ active: store.activeTool === 'obstruction' }">🧱 Obstruction</button>
+      </div>
+    </div>
 
-      <button v-if="store.selection.length > 1" @click="store.rotateSelection()"
-        style="background: #e8f5e9; color: #2e7d32; border-color: #a5d6a7;">
-        🔄 Rotate Group (90°)
-      </button>
-
-      <button v-if="store.selection.length > 0" @click="store.deleteSelection()"
-        style="background: #ffebee; color: #c62828; border-color: #ef9a9a; font-weight: bold;">
-        🗑️ Delete Selected ({{ store.selection.length }})
-      </button>
-
-      <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">🔄 Rotate Item (Right
-        Click)</button>
-      <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">📐 Orientation
-        (Alt+Click)</button>
-      <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">↗️ Lean
-        (Ctrl+Click)</button>
-      <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">🗑️ Delete Tool
-      </button>
+    <div class="tool-section">
+      <h3>Tools</h3>
+      <div class="list-tools">
+        <button @click="store.setTool('select')" :class="{ active: store.activeTool === 'select' }">
+          ⬜ Select (Click + Drag)
+        </button>
+        <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">
+          🗑️ Delete Tool
+        </button>
+        <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">
+          🔄 Rotate Item
+        </button>
+        <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">
+          📐 Orientation Tool
+        </button>
+        <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">
+          ↗️ Lean Tool
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .toolbox {
-  margin-bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.toolbox h3 {
-  font-size: 0.9rem;
+h3 {
+  font-size: 0.8rem;
   text-transform: uppercase;
   color: #888;
-  margin: 15px 0 10px 0;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 5px;
-}
-
-.layer-controls {
-  display: flex;
-  gap: 5px;
-  margin-bottom: 10px;
-}
-
-.layer-controls button {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid #ddd;
-  background: white;
-  cursor: pointer;
-  border-radius: 4px;
-  font-weight: bold;
-}
-
-.layer-controls button.active {
-  background: #2196f3;
-  color: white;
-  border-color: #1976d2;
+  margin: 0 0 8px 0;
+  letter-spacing: 0.5px;
 }
 
 .tool-grid {
@@ -129,26 +77,31 @@ const store = useMapStore()
   gap: 8px;
 }
 
-.action-tools {
+.list-tools {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 button {
-  padding: 8px 12px;
-  border: 1px solid #ddd;
+  padding: 10px;
+  border: 1px solid #eee;
   background: white;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   text-align: left;
   transition: all 0.2s;
   font-size: 0.9rem;
-  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 button:hover {
-  background: #f5f5f5;
+  background: #fafafa;
+  border-color: #ccc;
+  transform: translateY(-1px);
 }
 
 button.active {
@@ -156,42 +109,6 @@ button.active {
   border-color: #2196f3;
   color: #1565c0;
   font-weight: bold;
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.stat-box {
-  background: white;
-  border: 1px solid #ddd;
-  padding: 5px;
-  border-radius: 4px;
-  text-align: center;
-}
-
-.stat-box .label {
-  display: block;
-  font-size: 0.7rem;
-  color: #888;
-  text-transform: uppercase;
-}
-
-.stat-box .value {
-  display: block;
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: #333;
-}
-
-.nesting-info {
-  font-size: 0.8rem;
-  color: #666;
-  text-align: center;
-  padding-top: 5px;
-  border-top: 1px solid #eee;
+  box-shadow: inset 0 0 0 1px #2196f3;
 }
 </style>

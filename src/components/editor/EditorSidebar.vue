@@ -1,382 +1,292 @@
 <script setup>
-import { useMapStore } from '../../stores/mapStore'
-import { useUserStore } from '../../stores/userStore'
+import { computed, ref } from 'vue'
+import { useMapStore } from '@/stores/mapStore'
+import { useUserStore } from '@/stores/userStore'
 import { useRouter } from 'vue-router'
-import AuthForm from '../auth/AuthForm.vue' // <--- 1. Import AuthForm
-import { ref, computed } from 'vue'
-import LibraryModal from '@/components/modals/LibraryModal.vue'
-import CourseSettingsModal from '@/components/modals/CourseSettingsModal.vue'
-// --- 2. Import New Toolboxes ---
+
+// Toolboxes
 import BarnHuntToolbox from './toolboxes/BarnHuntToolbox.vue'
 import AgilityToolbox from './toolboxes/AgilityToolbox.vue'
 import ScentWorkToolbox from './toolboxes/ScentWorkToolbox.vue'
 
+// Modals
+import ShareMapModal from '../modals/ShareMapModal.vue'
+import LoadMapModal from '../modals/LoadMapModal.vue'
+import CourseSettingsModal from '../modals/CourseSettingsModal.vue'
+import RandomizerModal from '../modals/RandomizerModal.vue'
+import BugReportModal from '../modals/BugReportModal.vue'
+import DeleteMapModal from '../modals/DeleteMapModal.vue'
+import LibraryModal from '../modals/LibraryModal.vue'
+
 const store = useMapStore()
 const userStore = useUserStore()
 const router = useRouter()
-const fileInput = ref(null)
-const mergeInput = ref(null)
-const showLibrary = ref(false)
 const emit = defineEmits(['print', 'save-map', 'save-library'])
-const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
-const showCourseSettingsModal = ref(false)
 
-function handleSaveClick() {
-  emit('save-map') // Ask parent to generate thumb & save
-}
+// State for Modals & Menus
+const showShareModal = ref(false)
+const showLoadModal = ref(false)
+const showSettingsModal = ref(false)
+const showRandomizerModal = ref(false)
+const showBugReportModal = ref(false)
+const showDeleteModal = ref(false)
+const showLibraryModal = ref(false)
+const showMoreMenu = ref(false) // Toggle for the "More" section
+const isAdmin = computed(() => {
+  // REPLACE WITH YOUR EMAIL
+  return userStore.user?.email === 'reallyjustsam@gmail.com' 
+})
 
-async function handleSaveToLibrary() {
-  const name = prompt("Name this library item:")
-  if (name) {
-    emit('save-library', name) // Ask parent to crop, thumb & save
+
+const toolboxComponent = computed(() => {
+  switch (store.sport) {
+    case 'agility': return AgilityToolbox
+    case 'scentwork': return ScentWorkToolbox
+    default: return BarnHuntToolbox
   }
-}
+})
 
-function handlePrint(isJudge) {
-  emit('print', isJudge)
-}
-
-function handleImportClick() {
-  if (confirm("This will overwrite your current map. Continue?")) {
-    fileInput.value.click()
+function goHome() {
+  if (confirm("Leave editor? Unsaved changes will be lost.")) {
+    store.reset()
+    router.push('/dashboard')
   }
-}
-
-function handleFileChange(event) {
-  const file = event.target.files[0]
-  if (!file) return
-  const reader = new FileReader()
-  reader.onload = (e) => store.importMapFromJSON(e.target.result)
-  reader.readAsText(file)
-  event.target.value = '' // Reset
-}
-
-// NEW: Merge Handler
-function handleMergeClick() { mergeInput.value.click() }
-
-function handleMergeChange(event) {
-  const file = event.target.files[0]
-  if (!file) return
-  const reader = new FileReader()
-  reader.onload = (e) => store.mergeMapFromJSON(e.target.result)
-  reader.readAsText(file)
-  event.target.value = '' // Reset
 }
 </script>
 
 <template>
-  <aside class="editor-sidebar">
-    <div class="sidebar-header">
-      <div class="header-left">
-        <button @click="router.push('/dashboard')" class="btn-back" title="Back to Dashboard">⬅</button>
-        <h2>Editor</h2>
+  <div class="sidebar">
+    <div class="zone-top">
+      <div class="header-row">
+        <button @click="goHome" class="btn-icon" title="Home">🏠</button>
+        <div class="map-title-wrapper">
+          <input v-model="store.mapName" class="map-title-input" placeholder="Untitled Map" />
+        </div>
+        <button @click="showSettingsModal = true" class="btn-icon" title="Settings">⚙️</button>
       </div>
 
-      <div class="history-controls">
-        <button 
-          @click="store.undo()" 
-          :disabled="store.historyIndex <= 0" 
-          title="Undo (Ctrl+Z)">
-          ↩️
-        </button>
-        <button 
-          @click="store.redo()" 
-          :disabled="store.historyIndex >= store.historyStack.length - 1" 
-          title="Redo (Ctrl+Y)">
-          ↪️
-        </button>
-        <button @click="store.saveToCloud()" class="btn-save">💾</button>
+      <div class="control-row">
+        <div class="layer-pills" v-if="store.sport === 'barnhunt'">
+          <button @click="store.currentLayer = 1" :class="{ active: store.currentLayer === 1 }">L1</button>
+          <button @click="store.currentLayer = 2" :class="{ active: store.currentLayer === 2 }">L2</button>
+          <button @click="store.currentLayer = 3" :class="{ active: store.currentLayer === 3 }">L3</button>
+        </div>
+        
+        <div class="history-pills">
+          <button @click="store.undo()" title="Undo (Ctrl+Z)">↩</button>
+          <button @click="store.redo()" title="Redo (Ctrl+Y)">↪</button>
+        </div>
       </div>
     </div>
 
-    <div v-if="!userStore.user" class="auth-box">
-      <AuthForm />
+    <div class="zone-middle">
+      <component :is="toolboxComponent" />
     </div>
 
-    <div v-else class="sidebar-content">
-      <div class="config-group">
-        <label>Map Name</label>
-        <input v-model="store.mapName" class="input-text" />
+    <div class="zone-bottom">
+      <div class="primary-actions">
+        <button @click="emit('save-map')" class="btn-primary">💾 Save</button>
+        <button @click="emit('print', true)" class="btn-secondary">🖨️ Print</button>
+      </div>
+      
+      <div class="secondary-actions">
+        <button @click="showLoadModal = true">📂 Load</button>
+        <button @click="showShareModal = true">🔗 Share</button>
+        <button @click="showLibraryModal = true">📖 Lib</button>
       </div>
 
-      <div v-if="store.sport === 'barnhunt'" class="config-group">
-        <button @click="showCourseSettingsModal = true" class="btn-secondary" style="width:100%; font-weight:bold;">
-          ⚙️ Course Settings
+      <button class="btn-more" @click="showMoreMenu = !showMoreMenu">
+        {{ showMoreMenu ? '▼ Less' : '▲ More Actions' }}
+      </button>
+
+      <div v-if="showMoreMenu" class="more-menu">
+        <button @click="emit('print', false)">🖨️ Print (No Hides)</button>
+        <button v-if="isAdmin" @click="emit('save-library')">📚 Save to Library</button>
+        <button @click="store.exportMapToJSON()">⬇ Export JSON</button>
+        <button @click="showRandomizerModal = true">🎲 Randomizer</button>
+        <button @click="showBugReportModal = true">🐞 Report Bug</button>
+        <button v-if="store.currentMapId" @click="showDeleteModal = true" class="text-danger">
+          🗑️ Delete Map
         </button>
       </div>
-      <hr />
-
-      <aside class="sidebar">
-        <div class="panel">
-          <h3>📁 File</h3>
-          <div class="button-row">
-            <button @click="store.exportMapToJSON" class="btn-secondary">Export JSON</button>
-            <button @click="handleImportClick" class="btn-secondary">Load JSON</button>
-          </div>
-          <div class="button-row" style="margin-top: 5px;">
-            <button @click="handleMergeClick" class="btn-primary">➕ Merge Uploaded File</button>
-          </div>
-
-          <input type="file" ref="fileInput" @change="handleFileChange" accept=".json" style="display: none" />
-          <input type="file" ref="mergeInput" @change="handleMergeChange" accept=".json" style="display: none" />
-          <hr />
-          <div class="print-actions">
-            <label>Print:</label>
-            <div class="btn-group-sm">
-              <button @click="handlePrint(true)" title="Print with Hides/Answers">👨‍⚖️ Judge</button>
-              <button @click="handlePrint(false)" title="Print Clean Map">🏃 Exhibitor</button>
-            </div>
-
-          </div>
-          <div class="print-info">
-            <i>When you select one of the print options, a printable version will pop up in a new window. To save to
-              PDF, on the print dialog, select "Save to PDF" or "Print to PDF" as your printer. Exhibitor maps will not
-              show rat hides, but Judge maps will.</i>
-          </div>
-        </div>
-
-        <div class="panel">
-          <h3>📚 Library</h3>
-          <button @click="showLibrary = true" class="btn-primary" style="width: 100%; margin-bottom: 10px;">
-            Browse Tunnel Library
-          </button>
-
-          <button v-if="isAdmin" @click="handleSaveToLibrary" class="btn-admin">
-            🔒 Save Selection to Lib
-          </button>
-        </div>
-
-        <div class="panel">
-          <BarnHuntToolbox v-if="store.sport === 'barnhunt'" />
-          <AgilityToolbox v-else-if="store.sport === 'agility'" />
-          <ScentWorkToolbox v-else-if="store.sport === 'scentwork'" />
-        </div>
-        <LibraryModal v-if="showLibrary" @close="showLibrary = false" />
-        <CourseSettingsModal v-if="showCourseSettingsModal" @close="showCourseSettingsModal = false" />
-
-      </aside>
-
-      <hr />
-
-
     </div>
-  </aside>
+
+    <ShareMapModal v-if="showShareModal" @close="showShareModal = false" />
+    <LoadMapModal v-if="showLoadModal" @close="showLoadModal = false" />
+    <CourseSettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
+    <RandomizerModal v-if="showRandomizerModal" @close="showRandomizerModal = false" />
+    <BugReportModal v-if="showBugReportModal" @close="showBugReportModal = false" />
+    <DeleteMapModal v-if="showDeleteModal" @close="showDeleteModal = false" />
+    <LibraryModal v-if="showLibraryModal" @close="showLibraryModal = false" />
+  </div>
 </template>
 
 <style scoped>
-.editor-sidebar {
+.sidebar {
   width: 300px;
-  background: #fff;
+  background: white;
   border-right: 1px solid #ddd;
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
 }
 
-.sidebar-header {
-  padding: 15px;
+/* ZONE 1 */
+.zone-top {
+  padding: 10px;
   border-bottom: 1px solid #eee;
+  background: #fcfcfc;
+}
+
+.header-row {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 10px;
+}
+
+.map-title-wrapper {
+  flex: 1;
+}
+
+.map-title-input {
+  width: 100%;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.btn-icon {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 5px 8px;
+}
+
+.control-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  background: #f8f9fa;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
   gap: 10px;
 }
 
-.sidebar-header h2 {
-  margin: 0;
-  font-size: 1.2rem;
-}
-
-.btn-back {
-  background: none;
-  border: 1px solid #ccc;
+.layer-pills, .history-pills {
+  display: flex;
+  background: #f5f5f5;
   border-radius: 4px;
-  padding: 4px 8px;
-  cursor: pointer;
-  font-size: 1.1rem;
+  padding: 2px;
 }
 
-.btn-back:hover {
+.layer-pills button, .history-pills button {
+  border: none;
+  background: none;
+  padding: 4px 10px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  border-radius: 3px;
+  font-weight: bold;
+  color: #555;
+}
+
+.layer-pills button.active {
+  background: white;
+  color: #2196f3;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.history-pills button:hover {
   background: #e0e0e0;
 }
 
-.sidebar-content {
-  padding: 15px;
-  overflow-y: auto;
-  overflow-x: hidden;
+/* ZONE 2 */
+.zone-middle {
   flex: 1;
+  overflow-y: auto;
+  padding: 15px;
 }
 
-.config-group {
-  margin-bottom: 15px;
-}
-
-.config-group label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: bold;
-  color: #555;
-  font-size: 0.9rem;
-}
-
-.input-text,
-select {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-
-.dims-row {
+/* ZONE 3 */
+.zone-bottom {
+  padding: 15px;
+  border-top: 1px solid #eee;
+  background: #f9f9f9;
   display: flex;
-  align-items: center;
-  gap: 5px;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.dims-row input {
-  width: 60px;
-  padding: 5px;
-  text-align: center;
+.primary-actions {
+  display: flex;
+  gap: 8px;
 }
 
-.auth-box {
-  padding: 20px;
-  text-align: center;
-  background: #fff3e0;
-  margin: 20px;
-  border-radius: 8px;
-}
-
-/* SHARED BUTTON STYLES FOR HEADER/FOOTER AREAS */
-.btn-save {
-  background: #4caf50;
-  color: white;
+.primary-actions button {
+  flex: 1;
+  padding: 10px;
+  border-radius: 4px;
   border: none;
   font-weight: bold;
-  text-align: center;
-  padding: 5px 15px;
-  border-radius: 4px;
   cursor: pointer;
-  margin-left: 5px;
 }
 
-.btn-save:hover {
-  background: #43a047;
-}
+.btn-primary { background: #2196f3; color: white; }
+.btn-primary:hover { background: #1976d2; }
+.btn-secondary { background: #5c6bc0; color: white; }
+.btn-secondary:hover { background: #3949ab; }
 
-.print-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 5px;
-}
-
-.print-actions label {
-  font-size: 0.85em;
-  color: #666;
-  font-weight: bold;
-}
-
-.btn-group-sm {
+.secondary-actions {
   display: flex;
   gap: 5px;
-  flex: 1;
 }
 
-.btn-group-sm button {
+.secondary-actions button {
   flex: 1;
-  padding: 4px;
-  font-size: 0.85em;
-  text-align: center;
+  padding: 6px;
   border: 1px solid #ddd;
   background: white;
   border-radius: 4px;
+  font-size: 0.85rem;
   cursor: pointer;
 }
 
-.history-controls {
-  display: flex;
-  gap: 5px;
-}
-
-.history-controls button {
-  padding: 5px 8px;
-  font-size: 1.1rem;
+.btn-more {
+  background: none;
   border: none;
-  background: transparent;
-  cursor: pointer;
-  opacity: 0.8;
-}
-
-.history-controls button:hover:not(:disabled) {
-  opacity: 1;
-  background: #eee;
-  border-radius: 4px;
-}
-
-.history-controls button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.panel {
-  margin-bottom: 20px;
-  border-bottom: 1px solid #eee;
-  padding-bottom: 15px;
-}
-
-.button-row {
-  display: flex;
-  gap: 10px;
-}
-
-.btn-secondary {
-  background: #f0f0f0;
-  border: 1px solid #ccc;
-  padding: 8px;
-  cursor: pointer;
-  flex: 1;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-
-.print-info {
   font-size: 0.8rem;
-  color: #666;
-  text-align: center;
-  padding-top: 5px;
-  border-top: 1px solid #eee;
-}
-
-.btn-primary {
-  background: #2196f3;
-  color: white;
-  border: none;
-  padding: 8px;
+  color: #777;
   cursor: pointer;
-  flex: 1;
-  border-radius: 4px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.btn-admin {
-  background: #333;
-  color: #ffd700;
-  border: 1px solid #ffd700;
-  width: 100%;
-  padding: 8px;
-  cursor: pointer;
-  border-radius: 4px;
   margin-top: 5px;
-  font-weight: bold;
-  box-sizing: border-box;
+}
+
+.more-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: white;
+  padding: 10px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.more-menu button {
+  text-align: left;
+  padding: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #444;
+}
+
+.more-menu button:hover {
+  background: #f5f5f5;
+  color: #000;
+}
+
+.text-danger {
+  color: #c62828 !important;
+}
+.text-danger:hover {
+  background: #ffebee !important;
 }
 </style>

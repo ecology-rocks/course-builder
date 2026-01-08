@@ -91,7 +91,7 @@ function handleLeftClick(e, id) {
   
   // Tools
   if (store.activeTool === 'rotate') store.rotateBale(id)
-  if (store.activeTool === 'orientation') store.cycleOrientation(id)
+  if (store.activeTool === 'type') store.cycleOrientation(id)
   if (store.activeTool === 'lean') store.cycleLean(id)
   if (store.activeTool === 'delete') store.removeBale(id)
 }

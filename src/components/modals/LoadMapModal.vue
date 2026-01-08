@@ -1,21 +1,19 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
-const props = defineProps(['modelValue']) // v-model for open/close
-const emit = defineEmits(['update:modelValue', 'select'])
+// Changed: No props needed for visibility (handled by parent v-if)
+const emit = defineEmits(['close'])
 const store = useMapStore()
 const userMaps = ref([])
 
-// Load maps when the modal opens
-watch(() => props.modelValue, async (isOpen) => {
-  if (isOpen) {
-    userMaps.value = await store.loadUserMaps()
-  }
+// Changed: Load maps immediately on mount (since v-if in parent triggers mount)
+onMounted(async () => {
+  userMaps.value = await store.loadUserMaps()
 })
 
 function close() {
-  emit('update:modelValue', false)
+  emit('close')
 }
 
 function selectMap(map) {
@@ -40,7 +38,7 @@ async function handleRenameMap(map) {
 </script>
 
 <template>
-  <div v-if="modelValue" class="modal-overlay" @click.self="close">
+  <div class="modal-overlay" @click.self="close">
     <div class="modal">
       <div class="modal-header">
         <h3>Your Saved Maps</h3>

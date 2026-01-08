@@ -1,18 +1,18 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 import QRCode from 'qrcode'
 
-const props = defineProps(['modelValue'])
-const emit = defineEmits(['update:modelValue'])
+// Changed: No props, emit 'close'
+const emit = defineEmits(['close'])
 const store = useMapStore()
 
 const shareQrUrl = ref('')
 const shareLink = ref('')
 
-// Generate QR when opened
-watch(() => props.modelValue, async (isOpen) => {
-  if (isOpen && store.currentMapId) {
+// Changed: Generate QR on mount
+onMounted(async () => {
+  if (store.currentMapId) {
     shareLink.value = `${window.location.origin}/view/${store.currentMapId}`
     try {
       shareQrUrl.value = await QRCode.toDataURL(shareLink.value, { width: 250, margin: 2 })
@@ -23,7 +23,7 @@ watch(() => props.modelValue, async (isOpen) => {
 })
 
 function close() {
-  emit('update:modelValue', false)
+  emit('close')
 }
 
 function copyToClipboard() {
@@ -41,7 +41,7 @@ async function stopSharing() {
 </script>
 
 <template>
-  <div v-if="modelValue" class="modal-overlay" @click.self="close">
+  <div class="modal-overlay" @click.self="close">
     <div class="modal share-modal">
       <div class="modal-header">
         <h3>Share Map</h3>
