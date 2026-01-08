@@ -1,6 +1,5 @@
-export function useZones(state, snapshot) {
+export function useZones(state) {
   function addZone(x, y, type) {
-    snapshot()
     state.zones.value.push({
       id: Date.now().toString(),
       x, 
@@ -20,7 +19,6 @@ export function useZones(state, snapshot) {
   }
 
   function removeZone(id) {
-    snapshot()
     state.zones.value = state.zones.value.filter(z => z.id !== id)
   }
 

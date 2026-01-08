@@ -4,6 +4,13 @@ export function useKeyboardShortcuts(store) {
   function handleKeydown(e) {
     if (!e.key) return
 
+    // --- 1. IGNORE INPUTS ---
+    // If the user is typing in a form field (Map Title, etc.), 
+    // let the browser handle the event (native copy/paste/undo).
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+      return
+    }
+
     const isCtrl = e.ctrlKey || e.metaKey
     const key = e.key.toLowerCase()
 
@@ -36,8 +43,8 @@ export function useKeyboardShortcuts(store) {
     }
 
     // Delete
-    if (key === 'delete' || key === 'backspace') {
-      if (store.selection.length > 0 && e.target && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+if (key === 'delete' || key === 'backspace') {
+      if (store.selection.length > 0) {
         store.deleteSelection()
       }
     }

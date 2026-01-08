@@ -1,107 +1,83 @@
-import { ref } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 
-/**
- * src/stores/mapActions/history.js
- * Manages Undo/Redo functionality for the map state.
- * @param {Object} state - The full state object containing all refs to be saved.
- * @param {Function} validateFn - A function to re-validate items after restore (e.g., validateAllBales).
- */
-export function useHistory(state, validateFn) {
-  const history = ref([])
-  const future = ref([])
+export function useHistory(state, changeCallback) {
+  const historyStack = ref([])
+  const historyIndex = ref(-1)
+  const MAX_HISTORY = 50
+  const isUndoing = ref(false)
 
+  // Create a Snapshot of the current unified mapData
   function snapshot() {
-    future.value = []
-    
-    // We strictly define what constitutes a "Save State"
-    const snapshotData = JSON.stringify({
-      bales: state.bales.value,
-      agilityObstacles: state.agilityObstacles.value,
-      scentWorkObjects: state.scentWorkObjects.value,
-      hides: state.hides.value,
-      boardEdges: state.boardEdges.value,
-      dcMats: state.dcMats.value,
-      startBox: state.startBox.value,
-      ringDimensions: state.ringDimensions.value,
-      masterBlinds: state.masterBlinds.value,
-      steps: state.steps.value,
-      zones: state.zones.value,
-      gate: state.gate.value,
-      markers: state.markers.value
-    })
-    
-    history.value.push(snapshotData)
-    if (history.value.length > 50) history.value.shift()
-  }
+    if (isUndoing.value) return
 
-  function restoreState(jsonString) {
-    const data = JSON.parse(jsonString)
+    // Remove any "future" history if we are in the middle of the stack
+    if (historyIndex.value < historyStack.value.length - 1) {
+      historyStack.value = historyStack.value.slice(0, historyIndex.value + 1)
+    }
+
+    // We only need to clone ONE object now!
+    // This automatically captures bales, hides, startBox, metadata, etc.
+    const data = JSON.parse(JSON.stringify(state.mapData.value))
     
-    state.bales.value = data.bales || []
-    state.agilityObstacles.value = data.agilityObstacles || []
-    state.scentWorkObjects.value = data.scentWorkObjects || []
-    state.hides.value = data.hides || []
-    state.boardEdges.value = data.boardEdges || []
-    state.dcMats.value = data.dcMats || []
-    state.startBox.value = data.startBox || null
-    state.ringDimensions.value = data.ringDimensions || state.ringDimensions.value
-    state.masterBlinds.value = data.masterBlinds || []
-    state.steps.value = data.steps || []
-    state.zones.value = data.zones || []
-    state.gate.value = data.gate || null
-    state.markers.value = data.markers || []
-    
-    // Run validation to ensure supports are calculated correctly after undo
-    if (validateFn) validateFn()
+    historyStack.value.push(data)
+    if (historyStack.value.length > MAX_HISTORY) {
+      historyStack.value.shift()
+    } else {
+      historyIndex.value++
+    }
   }
 
   function undo() {
-    if (history.value.length === 0) return
-
-    // Save current state to Future before going back
-    const current = JSON.stringify({
-      bales: state.bales.value,
-      agilityObstacles: state.agilityObstacles.value,
-      scentWorkObjects: state.scentWorkObjects.value,
-      hides: state.hides.value,
-      boardEdges: state.boardEdges.value,
-      dcMats: state.dcMats.value,
-      startBox: state.startBox.value,
-      ringDimensions: state.ringDimensions.value,
-      masterBlinds: state.masterBlinds.value
-    })
-    future.value.push(current)
-
-    const previous = history.value.pop()
-    restoreState(previous)
+    if (historyIndex.value > 0) {
+      isUndoing.value = true
+      historyIndex.value--
+      const data = historyStack.value[historyIndex.value]
+      
+      // Restore the Unified State
+      state.mapData.value = JSON.parse(JSON.stringify(data))
+      
+      // Force UI refresh if needed
+      nextTick(() => {
+        isUndoing.value = false
+        if (changeCallback) changeCallback()
+      })
+    }
   }
 
   function redo() {
-    if (future.value.length === 0) return
-
-    // Save current state to History before going forward
-    const current = JSON.stringify({
-      bales: state.bales.value,
-      agilityObstacles: state.agilityObstacles.value,
-      scentWorkObjects: state.scentWorkObjects.value,
-      hides: state.hides.value,
-      boardEdges: state.boardEdges.value,
-      dcMats: state.dcMats.value,
-      startBox: state.startBox.value,
-      ringDimensions: state.ringDimensions.value,
-      masterBlinds: state.masterBlinds.value
-    })
-    history.value.push(current)
-
-    const nextState = future.value.pop()
-    restoreState(nextState)
+    if (historyIndex.value < historyStack.value.length - 1) {
+      isUndoing.value = true
+      historyIndex.value++
+      const data = historyStack.value[historyIndex.value]
+      
+      state.mapData.value = JSON.parse(JSON.stringify(data))
+      
+      nextTick(() => {
+        isUndoing.value = false
+        if (changeCallback) changeCallback()
+      })
+    }
   }
 
+  // WATCHER: The Magic Fix
+  // We deep watch the single mapData object. 
+  // Any change to ANY property inside it triggers a snapshot.
+  watch(
+    () => state.mapData.value, 
+    () => {
+      if (!isUndoing.value) snapshot()
+    },
+    { deep: true } 
+  )
+
+  // Initial snapshot
+  snapshot()
+
   return {
-    history,
-    future,
-    snapshot,
     undo,
-    redo
+    redo,
+    snapshot,
+    historyIndex,
+    historyStack
   }
 }

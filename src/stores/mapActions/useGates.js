@@ -1,12 +1,10 @@
-export function useGates(state, snapshot) {
+export function useGates(state) {
   function setGate(gateData) {
-    snapshot()
     // gateData should be { x, y, rotation }
     state.gate.value = gateData
   }
 
   function removeGate() {
-    snapshot()
     state.gate.value = null
   }
 

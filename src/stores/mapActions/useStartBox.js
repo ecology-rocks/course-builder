@@ -1,15 +1,13 @@
-export function useStartBox(state, snapshot) {
+export function useStartBox(state) {
   function snapToGrid(val) {
     return Math.round(val * 6) / 6
   }
 
   function addStartBox(x, y) {
-    snapshot()
     state.startBox.value = { x: snapToGrid(x), y: snapToGrid(y) }
   }
 
   function removeStartBox() {
-    snapshot()
     state.startBox.value = null
   }
 

@@ -6,6 +6,35 @@
         <button class="close-btn" @click="$emit('close')">×</button>
       </div>
 
+      <div class="settings-section">
+        <h4>Ring Dimensions (ft)</h4>
+        <div class="form-group-row">
+          <div class="form-group">
+            <label>Width</label>
+            <input 
+              type="number" 
+              v-model.number="localWidth" 
+              @change="applyResize"
+              step="1" 
+              min="10"
+            />
+          </div>
+          <div class="form-group">
+            <label>Height</label>
+            <input 
+              type="number" 
+              v-model.number="localHeight" 
+              @change="applyResize"
+              step="1" 
+              min="10"
+            />
+          </div>
+        </div>
+        <p class="hint">Changing size ensures items stay within bounds.</p>
+      </div>
+
+      <hr />
+
       <div class="settings-section" v-if="store.sport === 'barnhunt'">
         <h4>Map View Options</h4>
         <div style="display: flex; gap: 10px; align-items: center;">
@@ -13,6 +42,7 @@
           <p for="chkStats" class="hint">Show Map Statistics</p>
         </div>
       </div>
+
       <div class="settings-section" v-if="store.sport === 'barnhunt'">
         <h4>Comparison Baseline</h4>
         <p class="hint">Compare your current map against a saved map.</p>
@@ -26,12 +56,21 @@
                 {{ map.name }}
               </option>
             </select>
+            <button 
+              v-if="store.comparisonMapName" 
+              @click="handleClearComparison" 
+              class="btn-clear"
+              title="Remove Comparison"
+            >
+              Clear
+            </button>
           </div>
           <p class="status-text" v-if="store.comparisonMapName">
             Currently comparing vs: <strong>{{ store.comparisonMapName }}</strong>
           </p>
         </div>
       </div>
+      
       <hr v-if="store.sport === 'barnhunt'" />
 
       <div class="settings-section">
@@ -99,8 +138,6 @@
         </div>
         <p class="hint">Standard: 2.0 x 3.0</p>
       </div>
-
-
 
       <div class="settings-section">
         <h4>Grid Numbering Start</h4>
@@ -178,13 +215,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue' // Added ref, onMounted
+import { ref, onMounted } from 'vue' 
 import { useMapStore } from '@/stores/mapStore'
 const store = useMapStore()
 
 const userMaps = ref([])
 const selectedMapId = ref(null)
 const loadingMaps = ref(false)
+
+// Local state for Ring Dimensions
+const localWidth = ref(store.ringDimensions.width)
+const localHeight = ref(store.ringDimensions.height)
 
 onMounted(async () => {
   if (store.sport === 'barnhunt') {
@@ -197,16 +238,23 @@ onMounted(async () => {
   }
 })
 
+function applyResize() {
+  store.resizeRing(localWidth.value, localHeight.value)
+}
+
 function handleMapSelect() {
   if (!selectedMapId.value) return
-
   const map = userMaps.value.find(m => m.id === selectedMapId.value)
   if (map) {
-    // The structure might be map.data.bales or map.bales depending on migration
     const data = map.data || map
     const bales = data.bales || []
     store.setComparisonBales(bales, map.name)
   }
+}
+
+function handleClearComparison() {
+  store.setComparisonBales([], null) 
+  selectedMapId.value = null
 }
 
 function getBorderStyle(type) {
@@ -240,9 +288,7 @@ function formatCorner(c) {
   width: 400px;
   max-width: 90vw;
   max-height: 90vh;
-  /* Added constraint */
   overflow-y: auto;
-  /* Added scroll */
 }
 
 .modal-header {
@@ -302,7 +348,6 @@ function formatCorner(c) {
   margin-bottom: 4px;
 }
 
-/* --- FIX: Added width: 100% and box-sizing --- */
 .form-group input,
 .form-group select {
   padding: 6px;
@@ -312,7 +357,6 @@ function formatCorner(c) {
   box-sizing: border-box;
 }
 
-/* Ensure flex items can shrink below default content size */
 .form-group-row {
   display: flex;
   gap: 10px;
@@ -326,6 +370,12 @@ function formatCorner(c) {
 .comparison-row {
   display: flex;
   gap: 10px;
+  align-items: center;
+}
+
+.comparison-row select {
+  flex: 1;
+  min-width: 0;
 }
 
 .corner-selector {
@@ -416,5 +466,21 @@ function formatCorner(c) {
   border-radius: 4px;
   cursor: pointer;
   font-weight: bold;
+}
+
+.btn-clear {
+  background: #ef5350;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.btn-clear:hover {
+  background: #d32f2f;
 }
 </style>

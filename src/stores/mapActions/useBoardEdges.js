@@ -1,10 +1,10 @@
-export function useBoardEdges(state, snapshot) {
+export function useBoardEdges(state) {
   function snapToGrid(val) {
     return Math.round(val * 6) / 6
   }
 
   function startDrawingBoard(x, y) {
-    snapshot()
+
     const id = crypto.randomUUID()
     const snappedX = snapToGrid(x)
     const snappedY = snapToGrid(y)
@@ -34,7 +34,6 @@ export function useBoardEdges(state, snapshot) {
   }
 
   function removeBoardEdge(id) {
-    snapshot()
     state.boardEdges.value = state.boardEdges.value.filter(b => b.id !== id)
   }
 
@@ -52,7 +51,6 @@ export function useBoardEdges(state, snapshot) {
   function rotateBoard(id) {
     const board = state.boardEdges.value.find(b => b.id === id)
     if (board) {
-      snapshot()
       const mx = (board.x1 + board.x2) / 2
       const my = (board.y1 + board.y2) / 2
       const rad = (45 * Math.PI) / 180

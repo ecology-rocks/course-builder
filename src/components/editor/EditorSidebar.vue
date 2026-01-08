@@ -73,8 +73,18 @@ function handleMergeChange(event) {
       </div>
 
       <div class="history-controls">
-        <button @click="store.undo()" :disabled="store.history.length === 0" title="Undo (Ctrl+Z)">↩️</button>
-        <button @click="store.redo()" :disabled="store.future.length === 0" title="Redo (Ctrl+Y)">↪️</button>
+        <button 
+          @click="store.undo()" 
+          :disabled="store.historyIndex <= 0" 
+          title="Undo (Ctrl+Z)">
+          ↩️
+        </button>
+        <button 
+          @click="store.redo()" 
+          :disabled="store.historyIndex >= store.historyStack.length - 1" 
+          title="Redo (Ctrl+Y)">
+          ↪️
+        </button>
         <button @click="store.saveToCloud()" class="btn-save">💾</button>
       </div>
     </div>
@@ -87,17 +97,6 @@ function handleMergeChange(event) {
       <div class="config-group">
         <label>Map Name</label>
         <input v-model="store.mapName" class="input-text" />
-      </div>
-
-      <div class="config-group">
-        <label>Ring Size (ft)</label>
-        <div class="dims-row">
-          <input type="number" :value="store.ringDimensions.width"
-            @change="e => store.resizeRing(e.target.value, store.ringDimensions.height)" />
-          <span>x</span>
-          <input type="number" :value="store.ringDimensions.height"
-            @change="e => store.resizeRing(store.ringDimensions.width, e.target.value)" />
-        </div>
       </div>
 
       <div v-if="store.sport === 'barnhunt'" class="config-group">

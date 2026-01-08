@@ -1,10 +1,10 @@
-export function useDCMats(state, snapshot) {
+export function useDCMats(state) {
   function snapToGrid(val) {
     return Math.round(val * 6) / 6
   }
 
   function addDCMat(x, y) {
-    snapshot()
+
     state.dcMats.value.push({ 
       id: crypto.randomUUID(), 
       x: snapToGrid(x), 
@@ -14,14 +14,14 @@ export function useDCMats(state, snapshot) {
   }
 
   function removeDCMat(id) {
-    snapshot()
+
     state.dcMats.value = state.dcMats.value.filter(m => m.id !== id)
   }
 
   function rotateDCMat(id) {
     const mat = state.dcMats.value.find(m => m.id === id)
     if (mat) {
-      snapshot()
+
       mat.rotation = (mat.rotation + 15) % 360
     }
   }

@@ -7,38 +7,29 @@ import { mapService } from '../../services/mapService'
 import { libraryService } from '../../services/libraryService'
 
 /**
- * Extracts persistence logic (Save/Load/Import/Export) from the main store.
- * * @param {Object} state - An object containing all the Refs from the main store (bales, boardEdges, etc.)
- * @param {Object} userStore - The user store instance
- * @param {Object} notifications - A helper to show notifications ({ show: (msg, type) => ... })
+ * Persistence Logic
+ * Handles Cloud Save/Load, Local JSON Import/Export, and Library interactions.
+ * Refactored to use unified mapData state.
  */
 export function useMapPersistence(state, userStore, notifications) {
 
   // --- HELPER: CONSTRUCT DATA OBJECT ---
-  // Gathers the current state of the map into a clean object for saving/exporting.
   function getMapData() {
+    // 1. Gather all dynamic objects (bales, hides, etc.) from the unified store
+    // This automatically grabs everything defined in DEFAULT_MAP_DATA
+    const coreData = JSON.parse(JSON.stringify(state.mapData.value))
+
+    // 2. Attach Metadata & Settings (that live outside mapData)
     return {
+      ...coreData,
       dimensions: state.ringDimensions.value,
-      bales: state.bales.value,
-      agilityObstacles: state.agilityObstacles.value,
-      scentWorkObjects: state.scentWorkObjects.value,
-      dcMats: state.dcMats.value,
-      masterBlinds: state.masterBlinds.value,
-      boardEdges: state.boardEdges.value,
-      previousClassCount: state.previousClassCount.value,
-      isShared: state.isShared.value,
-      hides: state.hides.value,
-      startBox: state.startBox.value,
       wallTypes: state.wallTypes ? state.wallTypes.value : {},
-      gridStartCorner: state.gridStartCorner.value,
+      gridStartCorner: state.gridStartCorner ? state.gridStartCorner.value : 'top-left',
       trialLocation: state.trialLocation.value || '',
       trialDay: state.trialDay.value || '',
       trialNumber: state.trialNumber.value || '',
       baleConfig: state.baleConfig.value,
-      steps: state.steps.value || [],
-      zones: state.zones.value || [],
-      gate: state.gate.value || null,
-      markers: state.markers.value || []
+      previousClassCount: state.previousClassCount.value,
     }
   }
 
@@ -65,7 +56,7 @@ export function useMapPersistence(state, userStore, notifications) {
       sport: state.sport.value,
       thumbnail: thumbnail,
       updatedAt: new Date(),
-      data: getMapData()
+      data: getMapData() // Use the helper
     }
 
     // 3. Send to Service
@@ -88,7 +79,6 @@ export function useMapPersistence(state, userStore, notifications) {
 
   // --- SAVE SELECTION TO LIBRARY ---
   async function saveSelectionToLibrary(name, thumbnail) {
-    // 1. Validation
     if (state.selection.value.length === 0) {
       alert("Nothing selected! Select items to save first.")
       return
@@ -98,19 +88,24 @@ export function useMapPersistence(state, userStore, notifications) {
       return
     }
 
-    // 2. Extract Data (Filter only selected items)
-    const exportData = {
-      bales: state.bales.value.filter(b => state.selection.value.includes(b.id)),
-      boardEdges: state.boardEdges.value.filter(b => state.selection.value.includes(b.id)),
-      dcMats: state.dcMats.value.filter(m => state.selection.value.includes(m.id)),
-    }
+    // Dynamic Filter: Iterates all array-type objects in mapData
+    // automatically finding selected items regardless of type.
+    const exportData = {}
+    Object.keys(state.mapData.value).forEach(key => {
+      const collection = state.mapData.value[key]
+      if (Array.isArray(collection)) {
+        const selectedItems = collection.filter(item => state.selection.value.includes(item.id))
+        if (selectedItems.length > 0) {
+          exportData[key] = selectedItems
+        }
+      }
+    })
 
-    // 3. Send to Service
     try {
       await libraryService.addToLibrary(userStore.user, {
         name: name,
         sport: state.sport.value,
-        type: 'tunnel',
+        type: 'mixed', 
         data: exportData,
         thumbnail: thumbnail
       })
@@ -128,16 +123,8 @@ export function useMapPersistence(state, userStore, notifications) {
       name: state.mapName.value, 
       level: state.classLevel.value, 
       sport: state.sport.value, 
-      dcMats: state.dcMats.value, 
-      dimensions: state.ringDimensions.value, 
-      bales: state.bales.value, 
-      agilityObstacles: state.agilityObstacles.value, 
-      scentWorkObjects: state.scentWorkObjects.value, 
-      hides: state.hides.value, 
       isShared: state.isShared.value, 
-      masterBlinds: state.masterBlinds.value, 
-      boardEdges: state.boardEdges.value, 
-      previousClassCount: state.previousClassCount.value 
+      ...getMapData()
     }
     
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -158,7 +145,6 @@ export function useMapPersistence(state, userStore, notifications) {
   }
 
   // --- IMPORT DATA (CORE) ---
-// --- IMPORT DATA (CORE) ---
   function importMapFromData(data) {
     state.reset() 
     
@@ -171,30 +157,21 @@ export function useMapPersistence(state, userStore, notifications) {
 
     state.ringDimensions.value = source.dimensions || { width: 24, height: 24 }
     
-    if (state.gridStartCorner) {
-       state.gridStartCorner.value = source.gridStartCorner || 'top-left'
-    }
+    // Dynamic Load of Map Objects
+    // This loop ensures we only try to load keys that actually exist in our schema
+    Object.keys(state.mapData.value).forEach(key => {
+      if (source[key] !== undefined) {
+         state.mapData.value[key] = source[key]
+      }
+    })
 
-    // Core Objects
-    state.bales.value = source.bales || []
-    state.agilityObstacles.value = source.agilityObstacles || []
-    state.scentWorkObjects.value = source.scentWorkObjects || []
-    state.dcMats.value = source.dcMats || []
-    state.boardEdges.value = source.boardEdges || []
-    state.hides.value = source.hides || []
-    state.startBox.value = source.startBox || null
-    
-    // --- NEWLY ADDED FIELDS ---
-    state.steps.value = source.steps || []
-    state.zones.value = source.zones || []
-    state.gate.value = source.gate || null
-    state.markers.value = source.markers || []
-    // --------------------------
-
-    // Meta / Settings
+    // Load Metadata
+    if (state.wallTypes && source.wallTypes) state.wallTypes.value = source.wallTypes
+    if (state.gridStartCorner) state.gridStartCorner.value = source.gridStartCorner || 'top-left'
     if (state.trialLocation) state.trialLocation.value = source.trialLocation || ''
     if (state.trialDay) state.trialDay.value = source.trialDay || ''
     if (state.trialNumber) state.trialNumber.value = source.trialNumber || ''
+    if (state.previousClassCount) state.previousClassCount.value = source.previousClassCount || 0
     
     if (state.baleConfig) { 
        const def = { length: 3, width: 1.5, height: 1 }
@@ -210,53 +187,14 @@ export function useMapPersistence(state, userStore, notifications) {
 
   // --- LOAD FROM CLOUD DATA ---
   function loadMapFromData(id, data) {
-    state.reset()
+    // Re-use import logic for the heavy lifting
+    importMapFromData(data) 
+    
+    // Overwrite Cloud-specific fields
     state.currentMapId.value = id
-    state.mapName.value = data.name
-    state.classLevel.value = data.level || 'Novice'
-    state.sport.value = data.sport || 'barnhunt'
     state.isShared.value = data.isShared || false
     state.currentFolderId.value = data.folderId || null
-    
-    // --- FIX: DEFINE mapData AT THE VERY TOP ---
-    const mapData = data.data || data 
-    // -------------------------------------------
-
-    
-    // Now it is safe to access mapData for everything below
-    state.ringDimensions.value = mapData.dimensions || { width: 24, height: 24 }
-    state.bales.value = mapData.bales || []
-    state.agilityObstacles.value = mapData.agilityObstacles || []
-    state.scentWorkObjects.value = mapData.scentWorkObjects || []
-    state.dcMats.value = mapData.dcMats || []
-    state.boardEdges.value = mapData.boardEdges || []
-    state.hides.value = mapData.hides || []
-    state.masterBlinds.value = data.masterBlinds || []
-    state.startBox.value = mapData.startBox || null
-    state.previousClassCount.value = mapData.previousClassCount || 0
-    state.previousBales.value = JSON.parse(JSON.stringify(mapData.bales || []))
     state.comparisonMapName.value = "Original Save"
-    state.steps.value = mapData.steps || []
-    state.zones.value = mapData.zones || []
-    state.gate.value = mapData.gate || null
-    state.markers.value = mapData.markers || []
-    
-    if (state.wallTypes && mapData.wallTypes) state.wallTypes.value = mapData.wallTypes
-    if (state.gridStartCorner) state.gridStartCorner.value = mapData.gridStartCorner || 'top-left'
-    
-    // Trial Info
-    if (state.trialLocation) state.trialLocation.value = mapData.trialLocation || ''
-    if (state.trialDay) state.trialDay.value = mapData.trialDay || ''
-    if (state.trialNumber) state.trialNumber.value = mapData.trialNumber || ''
-
-    // Bale Config
-    if (state.baleConfig) {
-       const def = { length: 3, width: 1.5, height: 1 }
-       state.baleConfig.value = mapData.baleConfig || def
-    }
-    
-    // Run Validation
-    if (state.validateAllBales) state.validateAllBales()
   }
 
   // --- MERGE (Combine files) ---
@@ -265,45 +203,25 @@ export function useMapPersistence(state, userStore, notifications) {
     try {
       const data = JSON.parse(jsonString)
       const newItems = []
+      const source = data.data || data
       
-      // 1. Merge Bales
-      if (data.bales) {
-        data.bales.forEach(b => {
-          const newId = crypto.randomUUID()
-          const newBale = { ...b, id: newId }
-          state.bales.value.push(newBale)
-          newItems.push(newId)
-        })
-      }
-
-      // 2. Merge Boards
-      if (data.boardEdges) {
-        data.boardEdges.forEach(b => {
-          const newId = crypto.randomUUID()
-          const newBoard = { ...b, id: newId }
-          state.boardEdges.value.push(newBoard)
-          newItems.push(newId)
-        })
-      }
-
-      // 3. Merge DC Mats
-      if (data.dcMats) {
-        data.dcMats.forEach(m => {
-          const newId = crypto.randomUUID()
-          const newMat = { ...m, id: newId }
-          state.dcMats.value.push(newMat)
-          newItems.push(newId)
-        })
-      }
+      // Dynamic Merge
+      Object.keys(state.mapData.value).forEach(key => {
+        // Only merge arrays (collections). Ignore singletons like startBox.
+        if (Array.isArray(state.mapData.value[key]) && Array.isArray(source[key])) {
+           source[key].forEach(item => {
+             const newId = crypto.randomUUID()
+             const newItem = { ...item, id: newId }
+             state.mapData.value[key].push(newItem)
+             newItems.push(newId)
+           })
+        }
+      })
       
-      // 4. Select the new items
+      // Select the new items
       state.selection.value = newItems
       
-      state.validateAllBales()
-      
-      // Force reactivity
-      state.bales.value = [...state.bales.value]
-      state.boardEdges.value = [...state.boardEdges.value]
+      if (state.validateAllBales) state.validateAllBales()
       
       notifications.show("Library item loaded successfully!", 'success')
       
@@ -313,7 +231,7 @@ export function useMapPersistence(state, userStore, notifications) {
     }
   }
 
-  // --- CLOUD LIST MANAGEMENT ---
+  // --- CLOUD LIST MANAGEMENT (Unchanged) ---
   async function loadUserMaps() {
      if (!userStore.user) return
      const q = query(collection(db, "maps"), where("uid", "==", userStore.user.uid))
@@ -325,10 +243,7 @@ export function useMapPersistence(state, userStore, notifications) {
   async function deleteMap(id) { 
     try { 
       await deleteDoc(doc(db, "maps", id))
-      // If we deleted the currently open map, clear the ID so we don't try to update it later
       if (state.currentMapId.value === id) state.currentMapId.value = null 
-      // Refresh list
-      
       await loadUserMaps()
       notifications.show("Map deleted.", 'success')
     } catch (e) { 
@@ -353,7 +268,7 @@ export function useMapPersistence(state, userStore, notifications) {
     await loadUserMaps()
   }
 
-  // --- FOLDER MANAGEMENT ---
+  // --- FOLDER MANAGEMENT (Unchanged) ---
   async function createFolder(name) { 
     if (!userStore.user) return
     await addDoc(collection(db, "folders"), { uid: userStore.user.uid, name, createdAt: new Date() })
@@ -369,7 +284,6 @@ export function useMapPersistence(state, userStore, notifications) {
   async function deleteFolder(fid) { 
     if (!confirm("Delete folder? Maps inside will be moved to 'Unorganized'.")) return
     
-    // 1. Move maps out of folder
     const batch = writeBatch(db)
     const mapQuery = query(collection(db, "maps"), where("folderId", "==", fid))
     const mapDocs = await getDocs(mapQuery)
@@ -378,7 +292,6 @@ export function useMapPersistence(state, userStore, notifications) {
       batch.update(d.ref, { folderId: null })
     })
     
-    // 2. Delete folder
     batch.delete(doc(db, "folders", fid))
     
     await batch.commit()

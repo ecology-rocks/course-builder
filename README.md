@@ -2,20 +2,20 @@
 This is my one-true-copy of the project roadmap.
 
 ## Updates in Progress
-
+ - Adding code documentation
+ - Adding people documentation
  
 
 ## Feature Requests & Future Updates (Long Term)
  - Offline caching, offline version, local storage options (very long term)
  - Validation for class level guidelines
- - Point to point measurement tool
+ - Point to point measurement tool and area measurement tool (for distance challenge calculation)
  - Public library access for repeatable structures
  - Add a variety of SENIOR and MASTER tunnels to Tunnel Library.
  - Premade tunnels should indicate EastCoast/WestCoast dimensions
  - Numbered rat spots for Master
  - Ability to modify subscriptions, add extra seats to club sub, etc. 
  - Documentation + Guides, help button, etc.
- - Increase line thickness on tall bale slash marks so they're visible when printing
  - Include Course Builder map. Judge Map: All levels plus hides. CB Map: All levels. Exhib. Map: 1st Level Only
  - Consider adding a zoom function beyond the scale function at the bottom
  - Perimeter distances and hide locations very small and hard to read. Maybe a menu item to increase/decrease size?
@@ -23,6 +23,11 @@ This is my one-true-copy of the project roadmap.
  - "Select Area" selects things that are merely close to the selection box
  - Rat marker color change to indicate under/over a leaner?
  - Make a "copy" button on the dashboard for nested map design instead of the export/import feature.
+ - Make the step larger, and update the code so it's in feet instead of pixels
+ - Refactor BarnHuntLayer into its individual parts to prevent cross contamination issues
+ - Consider how to implement "whole tunnel board" options best
+ - Ability to place text on the map / notes box
+ - Adjust Ctrl+C/V so that they work in text inputs.
 
 ## New Year, New Editor Update (2026-01-03)
  - Nested course design: Now you can select a previously saved map to compare to in Course Settings! Comparison will show up in Map Statistics.

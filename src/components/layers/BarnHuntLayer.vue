@@ -1,11 +1,21 @@
 <script setup>
-import { computed, ref, nextTick } from 'vue'
+import { computed, ref } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
+
+// Components
+import BaleObject from './BarnHunt/BaleObject.vue'
+import BoardObject from './BarnHunt/BoardObject.vue' // Renamed
+import HideMarker from './BarnHunt/HideMarker.vue'
+import StepMarker from './BarnHunt/StepMarker.vue'
+import ZoneRect from './BarnHunt/ZoneRect.vue'
+import StartBoxObject from './BarnHunt/StartBoxObject.vue'
+import DCMatObject from './BarnHunt/DCMatObject.vue'
 
 const props = defineProps(['scale', 'showHides', 'GRID_OFFSET'])
 const store = useMapStore()
 
-const baleRefs = ref({})
+// UNIFIED REF REGISTRY: Stores { [id]: ComponentInstance }
+const objectRefs = ref({})
 const dragStartPos = ref({})
 
 // --- COMPUTED ---
@@ -21,244 +31,25 @@ const visibleBales = computed(() => {
   })
 })
 
-const isDraggable = computed(() => {
-  return store.activeTool === 'select' || store.activeTool === 'bale'
-})
-
-function dcMatDragBoundFunc(pos) {
-  const node = this
-  const matId = node.attrs.id
-  const mat = store.dcMats.find(m => m.id === matId)
-
-  if (!mat) return pos
-
-  // 1. Get Dimensions from Course Settings
-  const W = store.dcMatConfig.width
-  const H = store.dcMatConfig.height
-
-  // 2. Calculate Rotated Bounding Box (AABB)
-  const rad = (mat.rotation * Math.PI) / 180
-  const absCos = Math.abs(Math.cos(rad))
-  const absSin = Math.abs(Math.sin(rad))
-
-  // Calculate visual width/height in pixels
-  const visualW = ((W * absCos) + (H * absSin)) * props.scale
-  const visualH = ((W * absSin) + (H * absCos)) * props.scale
-
-  // 3. Define Constraints (Node position is the center)
-  const halfW = visualW / 2
-  const halfH = visualH / 2
-
-  const minX = halfW
-  const maxX = (store.ringDimensions.width * props.scale) - halfW
-  const minY = halfH
-  const maxY = (store.ringDimensions.height * props.scale) - halfH
-
-  // 4. Snap & Clamp
-  const layerAbs = node.getLayer().getAbsolutePosition()
-  const relX = pos.x - layerAbs.x
-  const relY = pos.y - layerAbs.y
-  const step = props.scale / 6 // 3-inch snapping
-
-  let snappedRelX = Math.round(relX / step) * step
-  let snappedRelY = Math.round(relY / step) * step
-
-  snappedRelX = Math.max(minX, Math.min(snappedRelX, maxX))
-  snappedRelY = Math.max(minY, Math.min(snappedRelY, maxY))
-
-  return { x: snappedRelX + layerAbs.x, y: snappedRelY + layerAbs.y }
-}
-
-// --- HELPERS ---
-function getBaleColor(bale) {
-  if (bale.supported === false) return '#ef5350'
-  switch (bale.layer) {
-    case 1: return '#e6c200'; case 2: return '#4caf50'; case 3: return '#2196f3';
-    default: return '#ccc'
-  }
-}
-function getOpacity(layer) { return layer === store.currentLayer ? 1 : 0.5 }
-
-// Dimensions based on orientation
-function getBaleDims(bale) {
-  const L = store.baleConfig.length
-  const W = store.baleConfig.width
-  const H = store.baleConfig.height
-
-  if (bale.orientation === 'pillar') return { width: W, height: H }
-  if (bale.orientation === 'tall') return { width: L, height: H }
-  return { width: L, height: W } // Flat
-}
-
-function getBaleVisual(bale) {
-  const dims = getBaleDims(bale) // Helper from previous step
-  return {
-    width: dims.width * props.scale,
-    height: dims.height * props.scale,
-    rotation: bale.rotation
-  }
-}
-
-function getAnchorLines(bale) {
-  const dims = getBaleDims(bale)
-  const W = store.ringDimensions.width
-  const H = store.ringDimensions.height
-  const bx = bale.x
-  const by = bale.y
-  const bw = dims.width
-  const bh = dims.height
-
-  // Helper: Format decimal feet to X' Y" (e.g. 4.25 -> 4' 3")
-  const fmt = (val) => {
-    const totalInches = Math.round(val * 12)
-    const ft = Math.floor(totalInches / 12)
-    const inch = totalInches % 12
-    return inch === 0 ? `${ft}'` : `${ft}' ${inch}"`
-  }
-  
-  // Center of bale
-  const cx = bx + bw / 2
-  const cy = by + bh / 2
-
-  const lines = []
-
-  // 1. Horizontal Distance (Find nearest wall)
-  const distLeft = bx
-  const distRight = W - (bx + bw)
-  
-  if (distLeft <= distRight) {
-    // Measure to Left Wall
-    lines.push({
-      points: [0, cy * props.scale, bx * props.scale, cy * props.scale],
-      text: fmt(distLeft), // <--- Used fmt()
-      textX: (bx / 2) * props.scale,
-      textY: (cy * props.scale) - 15
-    })
-  } else {
-    // Measure to Right Wall
-    lines.push({
-      points: [(bx + bw) * props.scale, cy * props.scale, W * props.scale, cy * props.scale],
-      text: fmt(distRight), // <--- Used fmt()
-      textX: (W - (distRight / 2)) * props.scale,
-      textY: (cy * props.scale) - 15
-    })
-  }
-
-  // 2. Vertical Distance (Find nearest wall)
-  const distTop = by
-  const distBottom = H - (by + bh)
-
-  if (distTop <= distBottom) {
-    // Measure to Top Wall
-    lines.push({
-      points: [cx * props.scale, 0, cx * props.scale, by * props.scale],
-      text: fmt(distTop), // <--- Used fmt()
-      textX: (cx * props.scale) + 5,
-      textY: (by / 2) * props.scale
-    })
-  } else {
-    // Measure to Bottom Wall
-    lines.push({
-      points: [cx * props.scale, (by + bh) * props.scale, cx * props.scale, H * props.scale],
-      text: fmt(distBottom), // <--- Used fmt()
-      textX: (cx * props.scale) + 5,
-      textY: (H - (distBottom / 2)) * props.scale
-    })
-  }
-
-  return lines
-}
-
-function getArrowPoints(width, height, direction) {
-  const cx = width / 2; const cy = height / 2; const size = Math.min(width, height) * 0.4
-  switch (direction) {
-    case 'top': return [cx, cy + size, cx, cy - size]
-    case 'bottom': return [cx, cy - size, cx, cy + size]
-    case 'left': return [cx + size, cy, cx - size, cy]
-    case 'right': return [cx - size, cy, cx + size, cy]
-    default: return []
-  }
-}
-
-// Snapping Logic
-function baleDragBoundFunc(pos) {
-  const node = this
-  const baleId = node.attrs.id
-  const bale = store.bales.find(b => b.id === baleId)
-
-  if (!bale) return pos
-
-  // 1. Get Base Dimensions
-  const L = store.baleConfig.length
-  const W = store.baleConfig.width
-  const H = store.baleConfig.height
-
-  let w, h
-  if (bale.orientation === 'pillar') { w = W; h = H }
-  else if (bale.orientation === 'tall') { w = L; h = H }
-  else { w = L; h = W } // Flat
-
-  // 2. Calculate Rotated Bounding Box (AABB)
-  // We need this to know exactly where the visual edges hit the walls
-  const rad = (bale.rotation * Math.PI) / 180
-  const absCos = Math.abs(Math.cos(rad))
-  const absSin = Math.abs(Math.sin(rad))
-
-  const visualW = ((w * absCos) + (h * absSin)) * props.scale
-  const visualH = ((w * absSin) + (h * absCos)) * props.scale
-
-  // 3. Define Constraints
-  const halfW = visualW / 2
-  const halfH = visualH / 2
-
-  const minX = halfW
-  const maxX = (store.ringDimensions.width * props.scale) - halfW
-  const minY = halfH
-  const maxY = (store.ringDimensions.height * props.scale) - halfH
-
-  // 4. Snap & Clamp
-  const layerAbs = node.getLayer().getAbsolutePosition()
-  const relX = pos.x - layerAbs.x
-  const relY = pos.y - layerAbs.y
-  const step = props.scale / 6
-
-  let snappedRelX = Math.round(relX / step) * step
-  let snappedRelY = Math.round(relY / step) * step
-
-  snappedRelX = Math.max(minX, Math.min(snappedRelX, maxX))
-  snappedRelY = Math.max(minY, Math.min(snappedRelY, maxY))
-
-  return { x: snappedRelX + layerAbs.x, y: snappedRelY + layerAbs.y }
-}
-
-
-function dragBoundFunc(pos) {
-  const node = this; const layerAbs = node.getLayer().getAbsolutePosition(); const step = props.scale / 6
-  let x = Math.round((pos.x - layerAbs.x) / step) * step; let y = Math.round((pos.y - layerAbs.y) / step) * step
-  return { x: x + layerAbs.x, y: y + layerAbs.y }
+// --- HELPER: Register Refs ---
+const setRef = (el, id) => {
+  if (el) objectRefs.value[id] = el
 }
 
 // --- HANDLERS ---
-// In BarnHuntLayer.vue
-
 function handleRightClick(e, id) { 
   e.evt.preventDefault()
-  
-  // [FIX] Do not rotate if we are using the Lean tool
   if (store.activeTool === 'lean') return 
-  if (e.evt.ctrlKey) return
-  if (e.evt.altKey) return
+  if (e.evt.ctrlKey || e.evt.altKey) return
   store.rotateBale(id) 
 }
 
 function handleLeftClick(e, id) {
   const evt = e.evt
-
-  // 1. Keyboard Shortcuts
   if (evt.altKey) { store.cycleOrientation(id); return }
   if (evt.ctrlKey) { store.cycleLean(id); return }
 
-  // 2. Board Tool
+  // Board Drawing Logic
   if (store.activeTool === 'board') {
     const stage = e.target.getStage()
     const p = stage.getPointerPosition()
@@ -270,230 +61,210 @@ function handleLeftClick(e, id) {
     return
   }
 
-  // 3. Select/Move
+// Select
   if (store.activeTool === 'select' || store.activeTool === 'bale') {
     const isMulti = evt.shiftKey || evt.ctrlKey || evt.metaKey
-    if (!store.selection.includes(id) && !isMulti) store.selectBale(id, false)
-    else if (isMulti) store.selectBale(id, true)
+    if (!store.selection.includes(id) && !isMulti) store.selectObject(id, false)
+    else if (isMulti) store.selectObject(id, true)
     return
   }
-
-  // 4. Specific Tools
-  if (store.activeTool === 'rotate') { store.rotateBale(id); return }
-  if (store.activeTool === 'type' || store.activeTool === 'orientation') { store.cycleOrientation(id); return }
-  if (store.activeTool === 'lean') { store.cycleLean(id); return }
-  if (store.activeTool === 'delete') { store.removeBale(id); return }
+  
+  // Tools
+  if (store.activeTool === 'rotate') store.rotateBale(id)
+  if (store.activeTool === 'orientation') store.cycleOrientation(id)
+  if (store.activeTool === 'lean') store.cycleLean(id)
+  if (store.activeTool === 'delete') store.removeBale(id)
 }
 
+// --- MULTI-OBJECT DRAG LOGIC ---
+
 function handleDragStart(e, id) {
-  if (!isDraggable.value) return
-  if (!store.selection.includes(id)) store.selectBale(id, false)
+  if (!store.selection.includes(id)) store.selectObject(id, false)
   dragStartPos.value = {}
   store.selection.forEach(selId => {
-    const node = baleRefs.value[selId]?.getNode()
+    const cmp = objectRefs.value[selId]
+    const node = cmp ? cmp.getNode() : null
     if (node) dragStartPos.value[selId] = { x: node.x(), y: node.y() }
   })
 }
 
 function handleDragMove(e, id) {
   const node = e.target
-  const startPos = dragStartPos.value[id]
-  if (!startPos) return
-  const dx = node.x() - startPos.x; const dy = node.y() - startPos.y
+  const start = dragStartPos.value[id]
+  if (!start) return
+
+  const dx = node.x() - start.x
+  const dy = node.y() - start.y
+  
   store.selection.forEach(selId => {
     if (selId === id) return
-    const peerNode = baleRefs.value[selId]?.getNode()
+    const cmp = objectRefs.value[selId]
+    const peerNode = cmp ? cmp.getNode() : null
     const peerStart = dragStartPos.value[selId]
-    if (peerNode && peerStart) peerNode.position({ x: peerStart.x + dx, y: peerStart.y + dy })
+    if (peerNode && peerStart) {
+      peerNode.position({ x: peerStart.x + dx, y: peerStart.y + dy })
+    }
   })
 }
 
-function handleDragEnd(e, id, type) {
-  const node = e.target
-  const layerAbs = node.getLayer().getAbsolutePosition()
-  const absPos = node.getAbsolutePosition()
+function handleDragEnd(e, id) {
+  const start = dragStartPos.value[id]
+  if (!start) return
+  const totalDx = e.target.x() - start.x
+  const totalDy = e.target.y() - start.y
   
-  // Convert pixels to Grid Coordinates
-  const rawX = (absPos.x - layerAbs.x) / props.scale
-  const rawY = (absPos.y - layerAbs.y) / props.scale
+  const gridDx = totalDx / props.scale
+  const gridDy = totalDy / props.scale
+  
+  store.moveSelection(gridDx, gridDy)
+}
 
-  if (type === 'bale') {
-    // Existing logic for bales (already accounts for the 1.5/0.75 offset)
-    const finalX = rawX - 1.5
-    const finalY = rawY - 0.75
-    nextTick(() => { store.commitDrag(id, finalX, finalY) })
+// Helpers for Update Events (Zone/Step specific)
+function handleUpdateZone(attrs) { store.updateZone(attrs.id, attrs) }
+function handleUpdateStep(attrs) { store.updateStep(attrs.id, attrs) }
+
+// --- ANCHOR LINES ---
+function getAnchorLines(bale) {
+  // 1. Get Dynamic Config
+  const { length: L, width: W, height: H } = store.baleConfig
+  
+  let w, h
+  if (bale.orientation === 'pillar') { w = W; h = H }
+  else if (bale.orientation === 'tall') { w = L; h = H }
+  else { w = L; h = W } // Flat
+
+  // 2. Calculate Center (Pivot) in Grid Units
+  const halfW = w / 2
+  const halfH = h / 2
+  const pivotX = bale.x + halfW
+  const pivotY = bale.y + halfH
+
+  // 3. Define Local Corners (offsets from center)
+  const corners = [
+    { x: -halfW, y: -halfH },
+    { x: halfW,  y: -halfH },
+    { x: halfW,  y: halfH },
+    { x: -halfW, y: halfH }
+  ]
+
+  // 4. Rotate Corners to find Bounding Box
+  const rad = (bale.rotation * Math.PI) / 180
+  const cos = Math.cos(rad)
+  const sin = Math.sin(rad)
+
+  const rotatedCoords = corners.map(p => ({
+    x: (p.x * cos) - (p.y * sin) + pivotX,
+    y: (p.x * sin) + (p.y * cos) + pivotY
+  }))
+
+  const minX = Math.min(...rotatedCoords.map(c => c.x))
+  const maxX = Math.max(...rotatedCoords.map(c => c.x))
+  const minY = Math.min(...rotatedCoords.map(c => c.y))
+  const maxY = Math.max(...rotatedCoords.map(c => c.y))
+
+  // 5. Calculate Lines
+  const RingW = store.ringDimensions.width
+  const RingH = store.ringDimensions.height
+  const lines = []
+  const fmt = (val) => { const total = Math.round(val * 12); const ft = Math.floor(total / 12); const inch = total % 12; return inch === 0 ? `${ft}'` : `${ft}' ${inch}"` }
+
+  // Horizontal (Left vs Right)
+  const distLeft = minX
+  const distRight = RingW - maxX
+
+  if (distLeft <= distRight) {
+    lines.push({ points: [0, pivotY * props.scale, minX * props.scale, pivotY * props.scale], text: fmt(distLeft), textX: (minX / 2) * props.scale, textY: (pivotY * props.scale) - 15 })
+  } else {
+    lines.push({ points: [maxX * props.scale, pivotY * props.scale, RingW * props.scale, pivotY * props.scale], text: fmt(distRight), textX: (RingW - (distRight / 2)) * props.scale, textY: (pivotY * props.scale) - 15 })
   }
-  else if (type === 'hide') { 
-    const h = store.hides.find(h => h.id === id)
-    if (h) { h.x = rawX; h.y = rawY } 
+
+  // Vertical (Top vs Bottom)
+  const distTop = minY
+  const distBottom = RingH - maxY
+
+  if (distTop <= distBottom) {
+    lines.push({ points: [pivotX * props.scale, 0, pivotX * props.scale, minY * props.scale], text: fmt(distTop), textX: (pivotX * props.scale) + 5, textY: (minY / 2) * props.scale })
+  } else {
+    lines.push({ points: [pivotX * props.scale, maxY * props.scale, pivotX * props.scale, RingH * props.scale], text: fmt(distBottom), textX: (pivotX * props.scale) + 5, textY: (RingH - (distBottom / 2)) * props.scale })
   }
-  else if (type === 'dcmat') { 
-    const m = store.dcMats.find(m => m.id === id)
-    if (m) { 
-      // [FIX] Subtract the half-width/height offset so we save the Top-Left corner
-      // This matches the logic used in the <template> :x calculation
-      const halfW = store.dcMatConfig.width / 2
-      const halfH = store.dcMatConfig.height / 2
-      
-      m.x = rawX - halfW
-      m.y = rawY - halfH
-    } 
-  }
-  else if (type === 'startbox') { 
-    if (store.startBox) { store.startBox.x = rawX; store.startBox.y = rawY } 
-  }
+
+  return lines
 }
 
-
-function handleBoardClick(e, id) {
-  if (store.activeTool === 'rotate') store.rotateBoard(id)
-  if (store.activeTool === 'delete') store.removeBoardEdge(id)
-}
-function handleBoardHandleDrag(e, boardId, whichPoint) {
-  const node = e.target; const absPos = node.getAbsolutePosition()
-  const rawX = (absPos.x - props.GRID_OFFSET) / props.scale; const rawY = (absPos.y - props.GRID_OFFSET) / props.scale
-  store.updateBoardEndpoint(boardId, whichPoint, rawX, rawY)
-  node.position({ x: (Math.round(rawX * 2) / 2) * props.scale, y: (Math.round(rawY * 2) / 2) * props.scale })
-}
-
-// [UPDATED] Handlers for DC Mats (No local functions)
-function handleDCClick(e, id) { 
-  if (e.evt.button !== 0) return; 
-  if (store.activeTool === 'rotate') store.rotateDCMat(id); 
-  if (store.activeTool === 'delete') store.removeDCMat(id) 
-}
-
-function handleDCRightClick(e, id) {
-  e.evt.preventDefault()
-  store.rotateDCMat(id) 
-}
-function handleHideClick(e, id) { if (e.evt.button !== 0) return; if (store.activeTool === 'delete') { store.removeHide(id); return }; store.cycleHideType(id) }
 </script>
 
 <template>
   <v-group>
-    <v-group v-if="store.startBox"
-      :config="{ draggable: true, dragBoundFunc: dragBoundFunc, x: store.startBox.x * scale, y: store.startBox.y * scale }"
-      @dragend="handleDragEnd($event, null, 'startbox')"
-      @click="store.activeTool === 'delete' ? store.removeStartBox() : null">
-      <v-rect
-        :config="{ width: 4 * scale, height: 4 * scale, fill: 'rgba(200, 200, 200, 0.5)', stroke: 'black', dash: [10, 5] }" />
-      <v-text :config="{ text: 'START', width: 4 * scale, padding: 5, align: 'center', fontSize: 14 }" />
-    </v-group>
+    <StartBoxObject v-if="store.startBox" :scale="scale" 
+      :ref="(el) => setRef(el, store.startBox.id || 'startbox')"
+      @dragstart="handleDragStart($event, store.startBox.id)"
+      @dragmove="handleDragMove($event, store.startBox.id)"
+      @dragend="handleDragEnd($event, store.startBox.id)" 
+    />
 
-<v-group v-for="mat in store.dcMats" :key="mat.id"
-      :config="{ 
-        id: mat.id,  draggable: true, 
-        dragBoundFunc: dcMatDragBoundFunc, x: (mat.x * scale) + ((store.dcMatConfig.width / 2) * scale), 
-        y: (mat.y * scale) + ((store.dcMatConfig.height / 2) * scale),
-        offsetX: (store.dcMatConfig.width / 2) * scale,
-        offsetY: (store.dcMatConfig.height / 2) * scale,
-        rotation: mat.rotation 
-      }"
-      @dragend="handleDragEnd($event, mat.id, 'dcmat')" 
-      @click="handleDCClick($event, mat.id)"
-      @contextmenu="handleDCRightClick($event, mat.id)">
-      
-      <v-rect :config="{ 
-        width: store.dcMatConfig.width * scale, 
-        height: store.dcMatConfig.height * scale, 
-        fill: '#d1c4e9', 
-        stroke: 'black' 
-      }" />
-      
-      <v-text :config="{ text: 'DC', fontSize: 12, x: 5, y: 5 }" />
-    </v-group>
+    <DCMatObject v-for="mat in store.dcMats" :key="mat.id" :mat="mat" :scale="scale" 
+      :ref="(el) => setRef(el, mat.id)"
+      @dragstart="handleDragStart($event, mat.id)"
+      @dragmove="handleDragMove($event, mat.id)"
+      @dragend="handleDragEnd($event, mat.id)"
+    />
 
-    <v-group v-for="bale in visibleBales" :key="bale.id" :ref="el => baleRefs[bale.id] = el" :config="{
-      id: bale.id,
-      draggable: isDraggable,
-      dragBoundFunc: baleDragBoundFunc,
-      listening: bale.layer === store.currentLayer || store.selection.includes(bale.id),
-      x: (bale.x * scale) + (1.5 * scale),
-      y: (bale.y * scale) + (0.75 * scale),
-      rotation: bale.rotation,
-      opacity: getOpacity(bale.layer),
-      offsetX: 1.5 * scale,
-      offsetY: 0.75 * scale
-    }" @contextmenu="handleRightClick($event, bale.id)"
-      @click="handleLeftClick($event, bale.id)" @dragstart="handleDragStart($event, bale.id)"
-      @dragmove="handleDragMove($event, bale.id)" @dragend="handleDragEnd($event, bale.id, 'bale')">
-      <v-rect :config="{
-        width: getBaleDims(bale).width * scale,
-        height: getBaleDims(bale).height * scale,
-        fill: getBaleColor(bale),
-        // If selected, be Blue. If not selected but is Anchor, be Red. Otherwise Black.
-        stroke: store.selection.includes(bale.id) ? '#00a1ff' : (bale.isAnchor ? '#d32f2f' : 'black'),
-        strokeWidth: store.selection.includes(bale.id) ? 3 : (bale.isAnchor ? 2 : 1),
-        shadowBlur: store.selection.includes(bale.id) ? 10 : 0,
-        shadowColor: '#00a1ff'
-      }" />
 
-      <v-line v-if="bale.orientation === 'tall'" :config="{
-        points: [0, 0, getBaleDims(bale).width * scale, getBaleDims(bale).height * scale],
-        stroke: 'black', strokeWidth: 2, opacity: 0.4
-      }" />
 
-      <v-text v-if="bale.isAnchor" :config="{
-        text: '⚓',
-        fontSize: 20,
-        align: 'center',
-        width: getBaleDims(bale).width * scale,
-        y: (getBaleDims(bale).height * scale) / 2 - 10
-      }" />
+    <BaleObject 
+      v-for="bale in visibleBales" 
+      :key="bale.id" :bale="bale" :scale="scale"
+      :ref="(el) => setRef(el, bale.id)"
+      @contextmenu="handleRightClick($event, bale.id)"
+      @click="handleLeftClick($event, bale.id)"
+      @dragstart="handleDragStart($event, bale.id)"
+      @dragmove="handleDragMove($event, bale.id)"
+      @dragend="handleDragEnd($event, bale.id)"
+    />
 
-      <v-group v-if="bale.orientation === 'pillar'">
-        <v-line
-          :config="{ points: [0, 0, getBaleDims(bale).width * scale, getBaleDims(bale).height * scale], stroke: 'black', strokeWidth: 2, opacity: 0.4 }" />
-        <v-line
-          :config="{ points: [getBaleDims(bale).width * scale, 0, 0, getBaleDims(bale).height * scale], stroke: 'black', strokeWidth: 2, opacity: 0.4 }" />
-      </v-group>
+    <template v-if="props.showHides">
+      <HideMarker v-for="hide in store.hides" :key="hide.id" :hide="hide" :scale="scale" 
+        :ref="(el) => setRef(el, hide.id)"
+        @dragstart="handleDragStart($event, hide.id)"
+        @dragmove="handleDragMove($event, hide.id)"
+        @dragend="handleDragEnd($event, hide.id)"
+      />
+    </template>
 
-      <v-arrow v-if="bale.lean"
-        :config="{ points: getArrowPoints(getBaleDims(bale).width * scale, getBaleDims(bale).height * scale, bale.lean), pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4 }" />
-    </v-group>
-
-    <v-group v-for="board in store.boardEdges" :key="board.id" @click="handleBoardClick($event, board.id)">
-      <v-line
-        :config="{ points: [board.x1 * scale, board.y1 * scale, board.x2 * scale, board.y2 * scale], stroke: store.selection.includes(board.id) ? '#2196f3' : '#2e7d32', strokeWidth: 6, lineCap: 'round', hitStrokeWidth: 20 }" />
-      <v-circle
-        :config="{ x: board.x1 * scale, y: board.y1 * scale, radius: 6, fill: '#1b5e20', draggable: true, dragBoundFunc: dragBoundFunc }"
-        @dragend="handleBoardHandleDrag($event, board.id, 'start')" />
-      <v-circle
-        :config="{ x: board.x2 * scale, y: board.y2 * scale, radius: 6, fill: '#1b5e20', draggable: true, dragBoundFunc: dragBoundFunc }"
-        @dragend="handleBoardHandleDrag($event, board.id, 'end')" />
-    </v-group>
-
-    <v-group v-for="hide in store.hides" :key="hide.id" v-if="props.showHides"
-      :config="{ draggable: true, dragBoundFunc: dragBoundFunc, x: hide.x * scale, y: hide.y * scale }"
-      @dragend="handleDragEnd($event, hide.id, 'hide')" @click="handleHideClick($event, hide.id)">
-      <v-circle
-        :config="{ radius: 8, fill: hide.type === 'rat' ? 'red' : (hide.type === 'litter' ? 'yellow' : 'white'), stroke: 'black', strokeWidth: 2 }" />
-      <v-text
-        :config="{ text: hide.type === 'rat' ? 'R' : (hide.type === 'litter' ? 'L' : 'E'), fontSize: 10, x: -3, y: -4, fontStyle: 'bold' }" />
-    </v-group>
+    <StepMarker v-for="step in store.steps" :key="step.id" :step="step" :scale="scale"
+      :isSelected="store.selection.includes(step.id)" 
+      :ref="(el) => setRef(el, step.id)"
+      @select="store.selectObject(step.id, true)"
+      @update="handleUpdateStep"
+      @dragstart="handleDragStart($event, step.id)"
+      @dragmove="handleDragMove($event, step.id)"
+      @dragend="handleUpdateStep"
+      @rotate="store.rotateStep"
+    />
+    
+    <ZoneRect v-for="zone in store.zones" :key="zone.id" :zone="zone" :scale="scale"
+      :isSelected="store.selection.includes(zone.id)" 
+      :ref="(el) => setRef(el, zone.id)"
+      @select="store.selectObject(zone.id, true)"
+      @update="handleUpdateZone"
+      @dragstart="handleDragStart($event, zone.id)"
+      @dragmove="handleDragMove($event, zone.id)"
+      @dragend="handleUpdateZone"
+    />
+    
+<BoardObject v-for="board in store.boardEdges" :key="board.id" :board="board" :scale="scale" 
+      :ref="(el) => setRef(el, board.id)"
+      @dragstart="handleDragStart($event, board.id)"
+      @dragmove="handleDragMove($event, board.id)"
+      @dragend="handleDragEnd($event, board.id)"
+    />
 
     <v-group>
       <template v-for="bale in visibleBales" :key="'anchor-'+bale.id">
         <template v-if="bale.isAnchor">
           <v-group v-for="(line, i) in getAnchorLines(bale)" :key="i">
-            <v-arrow :config="{
-              points: line.points,
-              pointerLength: 5,
-              pointerWidth: 5,
-              fill: '#d32f2f',
-              stroke: '#d32f2f',
-              strokeWidth: 1,
-              dash: [4, 4]
-            }" />
-            <v-text :config="{
-              x: line.textX,
-              y: line.textY,
-              text: line.text,
-              fontSize: 12,
-              fill: '#d32f2f',
-              fontStyle: 'bold'
-            }" />
+            <v-arrow :config="{ points: line.points, pointerLength: 5, pointerWidth: 5, fill: '#d32f2f', stroke: '#d32f2f', strokeWidth: 1, dash: [4, 4], listening: false }" />
+            <v-text :config="{ x: line.textX, y: line.textY, text: line.text, fontSize: 12, fill: '#d32f2f', fontStyle: 'bold', listening: false }" />
           </v-group>
         </template>
       </template>

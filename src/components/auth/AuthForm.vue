@@ -26,44 +26,35 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="auth-card">
-    <h2>{{ isRegistering ? 'Create Account' : 'Welcome Back' }}</h2>
-    <p>{{ isRegistering ? 'Start building your maps today' : 'Login to access your maps' }}</p>
+  <div class="auth-form">
+    <h3>{{ isRegistering ? 'Register' : 'Log In' }}</h3>
     
-    <div class="form-group">
-      <input v-model="email" type="email" placeholder="Email Address" />
-      <input v-model="password" type="password" placeholder="Password" />
-    </div>
+    <form @submit.prevent="handleSubmit">
+      <input 
+        v-model="email" 
+        type="email" 
+        placeholder="Email" 
+        required
+        autocomplete="username"
+      />
+      <input 
+        v-model="password" 
+        type="password" 
+        placeholder="Password" 
+        required
+        autocomplete="current-password"
+      />
+      
+      <button type="submit" :disabled="userStore.loading">
+        {{ isRegistering ? 'Sign Up' : 'Log In' }}
+      </button>
+    </form>
 
-    <div v-if="isRegistering">
-      <div class="sport-select-label">Choose your Primary Sport:</div>
-      <div class="sport-selector">
-        <label :class="{ active: registerSport === 'barnhunt' }">
-          <input type="radio" v-model="registerSport" value="barnhunt">
-          📦 Barn Hunt
-        </label>
-        <label :class="{ active: registerSport === 'agility' }">
-          <input type="radio" v-model="registerSport" value="agility">
-          🐕 Agility
-        </label>
-      </div>
-    </div>
+    <p @click="isRegister = !isRegister" class="toggle-link">
+      {{ isRegistering ? 'Already have an account? Log In' : 'Need an account? Sign Up' }}
+    </p>
 
-    <div class="auth-actions">
-      <button v-if="!isRegistering" @click="handleSubmit" class="btn-primary">Login</button>
-      <button v-else @click="handleSubmit" class="btn-secondary">Register New Account</button>
-    </div>
-
-    <div class="auth-toggle">
-      <span v-if="!isRegistering">
-        New here? <a href="#" @click.prevent="isRegistering = true">Create an Account</a>
-      </span>
-      <span v-else>
-        Already have an account? <a href="#" @click.prevent="isRegistering = false">Back to Login</a>
-      </span>
-    </div>
-
-    <div v-if="userStore.authError" class="error">{{ userStore.authError }}</div>
+    <p v-if="userStore.error" class="error">{{ userStore.error }}</p>
   </div>
 </template>
 

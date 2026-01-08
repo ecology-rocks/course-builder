@@ -18,8 +18,6 @@ import AgilityLayer from './layers/AgilityLayer.vue'
 import BarnHuntLayer from './layers/BarnHuntLayer.vue'
 import ScentWorkLayer from './layers/ScentWorkLayer.vue'
 import MapLegend from './layers/MapLegend.vue'
-import ZoneRect from './layers/ZoneRect.vue'
-import StepMarker from './layers/StepMarker.vue'
 
 // Setup
 const store = useMapStore()
@@ -140,21 +138,6 @@ function handleStageContextMenu(e) {
           <BarnHuntLayer v-if="store.sport === 'barnhunt'" :scale="scale" :showHides="showHides" :GRID_OFFSET="GRID_OFFSET" />
           <ScentWorkLayer v-if="store.sport === 'scentwork'" :scale="scale" :showHides="showHides" :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale / 2)) * (scale / 2), y: Math.round(pos.y / (scale / 2)) * (scale / 2) })" />
 
-          <StepMarker 
-            v-for="step in store.steps" :key="step.id" :step="step" :scale="scale" 
-            :isSelected="store.selection.includes(step.id)" :ringDimensions="store.ringDimensions" :GRID_OFFSET="GRID_OFFSET"
-            @select="(id) => store.toggleSelection(id, true)"
-            @update="(attrs) => store.updateStep(step.id, attrs)"
-            @dragend="(attrs) => store.updateStep(step.id, attrs)"
-            @rotate="store.rotateStep($event)"
-          />
-
-          <ZoneRect
-            v-for="zone in store.zones" :key="zone.id" :zone="zone" :scale="scale" :isSelected="store.selection.includes(zone.id)"
-            @select="(id) => store.toggleSelection(id, true)"
-            @update="(attrs) => store.updateZone(zone.id, attrs)"
-            @dragend="(attrs) => store.updateZone(zone.id, attrs)"
-          />
 
           <v-group v-if="store.gate" @dblclick="() => { if(store.activeTool === 'delete') store.removeGate() }">
             <v-rect :config="{ x: store.gate.x * scale, y: store.gate.y * scale, width: 3 * scale, height: 6, offsetX: (3 * scale) / 2, offsetY: 3, rotation: store.gate.rotation, fill: 'white', stroke: 'black', strokeWidth: 2 }" />
