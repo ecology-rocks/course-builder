@@ -48,7 +48,12 @@ const store = useMapStore()
       <button @click="store.setTool('step')" :class="{ active: store.activeTool === 'step' }">🪜 Step</button>
       <button @click="store.setTool('gate')" :class="{ active: store.activeTool === 'gate' }">🚪 Gate</button>
       <button @click="store.setTool('dead')" :class="{ active: store.activeTool === 'dead' }">🚫 Dead Zone</button>
-      <button @click="store.setTool('obstruction')" :class="{ active: store.activeTool === 'obstruction' }">🧱 Obstruction</button>
+      <button @click="store.setTool('obstruction')" :class="{ active: store.activeTool === 'obstruction' }">🧱
+        Obstruction</button>
+      <button class="tool-btn" :class="{ active: store.activeTool === 'measure' }" @click="store.setTool('measure')"
+        title="Measurement Tool (Left Click to Add Points, Right Click to Finish)">
+        📏 Measure
+      </button>
     </div>
     <h3>Actions</h3>
     <div class="action-tools">
@@ -77,7 +82,7 @@ const store = useMapStore()
       <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">↗️ Lean
         (Ctrl+Click)</button>
       <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">🗑️ Delete Tool
-        </button>
+      </button>
     </div>
   </div>
 </template>

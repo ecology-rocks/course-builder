@@ -67,6 +67,11 @@ async function handlePrint(withHides) {
 
 function handleStageContextMenu(e) {
   e.evt.preventDefault()
+  
+  // [FIX] Finish measurement if active
+  if (store.activeTool === 'measure' && store.activeMeasurement) {
+    store.finishMeasurement()
+  }
 }
 </script>
 

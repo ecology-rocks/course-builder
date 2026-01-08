@@ -27,6 +27,7 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
 
   // --- MOUSE DOWN ---
   function handleStageMouseDown(e) {
+    // Only handle Left Click on the Stage (Background)
     if (e.evt.button !== 0 || e.target !== e.target.getStage()) return
 
     const pointer = e.target.getStage().getPointerPosition()
@@ -49,6 +50,15 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
 
     if (store.sport === 'barnhunt') {
       if (store.activeTool === 'board') { store.startDrawingBoard(x, y); return }
+      
+      // [FIX] Handle Measurement Tool on Background
+      if (store.activeTool === 'measure') {
+        const snapX = Math.round(x * 2) / 2
+        const snapY = Math.round(y * 2) / 2
+        store.addMeasurementPoint(snapX, snapY)
+        return
+      }
+
       maybePlacing.value = true
     }
     else if (store.sport === 'agility') {
@@ -114,9 +124,6 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
       }
       else if (store.sport === 'agility') {
         store.addAgilityObstacle(store.activeTool, x, y)
-      }
-      else if (store.sport === 'scentwork') {
-         // (Handled in mousedown usually for SW, but safe to keep here if needed for single clicks)
       }
       maybePlacing.value = false
       dragStart.value = null

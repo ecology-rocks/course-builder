@@ -10,6 +10,7 @@ import { useBarnHuntLogic } from './mapActions/barnHuntLogic'
 import { useAgilityLogic } from './mapActions/agilityLogic'
 import { useScentWorkLogic } from './mapActions/scentWorkLogic'
 import { useHistory } from './mapActions/history'
+import { useMeasurements } from './mapActions/useMeasurements'
 
 // ==========================================
 // 0. CONSTANTS & STRATEGIES
@@ -30,6 +31,7 @@ const DEFAULT_MAP_DATA = {
   masterBlinds: [],
   startBox: null, // Singleton (Object or null)
   gate: null,     // Singleton (Object or null)
+  measurements: [],
 }
 
 // Logic for how different objects behave when the ring shrinks
@@ -78,7 +80,8 @@ export const useMapStore = defineStore('map', () => {
   const notification = ref(null)
   const showMapStats = ref(true)
   const previousClassCount = ref(0)
-  
+  const activeMeasurement = ref(null)
+
   // Configs
   const wallTypes = ref({ top: 'fence', right: 'fence', bottom: 'fence', left: 'fence' })
   const gridStartCorner = ref('top-left')
@@ -228,6 +231,8 @@ export const useMapStore = defineStore('map', () => {
     masterBlinds: createMapRef('masterBlinds'),
     startBox: createMapRef('startBox'),
     gate: createMapRef('gate'),
+    measurements: createMapRef('measurements'), // [NEW]
+    activeMeasurement, // [NEW]
 
     // Metadata & Editor State (Direct Refs)
     gridSize, activeTool, previousClassCount,
@@ -253,6 +258,7 @@ export const useMapStore = defineStore('map', () => {
   const bhLogic = useBarnHuntLogic(stateRefs, historyModule.snapshot, { show: showNotification })
   const agLogic = useAgilityLogic(stateRefs, historyModule.snapshot)
   const swLogic = useScentWorkLogic(stateRefs, historyModule.snapshot)
+const measureLogic = useMeasurements(stateRefs, historyModule.snapshot) // [NEW]
 
   // Link Validation
   stateRefs.validateAllBales = bhLogic.validateAllBales
@@ -290,6 +296,10 @@ export const useMapStore = defineStore('map', () => {
     trialNumber, baleConfig, comparisonMapName, dcMatConfig, showMapStats,
     isDrawingBoard, savedMaps,previousClassCount,
 
+    measurements: stateRefs.measurements,
+    activeMeasurement,
+   
+
     // Actions
     setTool, reset, showNotification, resizeRing, toggleAnchor, setComparisonBales,
     
@@ -302,6 +312,7 @@ export const useMapStore = defineStore('map', () => {
     ...agLogic,
     ...swLogic,
     ...persistence,
-    ...selectionLogic
+    ...selectionLogic,
+     ...measureLogic // [NEW]
   }
 })

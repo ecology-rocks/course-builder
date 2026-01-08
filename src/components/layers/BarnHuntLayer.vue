@@ -10,6 +10,7 @@ import StepMarker from './BarnHunt/StepMarker.vue'
 import ZoneRect from './BarnHunt/ZoneRect.vue'
 import StartBoxObject from './BarnHunt/StartBoxObject.vue'
 import DCMatObject from './BarnHunt/DCMatObject.vue'
+import MeasurementObject from './BarnHunt/MeasurementObject.vue'
 
 const props = defineProps(['scale', 'showHides', 'GRID_OFFSET'])
 const store = useMapStore()
@@ -41,6 +42,11 @@ function handleRightClick(e, id) {
   e.evt.preventDefault()
   if (store.activeTool === 'lean') return 
   if (e.evt.ctrlKey || e.evt.altKey) return
+if (store.activeTool === 'measure' && store.activeMeasurement) {
+    store.finishMeasurement()
+    return
+  }
+
   store.rotateBale(id) 
 }
 
@@ -58,6 +64,20 @@ function handleLeftClick(e, id) {
 
     if (!store.isDrawingBoard) store.startDrawingBoard(rawX, rawY)
     else store.stopDrawingBoard()
+    return
+  }
+
+  if (store.activeTool === 'measure') {
+    const stage = e.target.getStage()
+    const p = stage.getPointerPosition()
+    
+    // Snap to 0.5 grid for cleaner measurements
+    const rawX = (p.x - props.GRID_OFFSET) / props.scale
+    const rawY = (p.y - props.GRID_OFFSET) / props.scale
+    const snapX = Math.round(rawX * 2) / 2
+    const snapY = Math.round(rawY * 2) / 2
+    
+    store.addMeasurementPoint(snapX, snapY)
     return
   }
 
@@ -259,6 +279,21 @@ function getAnchorLines(bale) {
       @dragmove="handleDragMove($event, board.id)"
       @dragend="handleDragEnd($event, board.id)"
     />
+
+    <v-group>
+    <MeasurementObject 
+      v-for="m in store.measurements" 
+      :key="m.id" 
+      :measurement="m" 
+      :scale="scale" 
+    />
+
+    <MeasurementObject 
+      v-if="store.activeMeasurement"
+      :measurement="store.activeMeasurement" 
+      :scale="scale" 
+    />
+  </v-group>
 
     <v-group>
       <template v-for="bale in visibleBales" :key="'anchor-'+bale.id">
