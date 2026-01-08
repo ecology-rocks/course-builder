@@ -31,12 +31,28 @@ const showRandomizerModal = ref(false)
 const showBugReportModal = ref(false)
 const showDeleteModal = ref(false)
 const showLibraryModal = ref(false)
-const showMoreMenu = ref(false) // Toggle for the "More" section
-const isAdmin = computed(() => {
-  // REPLACE WITH YOUR EMAIL
-  return userStore.user?.email === 'reallyjustsam@gmail.com' 
-})
+const showMoreMenu = ref(false)
+const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
 
+// --- FILE IMPORT LOGIC ---
+const fileInput = ref(null)
+
+const triggerFileUpload = () => {
+  fileInput.value?.click()
+}
+
+const handleFileUpload = (event) => {
+  const file = event.target.files[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    store.importMapFromJSON(e.target.result)
+    event.target.value = '' // Reset so same file can be loaded again
+  }
+  reader.readAsText(file)
+}
+// -------------------------
 
 const toolboxComponent = computed(() => {
   switch (store.sport) {
@@ -102,6 +118,9 @@ function goHome() {
       <div v-if="showMoreMenu" class="more-menu">
         <button @click="emit('print', false)">🖨️ Print (No Hides)</button>
         <button v-if="isAdmin" @click="emit('save-library')">📚 Save to Library</button>
+        
+        <button @click="triggerFileUpload">⬆ Import JSON</button>
+        
         <button @click="store.exportMapToJSON()">⬇ Export JSON</button>
         <button @click="showRandomizerModal = true">🎲 Randomizer</button>
         <button @click="showBugReportModal = true">🐞 Report Bug</button>
@@ -110,6 +129,14 @@ function goHome() {
         </button>
       </div>
     </div>
+
+    <input 
+      type="file" 
+      ref="fileInput" 
+      accept=".json" 
+      style="display: none" 
+      @change="handleFileUpload" 
+    />
 
     <ShareMapModal v-if="showShareModal" @close="showShareModal = false" />
     <LoadMapModal v-if="showLoadModal" @close="showLoadModal = false" />

@@ -9,7 +9,7 @@ This is my one-true-copy of the project roadmap.
 ## Feature Requests & Future Updates (Long Term)
  - Offline caching, offline version, local storage options (very long term)
  - Validation for class level guidelines
- - Point to point measurement tool and area measurement tool (for distance challenge calculation)
+ - Area measurement tool (for distance challenge calculation)
  - Public library access for repeatable structures
  - Add a variety of SENIOR and MASTER tunnels to Tunnel Library.
  - Premade tunnels should indicate EastCoast/WestCoast dimensions
@@ -23,11 +23,24 @@ This is my one-true-copy of the project roadmap.
  - "Select Area" selects things that are merely close to the selection box
  - Rat marker color change to indicate under/over a leaner?
  - Make a "copy" button on the dashboard for nested map design instead of the export/import feature.
- - Make the step larger, and update the code so it's in feet instead of pixels
- - Refactor BarnHuntLayer into its individual parts to prevent cross contamination issues
  - Consider how to implement "whole tunnel board" options best
  - Ability to place text on the map / notes box
- - Adjust Ctrl+C/V so that they work in text inputs.
+ - Add additional keyboard functionality: arrows to move selection
+ - Add a faster bale rotation UI (maybe like DCMats?)
+ - Fix leaner right click (again lmao)
+ - Drag to select should select from all layers. Probably. It doesn't. 
+ - Bring to front feature for bales? Would require some redesign.
+
+
+## Coder's QOL Update (2026-01-08)
+ - Adjust Ctrl+C/V so that they work in text inputs and on the map for other things. 
+ - Point to point measurement tool
+ - Adjusted "Print" buttons so they're clearer (print w/ hides, print w/o hides)
+ - Adjusted the size of the Step
+ - Refactored BH Layer to prevent cross-contamination
+ - Fixed multi-object select and drag
+ - Removed DCMats from course settings; made their size editable by clicking on one after placement. 
+ - Rearranged editor sidebar so that it makes more logical sense. 
 
 ## New Year, New Editor Update (2026-01-03)
  - Nested course design: Now you can select a previously saved map to compare to in Course Settings! Comparison will show up in Map Statistics.
