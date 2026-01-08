@@ -55,7 +55,6 @@ function selectArea(x, y, w, h) {
       if (Array.isArray(collection)) {
         collection.forEach(item => {
           // 1. Layer Check for Bales
-          if (key === 'bales' && item.layer !== state.currentLayer.value) return
 
           // 2. Determine "Center" for Selection
           let cx, cy
