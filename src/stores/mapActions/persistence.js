@@ -154,6 +154,20 @@ export function useMapPersistence(state, userStore, notifications) {
       }
     })
 
+// Fix 1: "Deadzones" often change names (zones vs deadZones)
+    if (source.deadZones && Array.isArray(source.deadZones)) {
+      state.mapData.value.zones = source.deadZones
+    }
+    
+    // Fix 2: "Steps" (verify if old maps used singular 'step')
+    if (source.step && Array.isArray(source.step)) {
+      state.mapData.value.steps = source.step
+    }
+
+    // Fix 3: Ensure they are initialized as arrays if missing
+    if (!state.mapData.value.zones) state.mapData.value.zones = []
+    if (!state.mapData.value.steps) state.mapData.value.steps = []
+
     if (state.wallTypes && source.wallTypes) state.wallTypes.value = source.wallTypes
     if (state.gridStartCorner) state.gridStartCorner.value = source.gridStartCorner || 'top-left'
     if (state.trialLocation) state.trialLocation.value = source.trialLocation || ''
@@ -188,6 +202,10 @@ export function useMapPersistence(state, userStore, notifications) {
       const data = JSON.parse(jsonString)
       const newItems = []
       const source = data.data || data
+
+      // 1. Normalize Source (Apply Migration Fixes to source before merging)
+      if (source.deadZones) source.zones = source.deadZones
+      if (source.step) source.steps = source.step
       
       Object.keys(state.mapData.value).forEach(key => {
         if (Array.isArray(state.mapData.value[key]) && Array.isArray(source[key])) {

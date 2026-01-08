@@ -17,10 +17,9 @@ import { useMeasurements } from './mapActions/useMeasurements'
 // ==========================================
 
 // This acts as the "Schema" for your map. 
-// To add a new object type, you only need to add it here.
 const DEFAULT_MAP_DATA = {
   bales: [],
-  boardEdges: [], // Walls
+  boardEdges: [], 
   hides: [],
   dcMats: [],
   agilityObstacles: [],
@@ -29,8 +28,8 @@ const DEFAULT_MAP_DATA = {
   zones: [],
   markers: [],
   masterBlinds: [],
-  startBox: null, // Singleton (Object or null)
-  gate: null,     // Singleton (Object or null)
+  startBox: null, 
+  gate: null,     
   measurements: [],
 }
 
@@ -50,7 +49,6 @@ const RESIZE_STRATEGIES = {
   scentWorkObjects: (o, w, h) => {
     if (o.x >= w) o.x = w - 3; if (o.y >= h) o.y = h - 3
   },
-  // Default for simple point objects (hides, steps, startBox, etc)
   default: (o, w, h) => {
     if (o.x && o.x >= w) o.x = w - 1;
     if (o.y && o.y >= h) o.y = h - 1;
@@ -114,17 +112,14 @@ export const useMapStore = defineStore('map', () => {
   }
 
   function reset() {
-    // 1. Reset Map Objects (Deep Copy Default)
     mapData.value = JSON.parse(JSON.stringify(DEFAULT_MAP_DATA))
 
-    // 2. Reset Editor State & Metadata
     currentMapId.value = null; mapName.value = "Untitled Map"; 
     classLevel.value = "Novice"; sport.value = 'barnhunt'
     ringDimensions.value = { width: 24, height: 24 }
     currentLayer.value = 1; activeTool.value = 'bale'; nextNumber.value = 1
     selection.value = []; previousBales.value = []; comparisonMapName.value = null
     
-    // 3. Reset Settings
     wallTypes.value = { top: 'fence', right: 'fence', bottom: 'fence', left: 'fence' }
     gridStartCorner.value = 'top-left'
     trialLocation.value = ''; trialDay.value = ''; trialNumber.value = ''
@@ -138,19 +133,14 @@ export const useMapStore = defineStore('map', () => {
     const newW = Math.max(10, parseInt(width))
     const newH = Math.max(10, parseInt(height))
     
-    // 1. Calculate the change in size
     const dX = newW - oldW
     const dY = newH - oldH
     
     ringDimensions.value = { width: newW, height: newH }
     
-    // 2. Determine shift direction based on "Grid Start Corner"
-    // If grid starts on Right, we shift objects to keep them relative to the Right wall
     const shouldShiftX = gridStartCorner.value.includes('right')
-    // If grid starts on Bottom, we shift objects to keep them relative to the Bottom wall
     const shouldShiftY = gridStartCorner.value.includes('bottom')
 
-    // 3. Update all objects
     Object.keys(mapData.value).forEach(key => {
       const itemOrList = mapData.value[key]
       if (!itemOrList) return 
@@ -158,18 +148,14 @@ export const useMapStore = defineStore('map', () => {
       const strategy = RESIZE_STRATEGIES[key] || RESIZE_STRATEGIES.default
       
       const updateItem = (item) => {
-        // A. Apply Shift (Anchor Logic)
         if (shouldShiftX) {
-            if (item.x1 !== undefined) { item.x1 += dX; item.x2 += dX } // Boards
+            if (item.x1 !== undefined) { item.x1 += dX; item.x2 += dX } 
             else { item.x += dX }
         }
         if (shouldShiftY) {
-            if (item.y1 !== undefined) { item.y1 += dY; item.y2 += dY } // Boards
+            if (item.y1 !== undefined) { item.y1 += dY; item.y2 += dY } 
             else { item.y += dY }
         }
-
-        // B. Apply Safety Bounds (Prevent falling off the map)
-        // We pass newW/newH to the strategy to ensure they stay inside
         strategy(item, newW, newH)
       }
 
@@ -191,7 +177,6 @@ export const useMapStore = defineStore('map', () => {
       showNotification("Anchor bales must be on Layer 1.", "error")
       return
     }
-    // Access bales via mapData directly
     mapData.value.bales.forEach(b => {
       if (selection.value.includes(b.id)) {
         b.isAnchor = !b.isAnchor
@@ -208,9 +193,6 @@ export const useMapStore = defineStore('map', () => {
   // 3. MODULE INITIALIZATION (The Adapter Layer)
   // ==========================================
   
-  // We create writable computed refs for legacy support.
-  // This allows existing modules (useBales, etc.) to read/write `state.bales` 
-  // without realizing it's actually `mapData.value.bales`.
   const createMapRef = (key) => computed({
     get: () => mapData.value[key],
     set: (val) => mapData.value[key] = val
@@ -218,7 +200,6 @@ export const useMapStore = defineStore('map', () => {
 
   const stateRefs = {
     mapData,
-    // Map Objects (Adapted)
     bales: createMapRef('bales'),
     boardEdges: createMapRef('boardEdges'),
     hides: createMapRef('hides'),
@@ -231,10 +212,9 @@ export const useMapStore = defineStore('map', () => {
     masterBlinds: createMapRef('masterBlinds'),
     startBox: createMapRef('startBox'),
     gate: createMapRef('gate'),
-    measurements: createMapRef('measurements'), // [NEW]
-    activeMeasurement, // [NEW]
+    measurements: createMapRef('measurements'), 
+    activeMeasurement, 
 
-    // Metadata & Editor State (Direct Refs)
     gridSize, activeTool, previousClassCount,
     ringDimensions, mapName, currentMapId, currentFolderId, 
     isShared, classLevel, sport, savedMaps, folders,
@@ -243,34 +223,35 @@ export const useMapStore = defineStore('map', () => {
     comparisonMapName, showMapStats, selection, nextNumber,
     trialLocation, trialDay, trialNumber, baleConfig, dcMatConfig,
 
-    // Methods
     reset
   }
   
-  // Initialize Modules
   const historyModule = useHistory(stateRefs, () => {
     if (stateRefs.validateAllBales) stateRefs.validateAllBales()
   })
   
-  // Add snapshot to stateRefs so other modules can use it
   stateRefs.snapshot = historyModule.snapshot
 
   const bhLogic = useBarnHuntLogic(stateRefs, historyModule.snapshot, { show: showNotification })
   const agLogic = useAgilityLogic(stateRefs, historyModule.snapshot)
   const swLogic = useScentWorkLogic(stateRefs, historyModule.snapshot)
-const measureLogic = useMeasurements(stateRefs, historyModule.snapshot) // [NEW]
+  const measureLogic = useMeasurements(stateRefs, historyModule.snapshot)
 
-  // Link Validation
-  stateRefs.validateAllBales = bhLogic.validateAllBales
+  // =========================================================
+  // DISABLED VALIDATION (User Request)
+  // We point validation to an empty function so it never runs.
+  // =========================================================
+  stateRefs.validateAllBales = () => {} 
 
   const persistence = useMapPersistence(stateRefs, userStore, { show: showNotification })
-  const selectionLogic = useSelectionLogic(stateRefs, historyModule.snapshot, bhLogic.validateAllBales)
+  
+  // Passed empty function to selection logic too, just in case
+  const selectionLogic = useSelectionLogic(stateRefs, historyModule.snapshot, () => {})
 
   // ==========================================
   // 4. EXPORTS
   // ==========================================
   return {
-    // New Unified State
     mapData,
 
     // Legacy State (Computed Wrappers)
@@ -298,21 +279,21 @@ const measureLogic = useMeasurements(stateRefs, historyModule.snapshot) // [NEW]
 
     measurements: stateRefs.measurements,
     activeMeasurement,
-   
 
     // Actions
     setTool, reset, showNotification, resizeRing, toggleAnchor, setComparisonBales,
     
-    // Computed
     currentGuidelines: computed(() => sport.value === 'agility' ? (AGILITY_RULES[classLevel.value] || AGILITY_RULES['Other']) : (BH_RULES[classLevel.value] || BH_RULES['Other'])),
 
-    // Modules
     ...historyModule,
     ...bhLogic,
     ...agLogic,
     ...swLogic,
     ...persistence,
     ...selectionLogic,
-     ...measureLogic // [NEW]
+    ...measureLogic,
+    
+    // OVERRIDE: Explicitly disable validation here too
+    validateAllBales: () => {} 
   }
 })

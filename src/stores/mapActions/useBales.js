@@ -3,7 +3,7 @@ export function useBales(state, snapshot, notifications) {
     return Math.round(val * 6) / 6
   }
 
-  // --- PHYSICS & VALIDATION ---
+  // --- PHYSICS & VALIDATION (DISABLED) ---
   function getBaleRect(bale) {
     const L = state.baleConfig.value.length
     const W = state.baleConfig.value.width
@@ -28,42 +28,22 @@ export function useBales(state, snapshot, notifications) {
     }
   }
 
+  // Validation Check 1: Disabled
   function hasSupport(newBale) {
-    if (newBale.layer === 1) return true
-    const r1 = getBaleRect(newBale)
-    let totalSupportArea = 0
-    
-    // Filter from the reactive array
-    const lowerLayer = state.bales.value.filter(b => b.layer === newBale.layer - 1)
-
-    lowerLayer.forEach(baseBale => {
-      const r2 = getBaleRect(baseBale)
-      const x_overlap = Math.max(0, Math.min(r1.x + r1.w, r2.x + r2.w) - Math.max(r1.x, r2.x))
-      const y_overlap = Math.max(0, Math.min(r1.y + r1.h, r2.y + r2.h) - Math.max(r1.y, r2.y))
-      totalSupportArea += (x_overlap * y_overlap)
-    })
-    return totalSupportArea >= 1.0
-  }
-
-  function isValidPlacement(newBale) {
-    const r1 = getBaleRect(newBale)
-    if (r1.x < 0 || r1.y < 0 || 
-        r1.x + r1.w > state.ringDimensions.value.width || 
-        r1.y + r1.h > state.ringDimensions.value.height) {
-      return false
-    }
     return true
   }
 
+  // Validation Check 2: Disabled
+  function isValidPlacement(newBale) {
+    return true
+  }
+
+  // Validation Check 3: Force "Supported" (Green)
   function validateAllBales() {
-    // This updates state, which triggers the history watcher automatically.
+    // Instead of calculating bounds/support, we simply 
+    // force every bale to be valid so they never turn red.
     state.bales.value.forEach(bale => {
-      const r = getBaleRect(bale)
-      const outOfBounds = r.x < 0 || r.y < 0 || 
-                          r.x + r.w > state.ringDimensions.value.width || 
-                          r.y + r.h > state.ringDimensions.value.height
-      bale.supported = !outOfBounds
-      // Note: We could add hasSupport(bale) check here for layers > 1
+      bale.supported = true
     })
   }
 
@@ -81,11 +61,7 @@ export function useBales(state, snapshot, notifications) {
       supported: true
     }
 
-    if (!isValidPlacement(newBale)) {
-      notifications.show("Cannot place here: Out of Bounds", 'error')
-      return
-    }
-
+    // Removed the "isValidPlacement" check here
     state.bales.value.push(newBale)
     validateAllBales()
   }
