@@ -87,7 +87,14 @@ async function handleCreateFolder() {
 }
 
 async function handleDeleteFolder(id) {
-  await mapStore.deleteFolder(id)
+  if (confirm("Are you sure you want to delete this folder?")) {
+    await mapStore.deleteFolder(id)
+    
+    // If the deleted folder was the one currently open, switch back to 'All'
+    if (mapStore.currentFolderId === id) {
+      mapStore.currentFolderId = null
+    }
+  }
 }
 
 function onDragStart(event, mapId) {

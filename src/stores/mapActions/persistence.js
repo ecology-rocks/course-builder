@@ -1,6 +1,6 @@
 import { 
-  collection, addDoc, getDocs, query, where, 
-  doc, updateDoc, deleteDoc, writeBatch 
+  collection, addDoc, getDocs, getDoc, query, where, 
+  doc, updateDoc, deleteDoc, writeBatch, serverTimestamp 
 } from 'firebase/firestore'
 import { db } from '../../firebase'
 import { mapService } from '../../services/mapService'
@@ -15,11 +15,8 @@ export function useMapPersistence(state, userStore, notifications) {
 
   // --- HELPER: CONSTRUCT DATA OBJECT ---
   function getMapData() {
-    // 1. Gather all dynamic objects (bales, hides, etc.) from the unified store
-    // This automatically grabs everything defined in DEFAULT_MAP_DATA
     const coreData = JSON.parse(JSON.stringify(state.mapData.value))
 
-    // 2. Attach Metadata & Settings (that live outside mapData)
     return {
       ...coreData,
       dimensions: state.ringDimensions.value,
@@ -35,7 +32,6 @@ export function useMapPersistence(state, userStore, notifications) {
 
   // --- SAVE TO CLOUD ---
   async function saveToCloud(isAutoSave = false, thumbnail = null) {
-    // 1. Validation
     if (!userStore.user) {
       if (!isAutoSave) alert("Please log in to save.")
       return
@@ -46,7 +42,6 @@ export function useMapPersistence(state, userStore, notifications) {
       return
     }
 
-    // 2. Build Payload
     const mapData = {
       uid: userStore.user.uid,
       name: state.mapName.value.trim(),
@@ -56,10 +51,9 @@ export function useMapPersistence(state, userStore, notifications) {
       sport: state.sport.value,
       thumbnail: thumbnail,
       updatedAt: new Date(),
-      data: getMapData() // Use the helper
+      data: getMapData() 
     }
 
-    // 3. Send to Service
     try {
       if (state.currentMapId.value) {
         await mapService.updateMap(state.currentMapId.value, mapData)
@@ -73,7 +67,7 @@ export function useMapPersistence(state, userStore, notifications) {
       }
     } catch (e) {
       console.error(e)
-      if (!isAutoSave) alert("Failed to save map.", 'error')
+      if (!isAutoSave) alert("Failed to save map.")
     }
   }
 
@@ -88,8 +82,6 @@ export function useMapPersistence(state, userStore, notifications) {
       return
     }
 
-    // Dynamic Filter: Iterates all array-type objects in mapData
-    // automatically finding selected items regardless of type.
     const exportData = {}
     Object.keys(state.mapData.value).forEach(key => {
       const collection = state.mapData.value[key]
@@ -152,20 +144,16 @@ export function useMapPersistence(state, userStore, notifications) {
     state.classLevel.value = data.level || 'Novice'
     state.sport.value = data.sport || 'barnhunt'
     
-    // Handle "nested" data (from DB saves) vs "flat" data (from JSON exports)
     const source = data.data || data
 
     state.ringDimensions.value = source.dimensions || { width: 24, height: 24 }
     
-    // Dynamic Load of Map Objects
-    // This loop ensures we only try to load keys that actually exist in our schema
     Object.keys(state.mapData.value).forEach(key => {
       if (source[key] !== undefined) {
          state.mapData.value[key] = source[key]
       }
     })
 
-    // Load Metadata
     if (state.wallTypes && source.wallTypes) state.wallTypes.value = source.wallTypes
     if (state.gridStartCorner) state.gridStartCorner.value = source.gridStartCorner || 'top-left'
     if (state.trialLocation) state.trialLocation.value = source.trialLocation || ''
@@ -178,7 +166,6 @@ export function useMapPersistence(state, userStore, notifications) {
        state.baleConfig.value = source.baleConfig || def
     }
 
-    // Comparison Logic
     state.previousBales.value = JSON.parse(JSON.stringify(source.bales || []))
     state.comparisonMapName.value = "Original File"
     
@@ -187,10 +174,7 @@ export function useMapPersistence(state, userStore, notifications) {
 
   // --- LOAD FROM CLOUD DATA ---
   function loadMapFromData(id, data) {
-    // Re-use import logic for the heavy lifting
     importMapFromData(data) 
-    
-    // Overwrite Cloud-specific fields
     state.currentMapId.value = id
     state.isShared.value = data.isShared || false
     state.currentFolderId.value = data.folderId || null
@@ -205,9 +189,7 @@ export function useMapPersistence(state, userStore, notifications) {
       const newItems = []
       const source = data.data || data
       
-      // Dynamic Merge
       Object.keys(state.mapData.value).forEach(key => {
-        // Only merge arrays (collections). Ignore singletons like startBox.
         if (Array.isArray(state.mapData.value[key]) && Array.isArray(source[key])) {
            source[key].forEach(item => {
              const newId = crypto.randomUUID()
@@ -218,11 +200,8 @@ export function useMapPersistence(state, userStore, notifications) {
         }
       })
       
-      // Select the new items
       state.selection.value = newItems
-      
       if (state.validateAllBales) state.validateAllBales()
-      
       notifications.show("Library item loaded successfully!", 'success')
       
     } catch (e) {
@@ -231,7 +210,7 @@ export function useMapPersistence(state, userStore, notifications) {
     }
   }
 
-  // --- CLOUD LIST MANAGEMENT (Unchanged) ---
+  // --- CLOUD LIST MANAGEMENT ---
   async function loadUserMaps() {
      if (!userStore.user) return
      const q = query(collection(db, "maps"), where("uid", "==", userStore.user.uid))
@@ -268,11 +247,23 @@ export function useMapPersistence(state, userStore, notifications) {
     await loadUserMaps()
   }
 
-  // --- FOLDER MANAGEMENT (Unchanged) ---
-  async function createFolder(name) { 
+  // --- FOLDER MANAGEMENT ---
+  async function createFolder(name) {
     if (!userStore.user) return
-    await addDoc(collection(db, "folders"), { uid: userStore.user.uid, name, createdAt: new Date() })
-    await loadUserFolders() 
+
+    try {
+      await addDoc(collection(db, 'folders'), {
+        name: name,
+        uid: userStore.user.uid, 
+        createdAt: serverTimestamp()
+      })
+      
+      await loadUserFolders()
+      
+    } catch (error) {
+      console.error("Error creating folder:", error)
+      notifications.show("Failed to create folder", "error")
+    }
   }
 
   async function loadUserFolders() { 
@@ -281,22 +272,58 @@ export function useMapPersistence(state, userStore, notifications) {
     state.folders.value = (await getDocs(q)).docs.map(doc => ({ id: doc.id, ...doc.data() })) 
   }
 
+  // --- DEBUGGING VERSION OF DELETE FOLDER ---
   async function deleteFolder(fid) { 
     if (!confirm("Delete folder? Maps inside will be moved to 'Unorganized'.")) return
     
-    const batch = writeBatch(db)
-    const mapQuery = query(collection(db, "maps"), where("folderId", "==", fid))
-    const mapDocs = await getDocs(mapQuery)
-    
-    mapDocs.docs.forEach(d => {
-      batch.update(d.ref, { folderId: null })
-    })
-    
-    batch.delete(doc(db, "folders", fid))
-    
-    await batch.commit()
-    await loadUserFolders()
-    await loadUserMaps() 
+    try {
+      // 1. Debugging: Check the folder document first
+      const folderRef = doc(db, "folders", fid)
+      const folderSnap = await getDoc(folderRef)
+      
+      if (!folderSnap.exists()) {
+        console.error("Folder does not exist in DB")
+        return
+      }
+
+      const folderData = folderSnap.data()
+      console.log("--- DEBUGGING DELETE ---")
+      console.log("My User ID:", userStore.user.uid)
+      console.log("Folder Owner ID:", folderData.uid)
+      
+      if (folderData.uid !== userStore.user.uid) {
+        alert(`PERMISSION DENIED: This folder belongs to ${folderData.uid || 'NOBODY'}, but you are ${userStore.user.uid}.`)
+        return
+      }
+
+      // 2. Proceed with Batch Operation
+      const batch = writeBatch(db)
+      const mapQuery = query(
+  collection(db, "maps"), 
+  where("folderId", "==", fid), 
+  where("uid", "==", userStore.user.uid)
+)
+      const mapDocs = await getDocs(mapQuery)
+      
+      mapDocs.docs.forEach(d => {
+        const mapData = d.data()
+        // Only move maps we actually own
+        if (mapData.uid === userStore.user.uid) {
+           batch.update(d.ref, { folderId: null })
+        }
+      })
+      
+      batch.delete(folderRef)
+      
+      await batch.commit()
+      await loadUserFolders()
+      await loadUserMaps() 
+      notifications.show("Folder deleted.", "success")
+
+    } catch(e) {
+      console.error("Firebase Error:", e)
+      notifications.show("Error deleting folder: " + e.message, "error")
+    }
   }
 
   return {
