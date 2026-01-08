@@ -9,7 +9,7 @@ const store = useMapStore()
       <h3>Structures</h3>
       <div class="tool-grid">
         <button @click="store.setTool('bale')" :class="{ active: store.activeTool === 'bale' }">📦 Bale</button>
-        <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Wall</button>
+        <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Board</button>
         <button @click="store.setTool('gate')" :class="{ active: store.activeTool === 'gate' }">🚪 Gate</button>
         <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟨 Mat</button>
       </div>
