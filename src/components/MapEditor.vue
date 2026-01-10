@@ -208,7 +208,18 @@ function handleGlobalClick() {
 <style scoped>
 /* (Existing Styles) */
 .editor-container { display: flex; height: 100vh; width: 100vw; overflow: hidden; background: #f0f0f0; }
-.canvas-wrapper { flex: 1; overflow: auto; display: flex; justify-content: center; align-items: flex-start; padding: 40px; background: #e0e0e0; box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1); position: relative; }
+.canvas-wrapper { 
+  flex: 1; 
+  overflow: auto; 
+  display: flex; 
+  justify-content: center; 
+  align-items: flex-start; 
+  /* INCREASED bottom padding from 40px to 150px to clear the selection bar */
+  padding: 40px 40px 150px 40px; 
+  background: #e0e0e0; 
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1); 
+  position: relative; 
+}
 .toast-notification { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 8px; color: white; font-weight: bold; z-index: 2000; pointer-events: none; }
 .toast-notification.error { background-color: #d32f2f; }
 .toast-notification.success { background-color: #388e3c; }

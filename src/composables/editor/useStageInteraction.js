@@ -48,6 +48,11 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
       return
     }
 
+    if (store.selection.length > 0) {  
+      store.clearSelection()
+      return
+    }
+
     if (store.sport === 'barnhunt') {
       if (store.activeTool === 'board') { store.startDrawingBoard(x, y); return }
       
