@@ -193,10 +193,6 @@ function handleGlobalClick() {
           <BarnHuntLayer v-if="store.sport === 'barnhunt'" :scale="scale" :showHides="showHides" :GRID_OFFSET="GRID_OFFSET" />
           <ScentWorkLayer v-if="store.sport === 'scentwork'" :scale="scale" :showHides="showHides" :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale / 2)) * (scale / 2), y: Math.round(pos.y / (scale / 2)) * (scale / 2) })" />
 
-          <v-group v-if="store.gate" @dblclick="() => { if(store.activeTool === 'delete') store.removeGate() }">
-            <v-rect :config="{ x: store.gate.x * scale, y: store.gate.y * scale, width: 3 * scale, height: 6, offsetX: (3 * scale) / 2, offsetY: 3, rotation: store.gate.rotation, fill: 'white', stroke: 'black', strokeWidth: 2 }" />
-            <v-text :config="{ x: store.gate.x * scale, y: store.gate.y * scale, text: 'GATE', fontSize: 12, fontStyle: 'bold', offsetX: 15, offsetY: -5, rotation: store.gate.rotation }" />
-          </v-group>
 
           <v-rect v-if="selectionRect" :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
           

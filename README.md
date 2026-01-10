@@ -31,6 +31,7 @@ This is my one-true-copy of the project roadmap.
  - Notes box
  - Full board boxes if people prefer (instead of just point-to-point measurement)
  - Duplicate map button available on Dashboard for nested maps. 
+ - HIDE MARKERS: right click cycles through R/L/E; Alt+Click changes the border of the hide to indicate that it should be placed under a leaner. 
 
 ## New Year, New Editor Update (2026-01-03)
  - Nested course design: Now you can select a previously saved map to compare to in Course Settings! Comparison will show up in Map Statistics.

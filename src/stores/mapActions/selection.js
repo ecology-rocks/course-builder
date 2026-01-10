@@ -84,7 +84,42 @@ function selectArea(x, y, w, h) {
     state.selection.value = []
   }
 
+function removeObject(id) {
+    const keys = Object.keys(state.mapData.value)
+    let found = false
+
+    keys.forEach(key => {
+      if (found) return
+      const collection = state.mapData.value[key]
+      
+      if (Array.isArray(collection)) {
+        const idx = collection.findIndex(item => item.id === id)
+        if (idx !== -1) {
+          state.mapData.value[key].splice(idx, 1)
+          found = true
+        }
+      } else if (collection && collection.id === id) {
+        state.mapData.value[key] = null
+        found = true
+      }
+    })
+
+    // Also remove from selection if present
+    if (state.selection.value.includes(id)) {
+      state.selection.value = state.selection.value.filter(sid => sid !== id)
+    }
+
+    if (found && validateFn) validateFn()
+  }
+
+
   function deleteSelection() {
+
+    if (state.activeMeasurement && state.activeMeasurement.value) {
+      state.activeMeasurement.value = null
+      return
+    }
+
     if (state.selection.value.length === 0) return
     
 
@@ -239,6 +274,7 @@ function rotateSelection() {
     clearSelection,
     deleteSelection,
     rotateSelection,
+    removeObject,
     moveSelection,
     findObjectById
   }

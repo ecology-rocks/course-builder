@@ -13,6 +13,7 @@ import DCMatObject from './BarnHunt/DCMatObject.vue'
 import MeasurementObject from './BarnHunt/MeasurementObject.vue'
 import NoteObject from './BarnHunt/NoteObject.vue'
 import TunnelBoardObject from './BarnHunt/TunnelBoardObject.vue'
+import GateObject from './BarnHunt/GateObject.vue'
 
 const props = defineProps(['scale', 'showHides', 'GRID_OFFSET'])
 const store = useMapStore()
@@ -39,6 +40,13 @@ const setRef = (el, id) => {
   if (el) objectRefs.value[id] = el
 }
 
+function handleSelect(id, isMulti = false) {
+  if (store.activeTool === 'delete') {
+    store.removeObject(id)
+  } else {
+    store.selectObject(id, isMulti)
+  }
+}
 
 function handleUpdateNote(attrs) { store.updateNote(attrs.id, attrs) }
 function handleUpdateTunnelBoard(attrs) { store.updateTunnelBoard(attrs.id, attrs) }
@@ -126,7 +134,9 @@ function handleLeftClick(e, id) {
   }
   if (store.activeTool === 'type') store.cycleOrientation(id)
   if (store.activeTool === 'lean') store.cycleLean(id)
-  if (store.activeTool === 'delete') store.removeBale(id)
+  if (store.activeTool === 'delete') {
+    store.removeObject(id) 
+  }
 }
 // --- MULTI-OBJECT DRAG LOGIC ---
 
@@ -254,6 +264,16 @@ function getAnchorLines(bale) {
       @dragstart="handleDragStart($event, store.startBox?.id)"
       @dragmove="handleDragMove($event, store.startBox?.id)"
       @dragend="handleDragEnd($event, store.startBox?.id)" 
+    />
+
+<GateObject 
+      v-if="store.gate" 
+      :gate="store.gate" 
+      :scale="scale"
+      :ref="(el) => setRef(el, store.gate?.id)"
+      @dragstart="handleDragStart($event, store.gate?.id)"
+      @dragmove="handleDragMove($event, store.gate?.id)"
+      @dragend="handleDragEnd($event, store.gate?.id)"
     />
 
 <DCMatObject v-for="mat in store.dcMats" :key="mat.id" :mat="mat" :scale="scale" 

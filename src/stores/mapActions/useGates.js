@@ -1,7 +1,10 @@
 export function useGates(state) {
   function setGate(gateData) {
-    // gateData should be { x, y, rotation }
-    state.gate.value = gateData
+    // [FIX] Ensure object has an ID so selection/move logic works
+    state.gate.value = { 
+      ...gateData, 
+      id: gateData.id || crypto.randomUUID() 
+    }
   }
 
   function removeGate() {
