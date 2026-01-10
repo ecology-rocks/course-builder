@@ -55,6 +55,17 @@ if (key === 'delete' || key === 'backspace') {
       }
     }
 
+if (key === 'r') {
+      if (store.selection.length > 0) {
+        e.preventDefault()
+        // Shift+R = 45 deg, R = 15 deg (Matches Right-Click behavior)
+        const angle = e.shiftKey ? 45 : 15
+        store.rotateSelection(angle)
+      }
+      return
+    }
+
+
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
       if (store.selection.length > 0) {
         e.preventDefault()
@@ -89,6 +100,9 @@ if (key === 'delete' || key === 'backspace') {
       }
       return
     }
+
+
+
 
   }
 

@@ -42,7 +42,7 @@ defineEmits(['close'])
                 <td>Nudge selection <strong>1 foot</strong></td>
               </tr>
               <tr>
-                <td>Right Click</td>
+                <td>Right Click or <kbd>R</kbd></td>
                 <td>Rotate selection 15 degrees.</td>
               </tr>
               <tr>

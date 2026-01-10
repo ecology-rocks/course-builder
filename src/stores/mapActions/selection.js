@@ -144,49 +144,44 @@ function removeObject(id) {
     if (validateFn) validateFn()
   }
 
-function rotateSelection() {
+function rotateSelection(angle = 90) {
     const ids = state.selection.value
     if (ids.length === 0) return
 
-    // Helper: Get Intrinsic (Unrotated) Dimensions to calculate true centers
     const getIntrinsicDims = (item, key) => {
       if (key === 'bales') {
-         const conf = state.baleConfig?.value || { length: 3, width: 1.5, height: 1 }
-         if (item.orientation === 'tall') return { w: conf.length, h: conf.height }
-         if (item.orientation === 'pillar') return { w: conf.width, h: conf.height }
-         return { w: conf.length, h: conf.width }
+          const conf = state.baleConfig?.value || { length: 3, width: 1.5, height: 1 }
+          if (item.orientation === 'tall') return { w: conf.length, h: conf.height }
+          if (item.orientation === 'pillar') return { w: conf.width, h: conf.height }
+          return { w: conf.length, h: conf.width }
       }
       return { w: item.width || 0, h: item.height || 0 }
     }
 
-    // [FIX] Snap to 1/6 (2 inches) for final positions
     const snap = (val) => Math.round(val * 6) / 6
     
     const itemsToRotate = []
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
 
-    // 1. Calculate Group Bounds (Visual)
+    // 1. Calculate Group Bounds
     Object.keys(state.mapData.value).forEach(key => {
       const collection = state.mapData.value[key]
       const list = Array.isArray(collection) ? collection : (collection ? [collection] : [])
 
       list.forEach(item => {
         if (ids.includes(item.id)) {
-          
           if (item.x1 !== undefined) { 
-            // --- Boards/Lines ---
+            // Lines
             itemsToRotate.push({ item, type: 'line' })
             minX = Math.min(minX, item.x1, item.x2); maxX = Math.max(maxX, item.x1, item.x2)
             minY = Math.min(minY, item.y1, item.y2); maxY = Math.max(maxY, item.y1, item.y2)
           } else {
-            // --- Bales/Objects ---
+            // Objects
             const { w, h } = getIntrinsicDims(item, key)
-            
-            // Calculate Geometric Center
             const cx = item.x + w / 2
             const cy = item.y + h / 2
-
-            // Calculate Visual Bounds (rotated)
+            
+            // For bounds, we care about the visual footprint
             const isRotated = item.rotation && Math.abs(item.rotation % 180) === 90
             const visualW = isRotated ? h : w
             const visualH = isRotated ? w : h
@@ -207,19 +202,23 @@ function rotateSelection() {
 
     if (itemsToRotate.length === 0) return
 
-    // 2. Find Group Pivot Point
-    // [FIX] We do NOT snap the pivot to the grid. 
-    // Snapping the pivot causes the entire group to drift if the center is at, say, 0.75 ft.
+    // 2. Determine Pivot Point (Center of Group)
     const groupCx = (minX + maxX) / 2
     const groupCy = (minY + maxY) / 2
+
+    // Pre-calculate rotation math
+    const rad = (angle * Math.PI) / 180
+    const cos = Math.cos(rad)
+    const sin = Math.sin(rad)
 
     // 3. Rotate Items
     itemsToRotate.forEach(entry => {
       const { item } = entry
       
+      // Rotate point around Group Center
       const rotatePoint = (px, py) => ({
-        x: groupCx - (py - groupCy),
-        y: groupCy + (px - groupCx)
+        x: groupCx + (px - groupCx) * cos - (py - groupCy) * sin,
+        y: groupCy + (px - groupCx) * sin + (py - groupCy) * cos
       })
 
       if (entry.type === 'line') {
@@ -229,14 +228,11 @@ function rotateSelection() {
         item.x2 = snap(p2.x); item.y2 = snap(p2.y)
       } else {
         const { w, h, cx, cy } = entry
-        
-        // A. Rotate the Center
         const newCenter = rotatePoint(cx, cy)
         
-        // B. Update Rotation
-        item.rotation = (item.rotation || 0) + 90
-
-        // C. Calculate New Top-Left and Snap
+        // [UPDATED] Use dynamic angle
+        item.rotation = (item.rotation || 0) + angle
+        
         item.x = snap(newCenter.x - w / 2)
         item.y = snap(newCenter.y - h / 2)
       }
