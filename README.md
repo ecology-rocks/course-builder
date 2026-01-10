@@ -20,8 +20,6 @@ This is my one-true-copy of the project roadmap.
  - Perimeter distances and hide locations very small and hard to read. Maybe a menu item to increase/decrease size? 
  - Rat marker color change to indicate under/over a leaner?
  - Consider how to implement "whole tunnel board" options best
- - Ability to place text on the map / notes box
- - Add a faster bale rotation UI (maybe like DCMats?)
  - Bring to front feature for bales? Would require some redesign.
 
 

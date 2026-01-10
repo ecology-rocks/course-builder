@@ -125,6 +125,7 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
         else if (t === 'dcmat') store.addDCMat(x, y)
         else if (t === 'hide') store.addHide(x, y)
         else if (t === 'step') store.addStep(x, y)
+      else if (t === 'note') store.addNote(x, y)
         else if (t === 'dead' || t === 'obstruction') store.addZone(x, y, t)
       }
       else if (store.sport === 'agility') {

@@ -12,12 +12,14 @@ import { useGridSystem } from '@/composables/editor/useGridSystem'
 import { useExportTools } from '@/composables/editor/useExportTools'
 import { useStageInteraction } from '@/composables/editor/useStageInteraction'
 
+
 // Sub-Layers & Components
 import EditorSidebar from './editor/EditorSidebar.vue'
 import AgilityLayer from './layers/AgilityLayer.vue'
 import BarnHuntLayer from './layers/BarnHuntLayer.vue'
 import ScentWorkLayer from './layers/ScentWorkLayer.vue'
 import MapLegend from './layers/MapLegend.vue'
+import EditNoteModal from './modals/EditNoteModal.vue'
 
 // Setup
 const store = useMapStore()
@@ -99,6 +101,7 @@ function handleGlobalClick() {
     <EditorSidebar @print="handlePrint" @save-map="handleSaveMap" @save-library="handleLibrarySave" />
 
     <div class="canvas-wrapper" ref="wrapperRef">
+      <EditNoteModal v-if="store.editingNoteId" />
       <Transition name="fade">
         <div v-if="store.notification" class="toast-notification" :class="store.notification.type">
           {{ store.notification.message }}

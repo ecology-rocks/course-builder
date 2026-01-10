@@ -21,15 +21,16 @@ const store = useMapStore()
         <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🏁 Start</button>
         <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Hide</button>
         <button @click="store.setTool('step')" :class="{ active: store.activeTool === 'step' }">🪜 Step</button>
-        <button @click="store.setTool('measure')" :class="{ active: store.activeTool === 'measure' }">📏 Measure</button>
       </div>
     </div>
 
     <div class="tool-section">
-      <h3>Zones</h3>
+      <h3>Annotations</h3>
       <div class="tool-grid">
         <button @click="store.setTool('dead')" :class="{ active: store.activeTool === 'dead' }">🚫 Dead Zone</button>
         <button @click="store.setTool('obstruction')" :class="{ active: store.activeTool === 'obstruction' }">🧱 Obstruction</button>
+        <button @click="store.setTool('measure')" :class="{ active: store.activeTool === 'measure' }">📏 Measure</button>
+        <button @click="store.setTool('note')" :class="{ active: store.activeTool === 'note' }">📝 Note</button>
       </div>
     </div>
 

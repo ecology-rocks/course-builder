@@ -11,6 +11,7 @@ import ZoneRect from './BarnHunt/ZoneRect.vue'
 import StartBoxObject from './BarnHunt/StartBoxObject.vue'
 import DCMatObject from './BarnHunt/DCMatObject.vue'
 import MeasurementObject from './BarnHunt/MeasurementObject.vue'
+import NoteObject from './BarnHunt/NoteObject.vue'
 
 const props = defineProps(['scale', 'showHides', 'GRID_OFFSET'])
 const store = useMapStore()
@@ -36,6 +37,10 @@ const visibleBales = computed(() => {
 const setRef = (el, id) => {
   if (el) objectRefs.value[id] = el
 }
+
+
+function handleUpdateNote(attrs) { store.updateNote(attrs.id, attrs) }
+
 
 // --- HANDLERS ---
 function handleRightClick(e, id) { 
@@ -301,6 +306,17 @@ function getAnchorLines(bale) {
       @dragend="handleUpdateZone"
     />
     
+
+    <NoteObject v-for="note in store.notes" :key="note.id" :note="note" :scale="scale"
+      :isSelected="store.selection.includes(note.id)" 
+      :ref="(el) => setRef(el, note.id)"
+      @select="store.selectObject(note.id, true)"
+      @update="handleUpdateNote"
+      @dragstart="handleDragStart($event, note.id)"
+      @dragmove="handleDragMove($event, note.id)"
+      @dragend="handleUpdateNote"
+    />
+
 <BoardObject v-for="board in store.boardEdges" :key="board.id" :board="board" :scale="scale" 
       :ref="(el) => setRef(el, board.id)"
       @dragstart="handleDragStart($event, board.id)"

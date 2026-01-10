@@ -11,6 +11,7 @@ import { useAgilityLogic } from './mapActions/agilityLogic'
 import { useScentWorkLogic } from './mapActions/scentWorkLogic'
 import { useHistory } from './mapActions/history'
 import { useMeasurements } from './mapActions/useMeasurements'
+import { useNotes } from './mapActions/useNotes'
 
 // ==========================================
 // 0. CONSTANTS & STRATEGIES
@@ -27,6 +28,7 @@ const DEFAULT_MAP_DATA = {
   steps: [],
   zones: [],
   markers: [],
+  notes: [],
   masterBlinds: [],
   startBox: null, 
   gate: null,     
@@ -79,6 +81,7 @@ export const useMapStore = defineStore('map', () => {
   const showMapStats = ref(true)
   const previousClassCount = ref(0)
   const activeMeasurement = ref(null)
+  const editingNoteId = ref(null)
 
   // Configs
   const wallTypes = ref({ top: 'fence', right: 'fence', bottom: 'fence', left: 'fence' })
@@ -88,6 +91,7 @@ export const useMapStore = defineStore('map', () => {
   const trialNumber = ref('')   
   const baleConfig = ref({ length: 3, width: 1.5, height: 1 }) 
   const dcMatConfig = ref({ width: 2, height: 3 }) 
+
 
   // Editor State
   const savedMaps = ref([])
@@ -109,6 +113,14 @@ export const useMapStore = defineStore('map', () => {
   function showNotification(message, type = 'info') {
     notification.value = { message, type }
     setTimeout(() => { notification.value = null }, 3000)
+  }
+
+function openNoteEditor(id) {
+    editingNoteId.value = id
+  }
+
+  function closeNoteEditor() {
+    editingNoteId.value = null
   }
 
   function reset() {
@@ -211,6 +223,7 @@ export const useMapStore = defineStore('map', () => {
     markers: createMapRef('markers'),
     masterBlinds: createMapRef('masterBlinds'),
     startBox: createMapRef('startBox'),
+    notes: createMapRef('notes'),
     gate: createMapRef('gate'),
     measurements: createMapRef('measurements'), 
     activeMeasurement, 
@@ -236,6 +249,7 @@ export const useMapStore = defineStore('map', () => {
   const agLogic = useAgilityLogic(stateRefs, historyModule.snapshot)
   const swLogic = useScentWorkLogic(stateRefs, historyModule.snapshot)
   const measureLogic = useMeasurements(stateRefs, historyModule.snapshot)
+  const notesLogic = useNotes(stateRefs, historyModule.snapshot)
 
   // =========================================================
   // DISABLED VALIDATION (User Request)
@@ -318,6 +332,7 @@ export const useMapStore = defineStore('map', () => {
     dcMats: stateRefs.dcMats,
     startBox: stateRefs.startBox,
     gate: stateRefs.gate,
+    notes: stateRefs.notes,
     steps: stateRefs.steps,
     zones: stateRefs.zones,
     agilityObstacles: stateRefs.agilityObstacles,
@@ -333,6 +348,8 @@ export const useMapStore = defineStore('map', () => {
     wallTypes, gridStartCorner, trialLocation, trialDay, 
     trialNumber, baleConfig, comparisonMapName, dcMatConfig, showMapStats,
     isDrawingBoard, savedMaps,previousClassCount,
+
+    editingNoteId, openNoteEditor, closeNoteEditor,
 
     measurements: stateRefs.measurements,
     activeMeasurement,
@@ -350,6 +367,7 @@ export const useMapStore = defineStore('map', () => {
     ...persistence,
     ...selectionLogic,
     ...measureLogic,
+    ...notesLogic,
     
     // OVERRIDE: Explicitly disable validation here too
     validateAllBales: () => {} 
