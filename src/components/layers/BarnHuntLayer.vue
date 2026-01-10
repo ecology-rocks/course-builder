@@ -270,6 +270,7 @@ function getAnchorLines(bale) {
       v-if="store.gate" 
       :gate="store.gate" 
       :scale="scale"
+      :ringDimensions="store.ringDimensions"
       :ref="(el) => setRef(el, store.gate?.id)"
       @dragstart="handleDragStart($event, store.gate?.id)"
       @dragmove="handleDragMove($event, store.gate?.id)"
