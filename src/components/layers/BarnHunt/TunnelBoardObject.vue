@@ -9,34 +9,67 @@ const groupRef = ref(null)
 
 defineExpose({ getNode: () => groupRef.value?.getNode() })
 
-// Counter-scaling logic to prevent distortion during resize
+// [FIXED] Match NoteObject Logic
+// 1. Do NOT touch the rect (stroke/corners) during drag. This causes shrinking.
+// 2. DO update text width/height so centering works.
 function handleTransform() {
   const group = groupRef.value.getNode()
   const rect = group.findOne('.board-shape')
-  const scaleX = group.scaleX()
-  const scaleY = group.scaleY()
+  const text = group.findOne('.board-text')
 
-  group.scaleX(1)
-  group.scaleY(1)
+  const sx = group.scaleX()
+  const sy = group.scaleY()
 
-  const newWidth = Math.max(10, rect.width() * scaleX)
-  const newHeight = Math.max(10, rect.height() * scaleY)
+  if (Math.abs(sx) < 0.001 || Math.abs(sy) < 0.001) return
 
-  rect.width(newWidth)
-  rect.height(newHeight)
+  if (text) {
+    // Counter-scale text to keep font size constant
+    text.scaleX(1 / sx)
+    text.scaleY(1 / sy)
+
+    // Update dimensions to match the scaled group 
+    // (This ensures align='center' still works on the larger box)
+    text.width(rect.width() * sx)
+    text.height(rect.height() * sy)
+  }
 }
 
 function handleTransformEnd() {
   const group = groupRef.value.getNode()
   const rect = group.findOne('.board-shape')
+  const text = group.findOne('.board-text')
+  
+  // 1. Calculate final dimensions
+  const finalW = rect.width() * group.scaleX()
+  const finalH = rect.height() * group.scaleY()
+
+  // 2. RESET Group Scale to 1
+  group.scaleX(1)
+  group.scaleY(1)
+  
+  // 3. Reset Children
+  if (text) { 
+    text.scaleX(1)
+    text.scaleY(1)
+    text.width(finalW)
+    text.height(finalH)
+  }
+  
+  // Reset visual properties (Snaps them back to perfect 2px / 10px)
+  rect.strokeWidth(2)
+  rect.cornerRadius(10)
+
+  // 4. Commit new Width/Height
+  rect.width(finalW)
+  rect.height(finalH)
   
   emit('update', {
     id: props.board.id,
     x: group.x() / props.scale,
     y: group.y() / props.scale,
     rotation: group.rotation(),
-    width: rect.width() / props.scale,
-    height: rect.height() / props.scale
+    width: finalW / props.scale,
+    height: finalH / props.scale
   })
 }
 
@@ -83,7 +116,7 @@ function dragBoundFunc(pos) {
         width: board.width * scale,
         height: board.height * scale,
         cornerRadius: 10,
-        fill: 'rgba(139, 69, 19, 0.4)', // Semi-transparent brown
+        fill: 'rgba(139, 69, 19, 0.4)',
         stroke: isSelected ? '#00a1ff' : '#5D4037',
         strokeWidth: isSelected ? 2 : 2,
       }"
@@ -91,6 +124,7 @@ function dragBoundFunc(pos) {
 
     <v-text
       :config="{
+        name: 'board-text',
         text: 'BOARD',
         width: board.width * scale,
         height: board.height * scale,

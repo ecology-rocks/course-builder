@@ -12,6 +12,7 @@ import StartBoxObject from './BarnHunt/StartBoxObject.vue'
 import DCMatObject from './BarnHunt/DCMatObject.vue'
 import MeasurementObject from './BarnHunt/MeasurementObject.vue'
 import NoteObject from './BarnHunt/NoteObject.vue'
+import TunnelBoardObject from './BarnHunt/TunnelBoardObject.vue'
 
 const props = defineProps(['scale', 'showHides', 'GRID_OFFSET'])
 const store = useMapStore()
@@ -40,7 +41,7 @@ const setRef = (el, id) => {
 
 
 function handleUpdateNote(attrs) { store.updateNote(attrs.id, attrs) }
-
+function handleUpdateTunnelBoard(attrs) { store.updateTunnelBoard(attrs.id, attrs) }
 
 // --- HANDLERS ---
 function handleRightClick(e, id) { 
@@ -317,6 +318,16 @@ function getAnchorLines(bale) {
       @dragend="handleUpdateNote"
     />
 
+<TunnelBoardObject v-for="board in store.tunnelBoards" :key="board.id" :board="board" :scale="scale"
+      :isSelected="store.selection.includes(board.id)" 
+      :ref="(el) => setRef(el, board.id)"
+      @select="store.selectObject(board.id, true)"
+      @update="handleUpdateTunnelBoard"
+      @dragstart="handleDragStart($event, board.id)"
+      @dragmove="handleDragMove($event, board.id)"
+      @dragend="handleUpdateTunnelBoard"
+    />
+    
 <BoardObject v-for="board in store.boardEdges" :key="board.id" :board="board" :scale="scale" 
       :ref="(el) => setRef(el, board.id)"
       @dragstart="handleDragStart($event, board.id)"

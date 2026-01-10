@@ -12,6 +12,7 @@ import { useScentWorkLogic } from './mapActions/scentWorkLogic'
 import { useHistory } from './mapActions/history'
 import { useMeasurements } from './mapActions/useMeasurements'
 import { useNotes } from './mapActions/useNotes'
+import { useTunnelBoards } from './mapActions/useTunnelBoards'
 
 // ==========================================
 // 0. CONSTANTS & STRATEGIES
@@ -27,6 +28,7 @@ const DEFAULT_MAP_DATA = {
   scentWorkObjects: [],
   steps: [],
   zones: [],
+  tunnelBoards: [],
   markers: [],
   notes: [],
   masterBlinds: [],
@@ -224,6 +226,7 @@ function openNoteEditor(id) {
     masterBlinds: createMapRef('masterBlinds'),
     startBox: createMapRef('startBox'),
     notes: createMapRef('notes'),
+    tunnelBoards: createMapRef('tunnelBoards'),
     gate: createMapRef('gate'),
     measurements: createMapRef('measurements'), 
     activeMeasurement, 
@@ -250,6 +253,7 @@ function openNoteEditor(id) {
   const swLogic = useScentWorkLogic(stateRefs, historyModule.snapshot)
   const measureLogic = useMeasurements(stateRefs, historyModule.snapshot)
   const notesLogic = useNotes(stateRefs, historyModule.snapshot)
+  const tunnelBoardsLogic = useTunnelBoards(stateRefs, historyModule.snapshot)
 
   // =========================================================
   // DISABLED VALIDATION (User Request)
@@ -339,6 +343,7 @@ function openNoteEditor(id) {
     scentWorkObjects: stateRefs.scentWorkObjects,
     markers: stateRefs.markers,
     masterBlinds: stateRefs.masterBlinds,
+    tunnelBoards: stateRefs.tunnelBoards,
 
     // Settings & Meta
     ringDimensions, gridSize, currentLayer, selectedBaleId, activeTool,
@@ -368,6 +373,7 @@ function openNoteEditor(id) {
     ...selectionLogic,
     ...measureLogic,
     ...notesLogic,
+    ...tunnelBoardsLogic,
     
     // OVERRIDE: Explicitly disable validation here too
     validateAllBales: () => {} 

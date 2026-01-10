@@ -14,43 +14,51 @@ function handleDblClick(e) {
   store.openNoteEditor(props.note.id)
 }
 
-// [FIX] Live Resizing Logic
+// [FIX] Counter-Scaling Pattern
 function handleTransform() {
   const group = groupRef.value.getNode()
   const rect = group.findOne('.note-bg')
   const text = group.findOne('.note-text')
-
-  const scaleX = group.scaleX()
-  const scaleY = group.scaleY()
-
-  // 1. Reset Scale to 1 (Prevents distortion)
-  group.scaleX(1)
-  group.scaleY(1)
-
-  // 2. Calculate new dimensions based on the scale that WAS applied
-  const newWidth = Math.max(20, rect.width() * scaleX)
-  const newHeight = Math.max(20, rect.height() * scaleY)
-
-  // 3. Apply new dimensions directly to children
-  rect.width(newWidth)
-  rect.height(newHeight)
   
-  text.width(newWidth)
-  text.height(newHeight)
+  const sx = group.scaleX()
+  const sy = group.scaleY()
+
+  // 1. Counter-scale Text so font size looks invariant
+  text.scaleX(1 / sx)
+  text.scaleY(1 / sy)
+
+  // 2. Adjust Text Width so it wraps correctly in the new visual space
+  //    (Rect Width * Group Scale = Visual Width)
+  text.width(rect.width() * sx)
+  text.height(rect.height() * sy)
 }
 
 function handleTransformEnd() {
   const group = groupRef.value.getNode()
   const rect = group.findOne('.note-bg')
+  const text = group.findOne('.note-text')
+  
+  // 1. Calculate final dimensions
+  const finalW = rect.width() * group.scaleX()
+  const finalH = rect.height() * group.scaleY()
 
-  // Read the FINAL width/height from the rect (since scale is always 1 now)
+  // 2. Reset Scales
+  group.scaleX(1); group.scaleY(1)
+  text.scaleX(1); text.scaleY(1)
+
+  // 3. Commit Geometry
+  rect.width(finalW)
+  rect.height(finalH)
+  text.width(finalW)
+  text.height(finalH)
+
   emit('update', {
     id: props.note.id,
     x: group.x() / props.scale,
     y: group.y() / props.scale,
     rotation: group.rotation(),
-    width: rect.width() / props.scale,   // Convert back to grid units
-    height: rect.height() / props.scale
+    width: finalW / props.scale,
+    height: finalH / props.scale
   })
 }
 
@@ -60,12 +68,12 @@ function handleDragEnd(e) {
 
 function dragBoundFunc(pos) {
   const layerAbs = this.getLayer().getAbsolutePosition()
+  // Use current width/height from props (drag doesn't change size)
   const maxX = (store.ringDimensions.width * props.scale) - (props.note.width * props.scale)
   const maxY = (store.ringDimensions.height * props.scale) - (props.note.height * props.scale)
   
   let relX = pos.x - layerAbs.x
   let relY = pos.y - layerAbs.y
-  
   relX = Math.max(0, Math.min(relX, maxX))
   relY = Math.max(0, Math.min(relY, maxY))
 
@@ -89,7 +97,7 @@ function dragBoundFunc(pos) {
     @dragstart="emit('dragstart', $event)"
     @dragmove="emit('dragmove', $event)"
     @dragend="handleDragEnd"
-    @transform="handleTransform" 
+    @transform="handleTransform"
     @transformend="handleTransformEnd"
   >
     <v-rect
