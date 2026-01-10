@@ -1,14 +1,13 @@
-export function useHides(state) {
-  function snapToGrid(val) {
-    return Math.round(val * 6) / 6
-  }
+// src/stores/mapActions/useHides.js
 
+export function useHides(state, snapshot) {
   function addHide(x, y) {
-    state.hides.value.push({ 
-      id: crypto.randomUUID(), 
-      x: snapToGrid(x), 
-      y: snapToGrid(y), 
-      type: 'rat' 
+    state.hides.value.push({
+      id: crypto.randomUUID(),
+      x, 
+      y, 
+      type: 'rat', // rat, litter, empty
+      elevation: 'floor' // [NEW] floor, under, over
     })
   }
 
@@ -19,9 +18,24 @@ export function useHides(state) {
   function cycleHideType(id) {
     const hide = state.hides.value.find(h => h.id === id)
     if (hide) {
-      hide.type = hide.type === 'rat' ? 'litter' : (hide.type === 'litter' ? 'empty' : 'rat')
+      if (hide.type === 'rat') hide.type = 'litter'
+      else if (hide.type === 'litter') hide.type = 'empty'
+      else hide.type = 'rat'
     }
   }
 
-  return { addHide, removeHide, cycleHideType }
+  // [NEW ACTION] Cycle Elevation: Floor -> Under -> Over
+function cycleHideElevation(id) {
+  const hide = state.hides.value.find(h => h.id === id)
+  if (hide) {
+    // Toggle between 'under' and 'regular_over'
+    if (hide.elevation === 'under') {
+      hide.elevation = 'regular_over'
+    } else {
+      hide.elevation = 'under'
+    }
+  }
+}
+
+  return { addHide, removeHide, cycleHideType, cycleHideElevation }
 }

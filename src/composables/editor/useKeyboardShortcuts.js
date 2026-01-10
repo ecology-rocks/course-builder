@@ -75,6 +75,21 @@ if (key === 'delete' || key === 'backspace') {
       return
     }
 
+
+    if (key === 'u') {
+      if (store.selection.length > 0) {
+        e.preventDefault()
+        // Apply to all selected items (if they are hides)
+        store.selection.forEach(id => {
+          // Check if it's a hide by seeing if it exists in the hides array
+          if (store.hides.find(h => h.id === id)) {
+            store.cycleHideElevation(id)
+          }
+        })
+      }
+      return
+    }
+
   }
 
   // Arrow Keys: Nudge Selection
