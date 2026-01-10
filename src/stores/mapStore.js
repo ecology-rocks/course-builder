@@ -139,6 +139,8 @@ function openNoteEditor(id) {
     trialLocation.value = ''; trialDay.value = ''; trialNumber.value = ''
     baleConfig.value = { length: 3, width: 1.5, height: 1 }
     dcMatConfig.value = { width: 2, height: 3 }
+    activeMeasurement.value = null
+    editingNoteId.value = null
   }
 
  function resizeRing(width, height) {
