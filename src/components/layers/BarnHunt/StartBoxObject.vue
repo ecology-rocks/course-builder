@@ -2,8 +2,8 @@
 import { ref } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
-const props = defineProps(['scale'])
-const emit = defineEmits(['dragstart', 'dragmove', 'dragend'])
+const props = defineProps(['scale', 'isSelected'])
+const emit = defineEmits(['dragstart', 'dragmove', 'dragend', 'select'])
 const store = useMapStore()
 const groupRef = ref(null)
 
@@ -11,8 +11,13 @@ const groupRef = ref(null)
 defineExpose({ getNode: () => groupRef.value?.getNode() })
 
 function handleClick(e) {
+  // [2. PREVENT BUBBLING & EMIT SELECT]
+  e.cancelBubble = true
+  
   if (store.activeTool === 'delete') {
     store.removeStartBox()
+  } else {
+    emit('select')
   }
 }
 
@@ -59,7 +64,7 @@ function dragBoundFunc(pos) {
         width: 4 * scale, 
         height: 4 * scale, 
         fill: 'rgba(200, 200, 200, 0.5)', 
-        stroke: 'black', 
+        stroke: isSelected ? '#00a1ff' : 'black', 
         dash: [10, 5] 
       }" 
     />

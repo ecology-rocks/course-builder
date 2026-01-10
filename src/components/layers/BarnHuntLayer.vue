@@ -216,7 +216,9 @@ function getAnchorLines(bale) {
 <template>
   <v-group>
     <StartBoxObject v-if="store.startBox" :scale="scale" 
+      :isSelected="store.selection.includes(store.startBox?.id)"
       :ref="(el) => setRef(el, store.startBox?.id || 'startbox')"
+      @select="store.selectObject(store.startBox.id)"
       @dragstart="handleDragStart($event, store.startBox?.id)"
       @dragmove="handleDragMove($event, store.startBox?.id)"
       @dragend="handleDragEnd($event, store.startBox?.id)" 
