@@ -20,6 +20,8 @@ import BarnHuntLayer from './layers/BarnHuntLayer.vue'
 import ScentWorkLayer from './layers/ScentWorkLayer.vue'
 import MapLegend from './layers/MapLegend.vue'
 import EditNoteModal from './modals/EditNoteModal.vue'
+import BugReportModal from './modals/BugReportModal.vue'
+import HelpModal from './modals/HelpModal.vue'
 
 // Setup
 const store = useMapStore()
@@ -29,6 +31,8 @@ const stageRef = ref(null)
 const GRID_OFFSET = 30
 const showHides = ref(true)
 const isPrinting = ref(false)
+const showBugReportModal = ref(false)
+const showHelpModal = ref(false)
 
 // Context Menu State
 const contextMenu = ref({ visible: false, x: 0, y: 0 })
@@ -114,6 +118,15 @@ function handleGlobalClick() {
         <button @click="zoom(-5)">-</button>
         <button @click="fitToScreen">Fit</button>
       </div>
+
+      <button class="help-fab" @click="showHelpModal = true" title="Keyboard Shortcuts & Help">
+      ?
+    </button>
+
+    <HelpModal 
+      :show="showHelpModal" 
+      @close="showHelpModal = false" 
+    />
 
       <div 
         v-if="contextMenu.visible" 
@@ -309,4 +322,32 @@ function handleGlobalClick() {
 
 .slide-up-enter-active, .slide-up-leave-active { transition: all 0.3s ease; }
 .slide-up-enter-from, .slide-up-leave-to { transform: translate(-50%, 20px); opacity: 0; }
+
+/* ... existing styles ... */
+
+.help-fab {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background-color: #2c3e50;
+  color: white;
+  border: 2px solid white;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  font-size: 24px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.2s, background-color 0.2s;
+}
+
+.help-fab:hover {
+  background-color: #2196f3;
+  transform: scale(1.1);
+}
 </style>
