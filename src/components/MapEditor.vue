@@ -169,7 +169,7 @@ function handleGlobalClick() {
               :config="{
                 x: (n - 1) * scale, y: getXAxisY(),
                 text: getGridLabelX(n - 1),
-                fontSize: 10, fill: '#666', align: 'center', width: 30, offsetX: 15
+                fontSize: 12, fill: '#666', align: 'center', width: 30, offsetX: 15
               }" />
           </template>
 
@@ -178,7 +178,7 @@ function handleGlobalClick() {
               :config="{
                 x: getYAxisX(), y: (n - 1) * scale - 6,
                 text: getGridLabelY(n - 1),
-                fontSize: 10, fill: '#666', align: getYAxisAlign(), width: 20
+                fontSize: 12, fill: '#666', align: getYAxisAlign(), width: 20
               }" />
           </template>
 
@@ -195,7 +195,7 @@ function handleGlobalClick() {
 
           <v-group v-if="store.gate" @dblclick="() => { if(store.activeTool === 'delete') store.removeGate() }">
             <v-rect :config="{ x: store.gate.x * scale, y: store.gate.y * scale, width: 3 * scale, height: 6, offsetX: (3 * scale) / 2, offsetY: 3, rotation: store.gate.rotation, fill: 'white', stroke: 'black', strokeWidth: 2 }" />
-            <v-text :config="{ x: store.gate.x * scale, y: store.gate.y * scale, text: 'GATE', fontSize: 10, fontStyle: 'bold', offsetX: 15, offsetY: -5, rotation: store.gate.rotation }" />
+            <v-text :config="{ x: store.gate.x * scale, y: store.gate.y * scale, text: 'GATE', fontSize: 12, fontStyle: 'bold', offsetX: 15, offsetY: -5, rotation: store.gate.rotation }" />
           </v-group>
 
           <v-rect v-if="selectionRect" :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />

@@ -2,12 +2,10 @@
 import { ref, onMounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
-// Changed: No props needed for visibility (handled by parent v-if)
 const emit = defineEmits(['close'])
 const store = useMapStore()
 const userMaps = ref([])
 
-// Changed: Load maps immediately on mount (since v-if in parent triggers mount)
 onMounted(async () => {
   userMaps.value = await store.loadUserMaps()
 })
@@ -17,8 +15,22 @@ function close() {
 }
 
 function selectMap(map) {
-  store.loadMapFromData(map.id, map)
-  close()
+  if (confirm("Opening this map will replace your current workspace. Any unsaved changes will be lost. Continue?")) {
+    store.loadMapFromData(map.id, map)
+    close()
+  }
+}
+
+// [UPDATED] Added confirmation check
+function handleCopyMap(map) {
+  if (confirm("Loading this copy will replace your current workspace. Any unsaved changes will be lost. Continue?")) {
+    const newMap = JSON.parse(JSON.stringify(map))
+    newMap.id = null
+    newMap.name = `Copy of ${newMap.name}`
+    
+    store.loadMapFromData(null, newMap)
+    close()
+  }
 }
 
 async function handleDeleteMap(map) {
@@ -52,8 +64,9 @@ async function handleRenameMap(map) {
             <small>{{ new Date(map.updatedAt.seconds * 1000).toLocaleDateString() }}</small>
           </div>
           <div class="map-actions">
-            <button @click.stop="handleRenameMap(map)">✏️</button>
-            <button @click.stop="handleDeleteMap(map)" class="delete-btn">🗑️</button>
+            <button @click.stop="handleCopyMap(map)" title="Duplicate Map">📄</button>
+            <button @click.stop="handleRenameMap(map)" title="Rename">✏️</button>
+            <button @click.stop="handleDeleteMap(map)" class="delete-btn" title="Delete">🗑️</button>
           </div>
         </li>
       </ul>

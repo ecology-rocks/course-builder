@@ -16,10 +16,6 @@ This is my one-true-copy of the project roadmap.
  - Numbered rat spots for Master
  - Ability to modify subscriptions, add extra seats to club sub, etc. 
  - Documentation + Guides, help button, etc.
- - Consider adding a zoom function beyond the scale function at the bottom
- - Perimeter distances and hide locations very small and hard to read. Maybe a menu item to increase/decrease size? 
- - Rat marker color change to indicate under/over a leaner?
- - Consider how to implement "whole tunnel board" options best
  - Bring to front feature for bales? Would require some redesign.
 
 

@@ -114,7 +114,7 @@ function handleBoardHandleDrag(e, boardId, whichPoint) {
 
       <v-group v-if="obj.isHot && props.showHides">
         <v-circle :config="{ radius: 10, fill: 'red', x: 0, y: 0, opacity: 0.8 }" />
-        <v-text :config="{ text: 'HOT', fontSize: 10, fill: 'white', x: -10, y: -5, align: 'center', width: 20 }" />
+        <v-text :config="{ text: 'HOT', fontSize: 12, fill: 'white', x: -10, y: -5, align: 'center', width: 20 }" />
       </v-group>
 
     </v-group>
