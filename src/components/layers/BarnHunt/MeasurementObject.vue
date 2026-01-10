@@ -1,9 +1,22 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
 const props = defineProps(['measurement', 'scale'])
 const store = useMapStore()
+
+// --- LOCAL STATE ---
+// We use a local buffer so the UI is responsive and doesn't conflict with Store updates
+const localPoints = ref([])
+const isDragging = ref(false)
+
+// Sync Store -> Local (Only if NOT dragging)
+watch(() => props.measurement.points, (newPoints) => {
+  if (!isDragging.value && newPoints) {
+    // Deep copy to break reference
+    localPoints.value = newPoints.map(p => ({ x: p.x, y: p.y }))
+  }
+}, { deep: true, immediate: true })
 
 // --- SELECTION STATE ---
 const isSelected = computed(() => store.selection.includes(props.measurement.id))
@@ -16,10 +29,10 @@ const fmt = (val) => {
   return inch === 0 ? `${ft}'` : `${ft}' ${inch}"`
 }
 
+// Compute segments from LOCAL points (Real-time updates)
 const segments = computed(() => {
-  const pts = props.measurement.points
+  const pts = localPoints.value
   const results = []
-  
   if (!pts || pts.length < 2) return []
 
   for (let i = 0; i < pts.length - 1; i++) {
@@ -36,49 +49,66 @@ const segments = computed(() => {
 // --- HANDLERS ---
 
 function handleClick(e) {
-  // 1. Delete Tool Override
   if (store.activeTool === 'delete') {
     store.removeMeasurement(props.measurement.id)
     return
   }
-
-  // 2. Selection Logic
   e.cancelBubble = true
   const isMulti = e.evt.shiftKey || e.evt.ctrlKey || e.evt.metaKey
   store.selectObject(props.measurement.id, isMulti)
 }
 
-function handleDragStart(e) {
+function handlePointDragStart(e) {
   e.cancelBubble = true
-  store.snapshot() // Save state before modifying geometry
+  // Lock the local state so incoming store updates don't interrupt the drag
+  isDragging.value = true
 }
 
 function handlePointDragMove(e, index) {
   e.cancelBubble = true
-  const node = e.target // This will be the Group now
+  const node = e.target 
   
-  // Calculate Grid Coordinates from the Group's position
-  const rawX = node.x() / props.scale
-  const rawY = node.y() / props.scale
-  
-  // Snap to 0.5 grid
-  const snapX = Math.round(rawX * 2) / 2
-  const snapY = Math.round(rawY * 2) / 2
-  
-  // Update Store (Visual Refresh of lines)
-  store.updateMeasurementPoint(props.measurement.id, index, snapX, snapY)
-  
-  // Keep the Group snapped visually
-  node.position({ x: snapX * props.scale, y: snapY * props.scale })
+  // 1. Get current visual position (already snapped by dragBoundFunc)
+  const currentX = node.x() / props.scale
+  const currentY = node.y() / props.scale
+
+  // 2. Update LOCAL state directly
+  // This triggers 'segments' to recalculate, updating the lines instantly
+  if (localPoints.value[index]) {
+    localPoints.value[index] = { x: currentX, y: currentY }
+  }
 }
 
-// Snapping Logic for the Konva Drag System
-function dragBoundFunc(pos) {
-  const step = props.scale / 2
-  return {
-    x: Math.round(pos.x / step) * step,
-    y: Math.round(pos.y / step) * step
+function handlePointDragEnd(e, index) {
+  e.cancelBubble = true
+  const node = e.target
+  
+  // 1. Capture final position
+  const finalX = node.x() / props.scale
+  const finalY = node.y() / props.scale
+
+  // 2. Update Local State one last time (just in case)
+  if (localPoints.value[index]) {
+    localPoints.value[index] = { x: finalX, y: finalY }
   }
+
+  // 3. Update Store
+  store.updateMeasurementPoint(props.measurement.id, index, finalX, finalY)
+
+  // 4. Unlock
+  isDragging.value = false
+}
+
+// Snapping Logic
+function dragBoundFunc(pos) {
+  const node = this
+  const layerAbs = node.getLayer().getAbsolutePosition()
+  const step = props.scale / 6 // 2-inch snap
+  
+  let x = Math.round((pos.x - layerAbs.x) / step) * step
+  let y = Math.round((pos.y - layerAbs.y) / step) * step
+  
+  return { x: x + layerAbs.x, y: y + layerAbs.y }
 }
 </script>
 
@@ -91,7 +121,7 @@ function dragBoundFunc(pos) {
         stroke: color, 
         strokeWidth: 2, 
         dash: [4, 4], 
-        hitStrokeWidth: 20 // [FIX] Easier to click lines
+        hitStrokeWidth: 20 
       }" />
       
       <v-label :config="{ x: seg.midX * scale, y: seg.midY * scale }">
@@ -107,7 +137,7 @@ function dragBoundFunc(pos) {
       </v-label>
     </template>
 
-    <template v-for="(pt, i) in measurement.points" :key="'pt-'+i">
+    <template v-for="(pt, i) in localPoints" :key="'pt-'+i">
       <v-group
         :config="{
           x: pt.x * scale,
@@ -115,8 +145,9 @@ function dragBoundFunc(pos) {
           draggable: true,
           dragBoundFunc: dragBoundFunc
         }"
-        @dragstart="handleDragStart"
+        @dragstart="handlePointDragStart"
         @dragmove="handlePointDragMove($event, i)"
+        @dragend="handlePointDragEnd($event, i)"
       >
         <v-circle :config="{ 
           radius: 6, 
