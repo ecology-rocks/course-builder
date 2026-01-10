@@ -30,9 +30,9 @@ function handleHandleDragEnd(e, whichPoint) {
   const rawX = (absPos.x - layerAbs.x) / props.scale
   const rawY = (absPos.y - layerAbs.y) / props.scale
   
-  // Snap to 0.5 grid
-  const snappedX = Math.round(rawX * 2) / 2
-  const snappedY = Math.round(rawY * 2) / 2
+  // Snap to 2-inch grid
+const snappedX = Math.round(rawX * 6) / 6
+const snappedY = Math.round(rawY * 6) / 6
 
   // Update Store
   store.updateBoardEndpoint(props.board.id, whichPoint, snappedX, snappedY)
@@ -45,7 +45,7 @@ function handleHandleDragEnd(e, whichPoint) {
 function dragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
-  const step = props.scale / 2
+  const step = props.scale / 6
   let x = Math.round((pos.x - layerAbs.x) / step) * step
   let y = Math.round((pos.y - layerAbs.y) / step) * step
   return { x: x + layerAbs.x, y: y + layerAbs.y }
