@@ -34,9 +34,22 @@ function handleClick(e) {
 }
 
 function dragBoundFunc(pos) {
-  const node = this; const layerAbs = node.getLayer().getAbsolutePosition(); const step = props.scale / 6
-  let x = Math.round((pos.x - layerAbs.x) / step) * step; let y = Math.round((pos.y - layerAbs.y) / step) * step
-  return { x: x + layerAbs.x, y: y + layerAbs.y }
+  const node = this
+  const layerAbs = node.getLayer().getAbsolutePosition()
+  const step = props.scale / 6
+  
+  let relX = Math.round((pos.x - layerAbs.x) / step) * step
+  let relY = Math.round((pos.y - layerAbs.y) / step) * step
+  
+  // Radius is 8px
+  const r = 8
+  const maxX = (store.ringDimensions.width * props.scale) - r
+  const maxY = (store.ringDimensions.height * props.scale) - r
+
+  relX = Math.max(r, Math.min(relX, maxX))
+  relY = Math.max(r, Math.min(relY, maxY))
+
+  return { x: relX + layerAbs.x, y: relY + layerAbs.y }
 }
 </script>
 

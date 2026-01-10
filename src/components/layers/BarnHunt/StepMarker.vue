@@ -1,5 +1,8 @@
 <script setup>
 import { ref } from 'vue'
+import { useMapStore } from '@/stores/mapStore'
+
+const store = useMapStore() // <--- Initialize Store
 
 const props = defineProps(['step', 'isSelected', 'scale'])
 // Added 'dragstart' and 'dragmove' to emits
@@ -22,12 +25,23 @@ const handleContextMenu = (e) => {
 }
 
 function dragBoundFunc(pos) {
-  // Simple snapping logic
   const layerAbs = this.getLayer().getAbsolutePosition()
   const step = props.scale / 6
-  let x = Math.round((pos.x - layerAbs.x) / step) * step
-  let y = Math.round((pos.y - layerAbs.y) / step) * step
-  return { x: x + layerAbs.x, y: y + layerAbs.y }
+  
+  let relX = Math.round((pos.x - layerAbs.x) / step) * step
+  let relY = Math.round((pos.y - layerAbs.y) / step) * step
+
+  // Steps are 45x30 pixels centered
+  const halfW = 45 / 2
+  const halfH = 30 / 2
+  
+  const maxX = (store.ringDimensions.width * props.scale) - halfW
+  const maxY = (store.ringDimensions.height * props.scale) - halfH
+
+  relX = Math.max(halfW, Math.min(relX, maxX))
+  relY = Math.max(halfH, Math.min(relY, maxY))
+
+  return { x: relX + layerAbs.x, y: relY + layerAbs.y }
 }
 </script>
 

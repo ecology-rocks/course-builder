@@ -19,10 +19,22 @@ function handleClick(e) {
 function dragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
-  const step = props.scale / 6 // 3-inch snap
-  let x = Math.round((pos.x - layerAbs.x) / step) * step
-  let y = Math.round((pos.y - layerAbs.y) / step) * step
-  return { x: x + layerAbs.x, y: y + layerAbs.y }
+  const step = props.scale / 6 // 2-inch snap
+  
+  // 1. Calculate Snapped Position
+  let relX = Math.round((pos.x - layerAbs.x) / step) * step
+  let relY = Math.round((pos.y - layerAbs.y) / step) * step
+
+  // 2. Calculate Bounds (Box is 4x4 feet)
+  const boxSize = 4 * props.scale
+  const maxX = (store.ringDimensions.width * props.scale) - boxSize
+  const maxY = (store.ringDimensions.height * props.scale) - boxSize
+
+  // 3. Clamp
+  relX = Math.max(0, Math.min(relX, maxX))
+  relY = Math.max(0, Math.min(relY, maxY))
+
+  return { x: relX + layerAbs.x, y: relY + layerAbs.y }
 }
 </script>
 

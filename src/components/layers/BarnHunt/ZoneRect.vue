@@ -1,6 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
-
+import { useMapStore } from '@/stores/mapStore'
+const store = useMapStore()
 const props = defineProps(['zone', 'isSelected', 'scale'])
 // Added 'dragstart' and 'dragmove'
 const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend'])
@@ -29,6 +30,26 @@ const handleTransformEnd = () => {
 const handleDragEnd = (e) => {
   emit('update', { id: props.zone.id, x: e.target.x() / props.scale, y: e.target.y() / props.scale })
 }
+
+function dragBoundFunc(pos) {
+  const layerAbs = this.getLayer().getAbsolutePosition()
+  
+  let relX = pos.x - layerAbs.x
+  let relY = pos.y - layerAbs.y
+
+  // Calculate Zone Dimensions in Pixels
+  const zW = props.zone.width * props.scale
+  const zH = props.zone.height * props.scale
+
+  const maxX = (store.ringDimensions.width * props.scale) - zW
+  const maxY = (store.ringDimensions.height * props.scale) - zH
+
+  // Clamp
+  relX = Math.max(0, Math.min(relX, maxX))
+  relY = Math.max(0, Math.min(relY, maxY))
+
+  return { x: relX + layerAbs.x, y: relY + layerAbs.y }
+}
 </script>
 
 <template>
@@ -39,7 +60,8 @@ const handleDragEnd = (e) => {
       x: zone.x * scale,
       y: zone.y * scale,
       rotation: zone.rotation,
-      draggable: true
+      draggable: true,
+      dragBoundFunc: dragBoundFunc
     }"
     @click="emit('select', zone.id)"
     @dragstart="emit('dragstart', $event)"
