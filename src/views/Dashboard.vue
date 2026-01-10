@@ -86,6 +86,20 @@ async function handleCreateFolder() {
   if (name) await mapStore.createFolder(name)
 }
 
+
+function copyToNewMap(map) {
+  // 1. Deep clone to detach from original
+  const newMap = JSON.parse(JSON.stringify(map))
+  
+  // 2. Reset ID so it is treated as a NEW map upon saving
+  newMap.id = null
+  newMap.name = `Copy of ${newMap.name}`
+  
+  // 3. Load into store (passing null as ID) and redirect
+  mapStore.loadMapFromData(null, newMap)
+  router.push('/editor')
+}
+
 async function handleDeleteFolder(id) {
   if (confirm("Are you sure you want to delete this folder?")) {
     await mapStore.deleteFolder(id)
@@ -255,6 +269,7 @@ watch(() => userStore.user, async (newUser) => {
                 </div>
                 <div class="actions">
                   <button @click="openMap(map)">Edit</button>
+                  <button @click="copyToNewMap(map)">Copy</button>
                   <button @click="requestDelete(map.id)" class="btn-danger">Delete</button>
                 </div>
               </div>
