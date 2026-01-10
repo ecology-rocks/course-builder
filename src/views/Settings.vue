@@ -174,9 +174,9 @@ async function handleRemoveJudge(email) {
             <p>Upgrade to unlock Cloud Saves, Sharing, and Export.</p>
 
             <div class="pricing-grid">
-              <div class="plan-col">
+              <div class="plan-col"> 
                 <h3>Solo</h3>
-                <div class="price">$6<span>/mo</span></div>
+                <div class="price">$7.99<span>/mo</span></div>
                 <p class="desc">Single Sport (Barn Hunt)</p>
                 <button class="btn-primary" @click="handleUpgrade('solo')">Go Solo</button>
               </div>
@@ -184,14 +184,14 @@ async function handleRemoveJudge(email) {
               <div class="plan-col best-value">
                 <div class="badge-pop">BEST VALUE</div>
                 <h3>Pro</h3>
-                <div class="price">$10<span>/mo</span></div>
-                <p class="desc">All Sports + Power Tools</p>
+                <div class="price">$14.99<span>/mo</span></div>
+                <p class="desc">All Sports</p>
                 <button class="btn-primary" @click="handleUpgrade('pro')">Go Pro</button>
               </div>
 
               <div class="plan-col">
                 <h3>Club</h3>
-                <div class="price">$29<span>/mo</span></div>
+                <div class="price">$49.99<span>/mo</span></div>
                 <p class="desc">5 Pro Seats for Judges</p>
                 <button class="btn-club" @click="handleUpgrade('club')">Go Club</button>
               </div>
@@ -201,7 +201,7 @@ async function handleRemoveJudge(email) {
           <div v-else>
             <p v-if="userStore.tier === 'solo'">
               You are on the <strong>Solo</strong> plan (Barn Hunt). <br>
-              <a href="#" @click.prevent="handleUpgrade('pro')">Upgrade to Pro ($10/mo)</a> for all sports.
+              <a href="#" @click.prevent="handleUpgrade('pro')">Upgrade to Pro ($14.99/mo)</a> for all sports.
             </p>
             <p v-else>
               You are a <strong>{{ userStore.tier.toUpperCase() }}</strong> member.

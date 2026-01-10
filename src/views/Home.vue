@@ -64,7 +64,7 @@ function handleCta() {
         
         <div class="price-card">
           <h3>Solo</h3>
-          <div class="price">$6<span>/mo</span></div>
+          <div class="price">$7.99<span>/mo</span></div>
           <ul>
             <li>✅ <strong>Barn Hunt Only</strong></li>
             <li>✅ Cloud Saving & Sharing</li>
@@ -77,10 +77,10 @@ function handleCta() {
 <div class="price-card popular">
           <div class="badge">BEST VALUE</div>
           <h3>Pro</h3>
-          <div class="price">$10<span>/mo</span></div>
+          <div class="price">$14.99<span>/mo</span></div>
           <ul>
             <li>✅ <strong>All Sports Access</strong></li>
-            <li>✅ Barn Hunt, Agility, Scent Work</li>
+            <li>✅ Barn Hunt, Agility, Scent Work, Rally (coming soon)</li>
             <li>✅ Priority Support</li>
             <li>✅ Early Access to New Features</li>
           </ul>
@@ -89,7 +89,7 @@ function handleCta() {
 
         <div class="price-card">
           <h3>Club</h3>
-          <div class="price">$30<span>/mo</span></div>
+          <div class="price">$49.99<span>/mo</span></div>
           <ul>
             <li>✅ <strong>5 Pro Seats</strong></li>
             <li>✅ Sponsor your Judges</li>
