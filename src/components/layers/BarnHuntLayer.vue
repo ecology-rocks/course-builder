@@ -216,10 +216,10 @@ function getAnchorLines(bale) {
 <template>
   <v-group>
     <StartBoxObject v-if="store.startBox" :scale="scale" 
-      :ref="(el) => setRef(el, store.startBox.id || 'startbox')"
-      @dragstart="handleDragStart($event, store.startBox.id)"
-      @dragmove="handleDragMove($event, store.startBox.id)"
-      @dragend="handleDragEnd($event, store.startBox.id)" 
+      :ref="(el) => setRef(el, store.startBox?.id || 'startbox')"
+      @dragstart="handleDragStart($event, store.startBox?.id)"
+      @dragmove="handleDragMove($event, store.startBox?.id)"
+      @dragend="handleDragEnd($event, store.startBox?.id)" 
     />
 
 <DCMatObject v-for="mat in store.dcMats" :key="mat.id" :mat="mat" :scale="scale" 

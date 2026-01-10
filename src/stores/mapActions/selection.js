@@ -47,6 +47,8 @@ function selectArea(x, y, w, h) {
     }
 
     const newSelection = []
+    
+    // Helper for Point-in-Rect
     const isInside = (ox, oy) => ox >= rect.x && ox <= rect.x + rect.w && oy >= rect.y && oy <= rect.y + rect.h
 
     Object.keys(state.mapData.value).forEach(key => {
@@ -54,27 +56,33 @@ function selectArea(x, y, w, h) {
 
       if (Array.isArray(collection)) {
         collection.forEach(item => {
-          // 1. Layer Check for Bales
-
-          // 2. Determine "Center" for Selection
-          let cx, cy
           
           if (item.x1 !== undefined && item.y1 !== undefined) {
-             // It's a Board (Line) -> Use Midpoint
-             cx = (item.x1 + item.x2) / 2
-             cy = (item.y1 + item.y2) / 2
+             // [FIX] Use Bounding Box Overlap for Boards/Lines
+             // This selects the board if ANY part of its bounding box touches the selection area
+             const minX = Math.min(item.x1, item.x2)
+             const maxX = Math.max(item.x1, item.x2)
+             const minY = Math.min(item.y1, item.y2)
+             const maxY = Math.max(item.y1, item.y2)
+
+             // Check for overlap
+             const overlaps = (minX < rect.x + rect.w) && (maxX > rect.x) &&
+                              (minY < rect.y + rect.h) && (maxY > rect.y)
+             
+             if (overlaps) newSelection.push(item.id)
+
           } else {
-             // Standard Object
-             cx = item.x
-             cy = item.y
+             // Standard Objects: Check Center
+             let cx = item.x
+             let cy = item.y
              // Offset Bales slightly to match visual center
              if (key === 'bales') { cx += 1.5; cy += 0.75 }
-          }
 
-          if (isInside(cx, cy)) newSelection.push(item.id)
+             if (isInside(cx, cy)) newSelection.push(item.id)
+          }
         })
       } 
-      // Singletons (StartBox, Gate)
+      // Singletons
       else if (collection && collection.id) {
         if (isInside(collection.x, collection.y)) newSelection.push(collection.id)
       }

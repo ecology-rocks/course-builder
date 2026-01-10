@@ -4,7 +4,12 @@ export function useStartBox(state) {
   }
 
   function addStartBox(x, y) {
-    state.startBox.value = { x: snapToGrid(x), y: snapToGrid(y) }
+    // [FIX] Assign a random ID so selection/dragging logic works
+    state.startBox.value = { 
+      id: crypto.randomUUID(), 
+      x: snapToGrid(x), 
+      y: snapToGrid(y) 
+    }
   }
 
   function removeStartBox() {

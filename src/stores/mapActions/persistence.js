@@ -154,7 +154,7 @@ export function useMapPersistence(state, userStore, notifications) {
       }
     })
 
-// Fix 1: "Deadzones" often change names (zones vs deadZones)
+    // Fix 1: "Deadzones" often change names (zones vs deadZones)
     if (source.deadZones && Array.isArray(source.deadZones)) {
       state.mapData.value.zones = source.deadZones
     }
@@ -167,6 +167,14 @@ export function useMapPersistence(state, userStore, notifications) {
     // Fix 3: Ensure they are initialized as arrays if missing
     if (!state.mapData.value.zones) state.mapData.value.zones = []
     if (!state.mapData.value.steps) state.mapData.value.steps = []
+    
+    // [FIX] Ensure Singletons have IDs (StartBox, Gate)
+    if (state.mapData.value.startBox && !state.mapData.value.startBox.id) {
+      state.mapData.value.startBox.id = crypto.randomUUID()
+    }
+    if (state.mapData.value.gate && !state.mapData.value.gate.id) {
+      state.mapData.value.gate.id = crypto.randomUUID()
+    }
 
     if (state.wallTypes && source.wallTypes) state.wallTypes.value = source.wallTypes
     if (state.gridStartCorner) state.gridStartCorner.value = source.gridStartCorner || 'top-left'

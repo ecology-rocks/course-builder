@@ -41,6 +41,27 @@ const snappedY = Math.round(rawY * 6) / 6
   node.position({ x: snappedX * props.scale, y: snappedY * props.scale })
 }
 
+function handleGroupDragEnd(e) {
+  // If the event came from a bubble (endpoint drag), ignore it
+  if (e.target !== groupRef.value.getNode()) return
+
+  const node = e.target
+  // Calculate delta in Grid Units
+  const dx = node.x() / props.scale
+  const dy = node.y() / props.scale
+  
+  // Update Store (both endpoints)
+  store.updateBoardEndpoint(props.board.id, 'start', props.board.x1 + dx, props.board.y1 + dy)
+  store.updateBoardEndpoint(props.board.id, 'end', props.board.x2 + dx, props.board.y2 + dy)
+
+  // [IMPORTANT] Reset Group Position to (0,0)
+  // Since the store now contains the new absolute coordinates, 
+  // we must remove the group's offset to prevent double-movement.
+  node.position({ x: 0, y: 0 })
+  
+  emit('dragend', e)
+}
+
 // --- 2. Handle Whole Board Drag ---
 function dragBoundFunc(pos) {
   const node = this
@@ -76,7 +97,7 @@ function handleClick(e) {
     @click="handleClick"
     @dragstart="emit('dragstart', $event)"
     @dragmove="emit('dragmove', $event)"
-    @dragend="emit('dragend', $event)"
+    @dragend="handleGroupDragEnd"
   >
     <v-line 
       :config="{
