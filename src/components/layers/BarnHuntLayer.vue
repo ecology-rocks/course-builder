@@ -40,6 +40,7 @@ const setRef = (el, id) => {
 // --- HANDLERS ---
 function handleRightClick(e, id) { 
   e.evt.preventDefault()
+  e.cancelBubble = true
   if (store.activeTool === 'lean') return 
   if (e.evt.ctrlKey || e.evt.altKey) return
 if (store.activeTool === 'measure' && store.activeMeasurement) {
@@ -47,15 +48,21 @@ if (store.activeTool === 'measure' && store.activeMeasurement) {
     return
   }
 
-  store.rotateBale(id) 
+  const amount = e.evt.shiftKey ? 45 : 15
+  store.rotateBale(id, amount)
 }
 
 function handleLeftClick(e, id) {
+  // 1. Strict Check: Only allow Left Mouse Button
+  if (e.evt.button !== 0) return
+
   const evt = e.evt
+  
+  // 2. Modifiers: Alt (Shape) / Ctrl (Lean)
   if (evt.altKey) { store.cycleOrientation(id); return }
   if (evt.ctrlKey) { store.cycleLean(id); return }
 
-  // Board Drawing Logic
+  // 3. Board & Measure Tools (Pass-through)
   if (store.activeTool === 'board') {
     const stage = e.target.getStage()
     const p = stage.getPointerPosition()
@@ -70,8 +77,6 @@ function handleLeftClick(e, id) {
   if (store.activeTool === 'measure') {
     const stage = e.target.getStage()
     const p = stage.getPointerPosition()
-    
-    // Snap to 0.5 grid for cleaner measurements
     const rawX = (p.x - props.GRID_OFFSET) / props.scale
     const rawY = (p.y - props.GRID_OFFSET) / props.scale
     const snapX = Math.round(rawX * 2) / 2
@@ -81,21 +86,42 @@ function handleLeftClick(e, id) {
     return
   }
 
-// Select
+  // 4. [UPDATED] Selection Logic: Toggle behavior
   if (store.activeTool === 'select' || store.activeTool === 'bale') {
-    const isMulti = evt.shiftKey || evt.ctrlKey || evt.metaKey
-    if (!store.selection.includes(id) && !isMulti) store.selectObject(id, false)
-    else if (isMulti) store.selectObject(id, true)
+    const isMulti = evt.shiftKey || evt.metaKey
+    
+    if (isMulti) {
+      // Shift-Click: Always Toggle
+      store.selectObject(id, true)
+    } else {
+      // Standard Click
+      if (store.selection.includes(id)) {
+        // CASE A: Item is already selected
+        if (store.selection.length === 1) {
+           // If it's the ONLY item selected -> Deselect it (Toggle off)
+           store.clearSelection()
+        } else {
+           // If multiple items are selected -> Select ONLY this one
+           store.selectObject(id, false)
+        }
+      } else {
+        // CASE B: Item is not selected -> Select it
+        store.selectObject(id, false)
+      }
+    }
     return
   }
   
-  // Tools
-  if (store.activeTool === 'rotate') store.rotateBale(id)
+  // 5. Other Tools
+  if (store.activeTool === 'rotate') {
+    // Shift = 45 deg, Default = 15 deg
+    const amount = evt.shiftKey ? 45 : 15
+    store.rotateBale(id, amount)
+  }
   if (store.activeTool === 'type') store.cycleOrientation(id)
   if (store.activeTool === 'lean') store.cycleLean(id)
   if (store.activeTool === 'delete') store.removeBale(id)
 }
-
 // --- MULTI-OBJECT DRAG LOGIC ---
 
 function handleDragStart(e, id) {

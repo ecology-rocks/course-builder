@@ -81,10 +81,10 @@ export function useBales(state, snapshot, notifications) {
     validateAllBales()
   }
 
-  function rotateBale(id) {
+function rotateBale(id, amount = 15) {
     const bale = state.bales.value.find(b => b.id === id)
     if (bale) {
-      bale.rotation = (bale.rotation + 15) % 360
+      bale.rotation = (bale.rotation + amount) % 360
       validateAllBales()
     }
   }

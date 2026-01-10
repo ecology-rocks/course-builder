@@ -16,19 +16,12 @@ This is my one-true-copy of the project roadmap.
  - Numbered rat spots for Master
  - Ability to modify subscriptions, add extra seats to club sub, etc. 
  - Documentation + Guides, help button, etc.
- - Include Course Builder map. Judge Map: All levels plus hides. CB Map: All levels. Exhib. Map: 1st Level Only
  - Consider adding a zoom function beyond the scale function at the bottom
- - Perimeter distances and hide locations very small and hard to read. Maybe a menu item to increase/decrease size?
- - Add "Cut" in addition to Copy/Paste. Add buttons for all three.
- - "Select Area" selects things that are merely close to the selection box
+ - Perimeter distances and hide locations very small and hard to read. Maybe a menu item to increase/decrease size? 
  - Rat marker color change to indicate under/over a leaner?
- - Make a "copy" button on the dashboard for nested map design instead of the export/import feature.
  - Consider how to implement "whole tunnel board" options best
  - Ability to place text on the map / notes box
- - Add additional keyboard functionality: arrows to move selection
  - Add a faster bale rotation UI (maybe like DCMats?)
- - Fix leaner right click (again lmao)
- - Drag to select should select from all layers. Probably. It doesn't. 
  - Bring to front feature for bales? Would require some redesign.
 
 

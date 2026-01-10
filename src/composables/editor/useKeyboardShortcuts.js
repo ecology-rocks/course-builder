@@ -54,7 +54,31 @@ if (key === 'delete' || key === 'backspace') {
         store.deleteSelection()
       }
     }
+
+    if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+      if (store.selection.length > 0) {
+        e.preventDefault()
+        
+        // Step size: Shift = 1 ft, Default = 2 inches (1/6 ft)
+        const step = e.shiftKey ? 1 : (1 / 6)
+        
+        let dx = 0
+        let dy = 0
+
+        if (key === 'arrowleft') dx = -step
+        if (key === 'arrowright') dx = step
+        if (key === 'arrowup') dy = -step
+        if (key === 'arrowdown') dy = step
+
+        store.moveSelection(dx, dy)
+      }
+      return
+    }
+
   }
+
+  // Arrow Keys: Nudge Selection
+
 
   onMounted(() => window.addEventListener('keydown', handleKeydown))
   onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
