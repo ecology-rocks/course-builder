@@ -28,6 +28,12 @@ export function useKeyboardShortcuts(store) {
       return
     }
 
+    if (isCtrl && key === 'x') {
+      e.preventDefault()
+      store.cutSelection()
+      return
+    }
+
     // Paste: Ctrl+V
     if (isCtrl && key === 'v') {
       e.preventDefault()
