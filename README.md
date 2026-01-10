@@ -28,6 +28,9 @@ This is my one-true-copy of the project roadmap.
  - Fixed multi-object select and drag
  - Removed DCMats from course settings; made their size editable by clicking on one after placement. 
  - Rearranged editor sidebar so that it makes more logical sense. 
+ - Notes box
+ - Full board boxes if people prefer (instead of just point-to-point measurement)
+ - Duplicate map button available on Dashboard for nested maps. 
 
 ## New Year, New Editor Update (2026-01-03)
  - Nested course design: Now you can select a previously saved map to compare to in Course Settings! Comparison will show up in Map Statistics.

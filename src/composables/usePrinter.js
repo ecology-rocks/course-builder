@@ -3,6 +3,7 @@ import { nextTick } from 'vue'
 export function usePrinter(store, userStore, stageRef, scale) {
 
   async function handlePrint(withHides = true) {
+    store.clearSelection()
     const originalScale = scale.value
     scale.value = 40 // Force standard print resolution
     await nextTick()
@@ -104,9 +105,12 @@ export function usePrinter(store, userStore, stageRef, scale) {
             <div class="legend-item"><span class="symbol fence"></span> Fence</div>
             <div class="legend-item"><span class="symbol wall"></span> Wall</div>
             
-            <div class="legend-item"><span class="symbol tunnel"></span> Tunnel</div>
-            <div class="legend-item"><span class="symbol gate"></span> Gate</div>
+            <div class="legend-item"><span class="symbol tunnel"></span>Board Edge</div>
+            <div class="legend-item"><span class="symbol tunnelbox"></span>Board Box</div>
 
+            <div class="legend-item"><span class="symbol gate"></span> Gate</div>
+            <div class="legend-item"><span class="symbol step"></span> Step</div>
+            
             <div class="legend-item"><span class="symbol leaner">↗</span> Leaner</div>
             <div class="legend-item"><span class="symbol anchor">⚓</span> Anchor Bale</div>
             
@@ -116,7 +120,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
             <div class="legend-item"><span class="symbol obstruction"></span> Obstr.</div>
             <div class="legend-item"><span class="symbol dead-zone"></span> Dead Zone</div>
             
-            <div class="legend-item"><span class="symbol step"></span> Step</div>
+            
             
           </div>
         </div>
@@ -128,6 +132,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
             <div class="legend-item"><span class="symbol hide-rat">R</span> Rat</div>
             <div class="legend-item"><span class="symbol hide-litter">L</span> Litter</div>
             <div class="legend-item"><span class="symbol hide-empty">E</span> Empty</div>
+            <div class="legend-item"><span class="symbol hide-rat-under"> </span> (Under Object)</div>
           </div>
         </div>
         ` : ''}
@@ -206,6 +211,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
       /* Items */
       .anchor { border: 2px solid #d32f2f; color: #d32f2f; font-weight: bold; text-align: center; line-height: 8px; font-size: 10px; border-radius: 2px; background: white; }
       .tunnel { height: 4px; background: #2e7d32; border: none; }
+      .tunnelbox { height: 6px; background: rgba(139, 69, 19, 0.4); border: 1}
       .leaner { border: none; font-size: 12px; font-weight: bold; width: auto; height: auto; }
       .start { border: 1px dashed black; background: #eee; }
       .dc { background: #d1c4e9; }
@@ -218,17 +224,18 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .fence { height: 1px; background: black; border: none; }
       .wall { height: 6px; background: black; border: none; }
       
-      .hide-rat, .hide-litter, .hide-empty {
-        width: 14px; 
-        height: 14px; 
+      .hide-rat, .hide-litter, .hide-empty, .hide-rat-under {
+        width: 16px; 
+        height: 16px; 
         border-radius: 50%; 
         border: 2px solid black;
         text-align: center; 
-        line-height: 10px; 
-        font-size: 9px; 
+        line-height: 12px; 
+        font-size: 11px; 
         font-weight: bold;
       }
       .hide-rat { background: red; color: black; }
+      .hide-rat-under { color: black; stroke-width: 2; border-style: dashed}
       .hide-litter { background: yellow; color: black; }
       .hide-empty { background: white; color: black; }
     `
