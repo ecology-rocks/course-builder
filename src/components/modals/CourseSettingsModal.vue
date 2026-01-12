@@ -7,72 +7,38 @@
       </div>
 
       <div class="settings-section">
+        <h3>Map Settings</h3>
         <h4>Ring Dimensions (ft)</h4>
         <div class="form-group-row">
           <div class="form-group">
             <label>Width</label>
-            <input 
-              type="number" 
-              v-model.number="localWidth" 
-              @change="applyResize"
-              step="1" 
-              min="10"
-            />
+            <input type="number" v-model.number="localWidth" @change="applyResize" step="1" min="10" />
           </div>
           <div class="form-group">
             <label>Height</label>
-            <input 
-              type="number" 
-              v-model.number="localHeight" 
-              @change="applyResize"
-              step="1" 
-              min="10"
-            />
+            <input type="number" v-model.number="localHeight" @change="applyResize" step="1" min="10" />
           </div>
         </div>
-        <p class="hint">Changing size ensures items stay within bounds.</p>
+        <p class="hint">Instinct: 15x20-20x20; Novice & Open: 20x20-20x24; Senior, Master, Crazy 8s: 24x24-24x32</p>
       </div>
-
-      <hr />
-
-      <div class="settings-section" v-if="store.sport === 'barnhunt'">
-        <h4>Map View Options</h4>
-        <div style="display: flex; gap: 10px; align-items: center;">
-          <input type="checkbox" id="chkStats" v-model="store.showMapStats" style="width: auto;" />
-          <p for="chkStats" class="hint">Show Map Statistics</p>
-        </div>
-      </div>
-
-      <div class="settings-section" v-if="store.sport === 'barnhunt'">
-        <h4>Comparison Baseline</h4>
-        <p class="hint">Compare your current map against a saved map.</p>
-
-        <div class="form-group">
-          <label>Compare Against:</label>
-          <div class="comparison-row">
-            <select v-model="selectedMapId" @change="handleMapSelect" :disabled="loadingMaps">
-              <option :value="null">-- Select a Saved Map --</option>
-              <option v-for="map in userMaps" :key="map.id" :value="map.id">
-                {{ map.name }}
-              </option>
-            </select>
-            <button 
-              v-if="store.comparisonMapName" 
-              @click="handleClearComparison" 
-              class="btn-clear"
-              title="Remove Comparison"
-            >
-              Clear
-            </button>
+      <div class="settings-section">
+        <h4>Bale Dimensions (ft)</h4>
+        <div class="form-group-row">
+          <div class="form-group">
+            <label>Length</label>
+            <input type="number" v-model.number="store.baleConfig.length" step="0.1" />
           </div>
-          <p class="status-text" v-if="store.comparisonMapName">
-            Currently comparing vs: <strong>{{ store.comparisonMapName }}</strong>
-          </p>
+          <div class="form-group">
+            <label>Width (Flat)</label>
+            <input type="number" v-model.number="store.baleConfig.width" step="0.1" />
+          </div>
+          <div class="form-group">
+            <label>Height (Tall)</label>
+            <input type="number" v-model.number="store.baleConfig.height" step="0.1" />
+          </div>
         </div>
+        <p class="hint">Standard 2-Stringer Bale: 3.0 x 1.5 x 1.2 ft; Standard 3-Stringer Bale: 3.7 x 1.8 x 1.25</p>
       </div>
-      
-      <hr v-if="store.sport === 'barnhunt'" />
-
       <div class="settings-section">
         <h4>Trial Information</h4>
         <div class="form-grid">
@@ -104,94 +70,119 @@
           </div>
         </div>
       </div>
+      <hr />
+      <div class="settings-section" v-if="store.sport === 'barnhunt'">
+        <h3>Statistics</h3>
+        <h4>Map View Options</h4>
+        <div style="display: flex; gap: 10px; align-items: center;">
+          <input type="checkbox" id="chkStats" v-model="store.showMapStats" style="width: auto;" />
+          <p for="chkStats" class="hint">Show Map Statistics Overlay Box</p>
+        </div>
+      </div>
 
       <div class="settings-section" v-if="store.sport === 'barnhunt'">
-        <h4>Bale Dimensions (ft)</h4>
-        <div class="form-group-row">
-          <div class="form-group">
-            <label>Length</label>
-            <input type="number" v-model.number="store.baleConfig.length" step="0.1" />
+        <h4>Comparison Baseline</h4>
+        <p class="hint">Compare your current map against a saved map.</p>
+
+        <div class="form-group">
+          <label>Compare Against:</label>
+          <div class="comparison-row">
+            <select v-model="selectedMapId" @change="handleMapSelect" :disabled="loadingMaps">
+              <option :value="null">-- Select a Saved Map --</option>
+              <option v-for="map in userMaps" :key="map.id" :value="map.id">
+                {{ map.name }}
+              </option>
+            </select>
+            <button v-if="store.comparisonMapName" @click="handleClearComparison" class="btn-clear"
+              title="Remove Comparison">
+              Clear
+            </button>
           </div>
-          <div class="form-group">
-            <label>Width (Flat)</label>
-            <input type="number" v-model.number="store.baleConfig.width" step="0.1" />
-          </div>
-          <div class="form-group">
-            <label>Height (Tall)</label>
-            <input type="number" v-model.number="store.baleConfig.height" step="0.1" />
-          </div>
+          <p class="status-text" v-if="store.comparisonMapName">
+            Currently comparing vs: <strong>{{ store.comparisonMapName }}</strong>
+          </p>
         </div>
-        <p class="hint">Standard: 3.0 x 1.5 x 1.0</p>
       </div>
+
+      <hr v-if="store.sport === 'barnhunt'" />
+
+
+
+
 
 
       <div class="settings-section">
-        <h4>Grid Numbering Start</h4>
-        <div class="corner-selector">
-          <div class="row">
-            <button :class="{ active: store.gridStartCorner === 'top-left' }"
-              @click="store.gridStartCorner = 'top-left'">↖ TL</button>
-            <button :class="{ active: store.gridStartCorner === 'top-right' }"
-              @click="store.gridStartCorner = 'top-right'">TR ↗</button>
+        <h3>Perimeter Settings</h3>
+        <div class="perimeter-row">
+        
+        <div class="settings-leftcol">
+          <h4>Grid Numbering Start</h4>
+          <div class="corner-selector">
+            <div class="row">
+              <button :class="{ active: store.gridStartCorner === 'top-left' }"
+                @click="store.gridStartCorner = 'top-left'">↖ TL</button>
+              <button :class="{ active: store.gridStartCorner === 'top-right' }"
+                @click="store.gridStartCorner = 'top-right'">TR ↗</button>
+            </div>
+            <div class="preview-box">Ring</div>
+            <div class="row">
+              <button :class="{ active: store.gridStartCorner === 'bottom-left' }"
+                @click="store.gridStartCorner = 'bottom-left'">↙ BL</button>
+              <button :class="{ active: store.gridStartCorner === 'bottom-right' }"
+                @click="store.gridStartCorner = 'bottom-right'">BR ↘</button>
+            </div>
           </div>
-          <div class="preview-box">Ring</div>
-          <div class="row">
-            <button :class="{ active: store.gridStartCorner === 'bottom-left' }"
-              @click="store.gridStartCorner = 'bottom-left'">↙ BL</button>
-            <button :class="{ active: store.gridStartCorner === 'bottom-right' }"
-              @click="store.gridStartCorner = 'bottom-right'">BR ↘</button>
-          </div>
+          <p class="hint">Current: <strong>{{ formatCorner(store.gridStartCorner) }}</strong></p>
         </div>
-        <p class="hint">Current: <strong>{{ formatCorner(store.gridStartCorner) }}</strong></p>
-      </div>
 
-      <hr />
-
-      <div class="settings-section" v-if="store.sport === 'barnhunt'">
-        <h4>Wall Types</h4>
-        <div class="wall-grid">
-          <div class="wall-control">
-            <label>Top</label>
-            <select v-model="store.wallTypes.top">
-              <option value="fence">Fence (4')</option>
-              <option value="wall">Solid Wall</option>
-            </select>
-          </div>
-
-          <div class="middle-row">
+        <div class="settings-rightcol">
+          <h4>Wall Types</h4>
+          <div class="wall-grid">
             <div class="wall-control">
-              <label>Left</label>
-              <select v-model="store.wallTypes.left">
+              <label>Top</label>
+              <select v-model="store.wallTypes.top">
                 <option value="fence">Fence (4')</option>
                 <option value="wall">Solid Wall</option>
               </select>
             </div>
 
-            <div class="wall-preview-box" :style="{
-              borderTop: getBorderStyle(store.wallTypes.top),
-              borderRight: getBorderStyle(store.wallTypes.right),
-              borderBottom: getBorderStyle(store.wallTypes.bottom),
-              borderLeft: getBorderStyle(store.wallTypes.left)
-            }"></div>
+            <div class="middle-row">
+              <div class="wall-control">
+                <label>Left</label>
+                <select v-model="store.wallTypes.left">
+                  <option value="fence">Fence (4')</option>
+                  <option value="wall">Solid Wall</option>
+                </select>
+              </div>
+
+              <div class="wall-preview-box" :style="{
+                borderTop: getBorderStyle(store.wallTypes.top),
+                borderRight: getBorderStyle(store.wallTypes.right),
+                borderBottom: getBorderStyle(store.wallTypes.bottom),
+                borderLeft: getBorderStyle(store.wallTypes.left)
+              }"></div>
+
+              <div class="wall-control">
+                <label>Right</label>
+                <select v-model="store.wallTypes.right">
+                  <option value="fence">Fence (4')</option>
+                  <option value="wall">Solid Wall</option>
+                </select>
+              </div>
+            </div>
 
             <div class="wall-control">
-              <label>Right</label>
-              <select v-model="store.wallTypes.right">
+              <label>Bottom</label>
+              <select v-model="store.wallTypes.bottom">
                 <option value="fence">Fence (4')</option>
                 <option value="wall">Solid Wall</option>
               </select>
             </div>
           </div>
 
-          <div class="wall-control">
-            <label>Bottom</label>
-            <select v-model="store.wallTypes.bottom">
-              <option value="fence">Fence (4')</option>
-              <option value="wall">Solid Wall</option>
-            </select>
-          </div>
         </div>
-      </div>
+        </div>
+      </div><!-- end settings block -->
 
       <div class="actions">
         <button @click="$emit('close')" class="btn-primary">Done</button>
@@ -201,7 +192,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue' 
+import { ref, onMounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 const store = useMapStore()
 
@@ -239,7 +230,7 @@ function handleMapSelect() {
 }
 
 function handleClearComparison() {
-  store.setComparisonBales([], null) 
+  store.setComparisonBales([], null)
   selectedMapId.value = null
 }
 
@@ -254,6 +245,26 @@ function formatCorner(c) {
 </script>
 
 <style scoped>
+.perimeter-row {
+  display: flex;
+  justify-content: space-around;
+  /* Spreads them out evenly */
+  align-items: flex-start;
+  /* Aligns tops of both columns */
+  gap: 20px;
+  /* Adds space between the columns */
+  margin-top: 10px;
+}
+
+/* Ensure columns center their internal content */
+.settings-leftcol,
+.settings-rightcol {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 .modal-overlay {
   position: fixed;
   top: 0;

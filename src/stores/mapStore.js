@@ -91,7 +91,7 @@ export const useMapStore = defineStore('map', () => {
   const trialLocation = ref('') 
   const trialDay = ref('')      
   const trialNumber = ref('')   
-  const baleConfig = ref({ length: 3, width: 1.5, height: 1 }) 
+  const baleConfig = ref({ length: 3, width: 1.5, height: 1.2 }) 
   const dcMatConfig = ref({ width: 2, height: 3 }) 
 
 
