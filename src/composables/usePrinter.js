@@ -57,10 +57,17 @@ export function usePrinter(store, userStore, stageRef, scale) {
         const movedText = d.moved > 0 ? `, ${d.moved} moved` : '' 
         return `<div><strong>L${l}:</strong> ${sign}${d.net}${movedText}</div>`
       }
+      
+      // [NEW] Total Sign Calculation
+      const totalSign = diffs.totalNet > 0 ? '+' : ''
+      
       return `
         <div class="legend-sub-section">
           <h4 style="margin-bottom: 2px;">Changes vs. Previous</h4>
           <div style="font-size: 10px; line-height: 1.2;">
+            <div style="border-bottom: 1px solid #eee; margin-bottom: 2px; padding-bottom: 2px;">
+                <strong>TOTAL:</strong> ${totalSign}${diffs.totalNet} Bales
+            </div>
             ${fmt(1)}
             ${fmt(2)}
             ${fmt(3)}

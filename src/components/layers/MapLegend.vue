@@ -13,7 +13,7 @@ const inventory = computed(() => store.inventory)
 const diffs = computed(() => store.differentials)
 
 const dragBoundFunc = (pos) => {
-  const boxWidth = 140
+  const boxWidth = 190
   // FIX: Make height dynamic to match the template logic
   const boxHeight = diffs.value ? 170 : 110
   
@@ -69,6 +69,12 @@ const dragBoundFunc = (pos) => {
       <v-text :config="{
         text: `L3: ${diffs[3].net > 0 ? '+' : ''}${diffs[3].net} bales${diffs[3].moved > 0 ? `, ${diffs[3].moved} moved` : ''}`,
         x: 10, y: 150, fontSize: 11, fill: '#333'
+      }" />
+      
+      <v-line :config="{ points: [10, 163, 130, 163], stroke: '#eee', strokeWidth: 1 }" />
+      <v-text :config="{
+        text: `TOTAL: ${diffs.totalNet > 0 ? '+' : ''}${diffs.totalNet} Bales`,
+        x: 10, y: 170, fontSize: 12, fontStyle: 'bold', fill: 'black'
       }" />
     </v-group>
   </v-group>

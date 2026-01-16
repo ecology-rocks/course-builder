@@ -54,13 +54,14 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
     }
   })
 
-  const differentials = computed(() => {
+const differentials = computed(() => {
     if (!state.previousBales.value || state.previousBales.value.length === 0) return null
 
     const stats = {
       1: { net: 0, moved: 0 },
       2: { net: 0, moved: 0 },
-      3: { net: 0, moved: 0 }
+      3: { net: 0, moved: 0 },
+      totalNet: 0 // [NEW] Track total change
     }
 
     const getLayers = (baleList) => ({
@@ -75,13 +76,19 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
     ;[1, 2, 3].forEach(layer => {
       const curr = currentLayers[layer]
       const prev = prevLayers[layer] 
-      stats[layer].net = curr.length - prev.length
+      
+      // Calculate Net per layer
+      const net = curr.length - prev.length
+      stats[layer].net = net
+      
+      // Add to Total Net
+      stats.totalNet += net
 
+      // Calculate "Moved" (Reused) bales
       let staticCount = 0
       const prevPool = [...prev] 
 
       curr.forEach(bale => {
-        // Matches based on physics properties, not ID
         const matchIndex = prevPool.findIndex(p => 
           Math.abs(p.x - bale.x) < 0.05 && 
           Math.abs(p.y - bale.y) < 0.05 &&
