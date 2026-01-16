@@ -35,6 +35,14 @@ const visibleBales = computed(() => {
   })
 })
 
+const visibleMeasurements = computed(() => {
+  if (!store.measurements) return []
+  return store.measurements.filter(m => {
+    // Show if on current layer, OR if no layer is assigned (legacy support)
+    return m.layer === undefined || m.layer === store.currentLayer
+  })
+})
+
 // --- HELPER: Register Refs ---
 const setRef = (el, id) => {
   if (el) objectRefs.value[id] = el
@@ -355,21 +363,21 @@ function getAnchorLines(bale) {
       @dragmove="handleDragMove($event, board.id)"
       @dragend="handleDragEnd($event, board.id)"
     />
+    
+<v-group>
+      <MeasurementObject 
+        v-for="m in visibleMeasurements" 
+        :key="m.id" 
+        :measurement="m" 
+        :scale="scale" 
+      />
 
-    <v-group>
-    <MeasurementObject 
-      v-for="m in store.measurements" 
-      :key="m.id" 
-      :measurement="m" 
-      :scale="scale" 
-    />
-
-    <MeasurementObject 
-      v-if="store.activeMeasurement"
-      :measurement="store.activeMeasurement" 
-      :scale="scale" 
-    />
-  </v-group>
+      <MeasurementObject 
+        v-if="store.activeMeasurement"
+        :measurement="store.activeMeasurement" 
+        :scale="scale" 
+      />
+    </v-group>
 
     <v-group>
       <template v-for="bale in visibleBales" :key="'anchor-'+bale.id">

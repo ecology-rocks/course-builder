@@ -70,9 +70,11 @@
           </div>
         </div>
       </div>
-      <hr />
+      <hr />    
+       <h3>Statistics</h3>
+      <div class="perimeter-row">
       <div class="settings-section" v-if="store.sport === 'barnhunt'">
-        <h3>Statistics</h3>
+
         <h4>Map View Options</h4>
         <div style="display: flex; gap: 10px; align-items: center;">
           <input type="checkbox" id="chkStats" v-model="store.showMapStats" style="width: auto;" />
@@ -82,10 +84,8 @@
 
       <div class="settings-section" v-if="store.sport === 'barnhunt'">
         <h4>Comparison Baseline</h4>
-        <p class="hint">Compare your current map against a saved map.</p>
-
         <div class="form-group">
-          <label>Compare Against:</label>
+          <label>Compare Against A Saved Map:</label>
           <div class="comparison-row">
             <select v-model="selectedMapId" @change="handleMapSelect" :disabled="loadingMaps">
               <option :value="null">-- Select a Saved Map --</option>
@@ -103,7 +103,7 @@
           </p>
         </div>
       </div>
-
+</div>
       <hr v-if="store.sport === 'barnhunt'" />
 
 
@@ -124,7 +124,7 @@
               <button :class="{ active: store.gridStartCorner === 'top-right' }"
                 @click="store.gridStartCorner = 'top-right'">TR ↗</button>
             </div>
-            <div class="preview-box">Ring</div>
+                          <div class="wall-preview-box" style="border: dashed; border-color: #999; border-width: 2px"></div>
             <div class="row">
               <button :class="{ active: store.gridStartCorner === 'bottom-left' }"
                 @click="store.gridStartCorner = 'bottom-left'">↙ BL</button>

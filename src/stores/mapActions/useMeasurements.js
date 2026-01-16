@@ -27,12 +27,16 @@ export function useMeasurements(state, snapshot) {
     }
   }
 
-  function finishMeasurement() {
+function finishMeasurement() {
     if (state.activeMeasurement.value) {
       // Only save if we have at least 2 points (a line)
       if (state.activeMeasurement.value.points.length >= 2) {
         snapshot()
-        state.measurements.value.push(JSON.parse(JSON.stringify(state.activeMeasurement.value)))
+        // [FIX] Use array spread to ensure reactivity triggers properly
+        // Check if array exists (handling legacy saves)
+        const current = state.measurements.value || []
+        const newMeasurement = JSON.parse(JSON.stringify(state.activeMeasurement.value))
+        state.measurements.value = [...current, newMeasurement]
       }
       state.activeMeasurement.value = null
     }

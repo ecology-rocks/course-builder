@@ -119,19 +119,28 @@ function dragBoundFunc(pos) {
       <v-line :config="{
         points: [seg.p1.x * scale, seg.p1.y * scale, seg.p2.x * scale, seg.p2.y * scale],
         stroke: color, 
-        strokeWidth: 2, 
-        dash: [4, 4], 
+        strokeWidth: 3, 
+        dash: [6, 4], 
         hitStrokeWidth: 20 
       }" />
       
       <v-label :config="{ x: seg.midX * scale, y: seg.midY * scale }">
-        <v-tag :config="{ fill: 'white', opacity: 0.8, cornerRadius: 4 }" />
+        <v-tag :config="{ 
+          fill: 'white', 
+          stroke: color,
+          strokeWidth: 1,
+          opacity: 0.9, 
+          cornerRadius: 4,
+          pointerDirection: 'down',
+          pointerWidth: 8,
+          pointerHeight: 6
+        }" />
         <v-text :config="{ 
           text: seg.label, 
-          fontSize: 12, 
+          fontSize: 18, 
           fontStyle: 'bold', 
           fill: color, 
-          padding: 2, 
+          padding: 4, 
           align: 'center' 
         }" />
       </v-label>
@@ -150,7 +159,7 @@ function dragBoundFunc(pos) {
         @dragend="handlePointDragEnd($event, i)"
       >
         <v-circle :config="{ 
-          radius: 6, 
+          radius: 7, 
           fill: color,
           stroke: 'white',
           strokeWidth: 2
