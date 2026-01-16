@@ -1,18 +1,18 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
-const store = useMapStore() // <--- Initialize Store
-
+const store = useMapStore()
 const props = defineProps(['step', 'isSelected', 'scale'])
-// Added 'dragstart' and 'dragmove' to emits
 const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend', 'rotate'])
 
 const groupRef = ref(null)
-const width = 45 
-const height = 30
 
-// Expose node for multi-select
+// [FIX] Use Grid Units (Feet) instead of fixed pixels
+// This ensures the object scales up on print, matching the map view.
+const UNIT_W = 2   // 2 feet wide
+const UNIT_H = 1.5 // 1.5 feet deep
+
 defineExpose({ getNode: () => groupRef.value?.getNode() })
 
 const handleClick = (e) => {
@@ -24,24 +24,52 @@ const handleContextMenu = (e) => {
   emit('rotate', props.step.id)
 }
 
+// [FIX] Smart Edge Snapping (matches Bales/Mats)
 function dragBoundFunc(pos) {
-  const layerAbs = this.getLayer().getAbsolutePosition()
-  const step = props.scale / 6
+  const node = this
   
-  let relX = Math.round((pos.x - layerAbs.x) / step) * step
-  let relY = Math.round((pos.y - layerAbs.y) / step) * step
+  // 1. Visual Dimensions
+  const visualW = UNIT_W * props.scale
+  const visualH = UNIT_H * props.scale
 
-  // Steps are 45x30 pixels centered
-  const halfW = 45 / 2
-  const halfH = 30 / 2
+  // 2. Rotated Bounding Box
+  const rad = (props.step.rotation || 0) * Math.PI / 180
+  const absCos = Math.abs(Math.cos(rad))
+  const absSin = Math.abs(Math.sin(rad))
+
+  const bboxW = (visualW * absCos) + (visualH * absSin)
+  const bboxH = (visualW * absSin) + (visualH * absCos)
+
+  // 3. Constraints
+  const minX = bboxW / 2
+  const maxX = (store.ringDimensions.width * props.scale) - (bboxW / 2)
+  const minY = bboxH / 2
+  const maxY = (store.ringDimensions.height * props.scale) - (bboxH / 2)
+
+  // 4. Snap Top-Left Edge
+  const layerAbs = node.getLayer().getAbsolutePosition()
+  const step = props.scale / 6 // 2-inch grid
+
+  let relX = pos.x - layerAbs.x
+  let relY = pos.y - layerAbs.y
+
+  const halfW = bboxW / 2
+  const halfH = bboxH / 2
   
-  const maxX = (store.ringDimensions.width * props.scale) - halfW
-  const maxY = (store.ringDimensions.height * props.scale) - halfH
+  const leftEdge = relX - halfW
+  const topEdge = relY - halfH
 
-  relX = Math.max(halfW, Math.min(relX, maxX))
-  relY = Math.max(halfH, Math.min(relY, maxY))
+  const snappedLeft = Math.round(leftEdge / step) * step
+  const snappedTop = Math.round(topEdge / step) * step
 
-  return { x: relX + layerAbs.x, y: relY + layerAbs.y }
+  let newCenterX = snappedLeft + halfW
+  let newCenterY = snappedTop + halfH
+
+  // 5. Apply Constraints
+  newCenterX = Math.max(minX, Math.min(newCenterX, maxX))
+  newCenterY = Math.max(minY, Math.min(newCenterY, maxY))
+
+  return { x: newCenterX + layerAbs.x, y: newCenterY + layerAbs.y }
 }
 </script>
 
@@ -64,23 +92,29 @@ function dragBoundFunc(pos) {
     @contextmenu="handleContextMenu"
   >
     <v-rect :config="{
-      width: width,
-      height: height,
+      width: UNIT_W * scale,
+      height: UNIT_H * scale,
       fill: '#8D6E63',
       stroke: isSelected ? '#00a1ff' : 'black',
-      strokeWidth: isSelected ? 2 : 1,
-      offsetX: width / 2,
-      offsetY: height / 2,
+      strokeWidth: isSelected ? 3 : 2,
+      offsetX: (UNIT_W * scale) / 2,
+      offsetY: (UNIT_H * scale) / 2,
       shadowColor: '#00a1ff',
-      shadowBlur: isSelected ? 5 : 0
+      shadowBlur: isSelected ? 5 : 0,
+      cornerRadius: 5
     }" />
     
     <v-text :config="{
       text: 'STEP',
-      fontSize: 12,
+      fontSize: scale * 0.45, 
+      fontStyle: 'bold',
       fill: 'white',
-      offsetX: 15,
-      offsetY: 5,
+      width: UNIT_W * scale,
+      height: UNIT_H * scale,
+      offsetX: (UNIT_W * scale) / 2,
+      offsetY: (UNIT_H * scale) / 2,
+      align: 'center',
+      verticalAlign: 'middle',
       rotation: 0,
       listening: false
     }" />
