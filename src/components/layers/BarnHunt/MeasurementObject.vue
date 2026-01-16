@@ -30,18 +30,26 @@ const fmt = (val) => {
 }
 
 // Compute segments from LOCAL points (Real-time updates)
+// Compute segments from LOCAL points (Real-time updates)
 const segments = computed(() => {
   const pts = localPoints.value
   const results = []
   if (!pts || pts.length < 2) return []
 
+  let runningTotal = 0 // [NEW] Accumulator
+
   for (let i = 0; i < pts.length - 1; i++) {
     const p1 = pts[i]; const p2 = pts[i+1]
     const dx = p2.x - p1.x; const dy = p2.y - p1.y
     const dist = Math.sqrt(dx*dx + dy*dy)
+    
+    // [FIX] Add to running total
+    runningTotal += dist
+
     const midX = (p1.x + p2.x) / 2; const midY = (p1.y + p2.y) / 2
     
-    results.push({ p1, p2, dist, midX, midY, label: fmt(dist) })
+    // [FIX] Use runningTotal for the label
+    results.push({ p1, p2, dist, midX, midY, label: fmt(runningTotal) })
   }
   return results
 })
