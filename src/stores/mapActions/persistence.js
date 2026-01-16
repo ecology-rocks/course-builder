@@ -14,8 +14,32 @@ import { libraryService } from '../../services/libraryService'
 export function useMapPersistence(state, userStore, notifications) {
 
   // --- HELPER: CONSTRUCT DATA OBJECT ---
+// --- HELPER: CONSTRUCT DATA OBJECT ---
   function getMapData() {
     const coreData = JSON.parse(JSON.stringify(state.mapData.value))
+
+    // [FIX] Recursive cleaner to enforce 4-decimal precision
+    // This prevents floating-point drift (e.g. 10.166666... becoming 10.166665)
+    // which causes items to "jump" grid lines upon reload.
+    const cleanObj = (obj) => {
+      Object.keys(obj).forEach(key => {
+        const val = obj[key]
+        if (val === null || val === undefined) {
+          delete obj[key]
+        } else if (typeof val === 'number') {
+          // Round to 4 decimals (Supports 1/6th grid ≈ 0.1667)
+          obj[key] = Math.round(val * 10000) / 10000
+        } else if (typeof val === 'object' && !Array.isArray(val)) {
+          cleanObj(val)
+        } else if (Array.isArray(val)) {
+          val.forEach(item => {
+            if (typeof item === 'object') cleanObj(item)
+          })
+        }
+      })
+    }
+    
+    cleanObj(coreData)
 
     return {
       ...coreData,

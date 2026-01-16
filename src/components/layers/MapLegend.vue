@@ -13,9 +13,9 @@ const inventory = computed(() => store.inventory)
 const diffs = computed(() => store.differentials)
 
 const dragBoundFunc = (pos) => {
-  const boxWidth = 190
+  const boxWidth = 140
   // FIX: Make height dynamic to match the template logic
-  const boxHeight = diffs.value ? 170 : 110
+  const boxHeight = diffs.value ? 190 : 110
   
   // Calculate boundaries in Stage Pixels
   // The Grid starts at GRID_OFFSET and extends by (width * scale)
@@ -37,7 +37,7 @@ const dragBoundFunc = (pos) => {
 
     <v-rect :config="{
       width: 140,
-      height: diffs ? 170 : 110,
+      height: diffs ? 190 : 110,
       fill: 'white',
       stroke: 'black',
       strokeWidth: 2,
