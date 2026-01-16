@@ -194,6 +194,7 @@ function handleUpdateZone(attrs) { store.updateZone(attrs.id, attrs) }
 function handleUpdateStep(attrs) { store.updateStep(attrs.id, attrs) }
 
 // --- ANCHOR LINES ---
+// --- ANCHOR LINES ---
 function getAnchorLines(bale) {
   // 1. Get Dynamic Config
   const { length: L, width: W, height: H } = store.baleConfig
@@ -243,9 +244,21 @@ function getAnchorLines(bale) {
   const distRight = RingW - maxX
 
   if (distLeft <= distRight) {
-    lines.push({ points: [0, pivotY * props.scale, minX * props.scale, pivotY * props.scale], text: fmt(distLeft), textX: (minX / 2) * props.scale, textY: (pivotY * props.scale) - 15 })
+    lines.push({ 
+      points: [0, pivotY * props.scale, minX * props.scale, pivotY * props.scale], 
+      text: fmt(distLeft), 
+      textX: (minX / 2) * props.scale, 
+      textY: pivotY * props.scale, 
+      dir: 'down' // Label sits above, points down
+    })
   } else {
-    lines.push({ points: [maxX * props.scale, pivotY * props.scale, RingW * props.scale, pivotY * props.scale], text: fmt(distRight), textX: (RingW - (distRight / 2)) * props.scale, textY: (pivotY * props.scale) - 15 })
+    lines.push({ 
+      points: [maxX * props.scale, pivotY * props.scale, RingW * props.scale, pivotY * props.scale], 
+      text: fmt(distRight), 
+      textX: (RingW - (distRight / 2)) * props.scale, 
+      textY: pivotY * props.scale,
+      dir: 'down'
+    })
   }
 
   // Vertical (Top vs Bottom)
@@ -253,9 +266,21 @@ function getAnchorLines(bale) {
   const distBottom = RingH - maxY
 
   if (distTop <= distBottom) {
-    lines.push({ points: [pivotX * props.scale, 0, pivotX * props.scale, minY * props.scale], text: fmt(distTop), textX: (pivotX * props.scale) + 5, textY: (minY / 2) * props.scale })
+    lines.push({ 
+      points: [pivotX * props.scale, 0, pivotX * props.scale, minY * props.scale], 
+      text: fmt(distTop), 
+      textX: pivotX * props.scale, 
+      textY: (minY / 2) * props.scale,
+      dir: 'left' // Label sits right, points left
+    })
   } else {
-    lines.push({ points: [pivotX * props.scale, maxY * props.scale, pivotX * props.scale, RingH * props.scale], text: fmt(distBottom), textX: (pivotX * props.scale) + 5, textY: (RingH - (distBottom / 2)) * props.scale })
+    lines.push({ 
+      points: [pivotX * props.scale, maxY * props.scale, pivotX * props.scale, RingH * props.scale], 
+      text: fmt(distBottom), 
+      textX: pivotX * props.scale, 
+      textY: (RingH - (distBottom / 2)) * props.scale,
+      dir: 'left'
+    })
   }
 
   return lines
@@ -363,7 +388,7 @@ function getAnchorLines(bale) {
       @dragmove="handleDragMove($event, board.id)"
       @dragend="handleDragEnd($event, board.id)"
     />
-    
+
 <v-group>
       <MeasurementObject 
         v-for="m in visibleMeasurements" 
@@ -383,11 +408,39 @@ function getAnchorLines(bale) {
       <template v-for="bale in visibleBales" :key="'anchor-'+bale.id">
         <template v-if="bale.isAnchor">
           <v-group v-for="(line, i) in getAnchorLines(bale)" :key="i">
-            <v-arrow :config="{ points: line.points, pointerLength: 5, pointerWidth: 5, fill: '#d32f2f', stroke: '#d32f2f', strokeWidth: 1, dash: [4, 4], listening: false }" />
-            <v-text :config="{ x: line.textX, y: line.textY, text: line.text, fontSize: 12, fill: '#d32f2f', fontStyle: 'bold', listening: false }" />
+            <v-arrow :config="{ 
+              points: line.points, 
+              pointerLength: 6, 
+              pointerWidth: 6, 
+              fill: '#d32f2f', 
+              stroke: '#d32f2f', 
+              strokeWidth: 2, 
+              dash: [6, 4], 
+              listening: false 
+            }" />
+            
+            <v-label :config="{ x: line.textX, y: line.textY, opacity: 1.0 }">
+              <v-tag :config="{ 
+                fill: 'white', 
+                stroke: '#d32f2f', 
+                strokeWidth: 1,
+                cornerRadius: 3,
+                pointerDirection: line.dir,
+                pointerWidth: 8,
+                pointerHeight: 6
+              }" />
+              <v-text :config="{ 
+                text: line.text, 
+                fontSize: 18, 
+                fill: '#d32f2f', 
+                fontStyle: 'bold', 
+                padding: 5, 
+                align: 'center' 
+              }" />
+            </v-label>
           </v-group>
         </template>
       </template>
-    </v-group>
+    </v-group>s
   </v-group>
 </template>

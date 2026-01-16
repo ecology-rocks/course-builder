@@ -30,9 +30,16 @@ function handleHandleDragEnd(e, whichPoint) {
   const rawX = (absPos.x - layerAbs.x) / props.scale
   const rawY = (absPos.y - layerAbs.y) / props.scale
   
-  // Snap to 2-inch grid
-const snappedX = Math.round(rawX * 6) / 6
-const snappedY = Math.round(rawY * 6) / 6
+  // 1. Snap to 2-inch grid
+  let snappedX = Math.round(rawX * 6) / 6
+  let snappedY = Math.round(rawY * 6) / 6
+
+  // 2. [FIX] Clamp logic ensures points never save outside the ring
+  const W = store.ringDimensions.width
+  const H = store.ringDimensions.height
+  
+  snappedX = Math.max(0, Math.min(snappedX, W))
+  snappedY = Math.max(0, Math.min(snappedY, H))
 
   // Update Store
   store.updateBoardEndpoint(props.board.id, whichPoint, snappedX, snappedY)
@@ -66,10 +73,53 @@ function handleGroupDragEnd(e) {
 function dragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
-  const step = props.scale / 6
-  let x = Math.round((pos.x - layerAbs.x) / step) * step
-  let y = Math.round((pos.y - layerAbs.y) / step) * step
-  return { x: x + layerAbs.x, y: y + layerAbs.y }
+  const step = props.scale / 6 // 2-inch grid
+  
+  // 1. Calculate Grid-Relative Position
+  // Note: For the Group, this is the delta (since it starts at 0,0)
+  // For the Circle (Endpoint), this is the actual coordinate
+  let relX = Math.round((pos.x - layerAbs.x) / step) * step
+  let relY = Math.round((pos.y - layerAbs.y) / step) * step
+
+  const W = store.ringDimensions.width * props.scale
+  const H = store.ringDimensions.height * props.scale
+
+  // 2. Logic based on Node Type (Endpoint vs Whole Board)
+  if (node.getClassName() === 'Circle') {
+    // --- ENDPOINT CLAMPING ---
+    // Simple: The point itself must be within bounds (0,0) to (W,H)
+    relX = Math.max(0, Math.min(relX, W))
+    relY = Math.max(0, Math.min(relY, H))
+  
+  } else {
+    // --- GROUP (WHOLE BOARD) CLAMPING ---
+    // The Group starts at (0,0). 'relX/Y' represents the translation distance.
+    
+    // Find bounds of the board shape itself
+    const bx1 = props.board.x1 * props.scale
+    const bx2 = props.board.x2 * props.scale
+    const by1 = props.board.y1 * props.scale
+    const by2 = props.board.y2 * props.scale
+    
+    const minBoardX = Math.min(bx1, bx2)
+    const maxBoardX = Math.max(bx1, bx2)
+    const minBoardY = Math.min(by1, by2)
+    const maxBoardY = Math.max(by1, by2)
+
+    // Calculate allowed translation range
+    // e.g. Leftmost point (minBoardX) cannot go below 0 -> minDx = -minBoardX
+    // e.g. Rightmost point (maxBoardX) cannot go above W -> maxDx = W - maxBoardX
+    const minDx = -minBoardX
+    const maxDx = W - maxBoardX
+    const minDy = -minBoardY
+    const maxDy = H - maxBoardY
+
+    // Clamp the translation delta
+    relX = Math.max(minDx, Math.min(relX, maxDx))
+    relY = Math.max(minDy, Math.min(relY, maxDy))
+  }
+
+  return { x: relX + layerAbs.x, y: relY + layerAbs.y }
 }
 
 // --- 3. Clicks ---

@@ -94,34 +94,53 @@ function handleDragEnd(e) {
 
 function dcMatDragBoundFunc(pos) {
   const node = this
+  
+  // 1. Get Visual Dimensions
   const W = props.mat.width || store.dcMatConfig.width
   const H = props.mat.height || store.dcMatConfig.height
-  
+  const visualW = W * props.scale
+  const visualH = H * props.scale
+
+  // 2. Calculate Rotated Bounding Box
   const rad = (props.mat.rotation * Math.PI) / 180
   const absCos = Math.abs(Math.cos(rad))
   const absSin = Math.abs(Math.sin(rad))
 
-  const visualW = ((W * absCos) + (H * absSin)) * props.scale
-  const visualH = ((W * absSin) + (H * absCos)) * props.scale
+  const bboxW = (visualW * absCos) + (visualH * absSin)
+  const bboxH = (visualW * absSin) + (visualH * absCos)
 
-  const minX = visualW / 2
-  const maxX = (store.ringDimensions.width * props.scale) - (visualW / 2)
-  const minY = visualH / 2
-  const maxY = (store.ringDimensions.height * props.scale) - (visualH / 2)
+  // 3. Constraints
+  const minX = bboxW / 2
+  const maxX = (store.ringDimensions.width * props.scale) - (bboxW / 2)
+  const minY = bboxH / 2
+  const maxY = (store.ringDimensions.height * props.scale) - (bboxH / 2)
 
+  // 4. Smart Edge Snapping
   const layerAbs = node.getLayer().getAbsolutePosition()
-  const step = props.scale / 6
+  const step = props.scale / 6 // 2-inch grid
 
   let relX = pos.x - layerAbs.x
   let relY = pos.y - layerAbs.y
 
-  let snappedRelX = Math.round(relX / step) * step
-  let snappedRelY = Math.round(relY / step) * step
+  // Calculate top-left edge of the bounding box
+  const halfW = bboxW / 2
+  const halfH = bboxH / 2
+  const leftEdge = relX - halfW
+  const topEdge = relY - halfH
 
-  snappedRelX = Math.max(minX, Math.min(snappedRelX, maxX))
-  snappedRelY = Math.max(minY, Math.min(snappedRelY, maxY))
+  // Snap the edge
+  const snappedLeft = Math.round(leftEdge / step) * step
+  const snappedTop = Math.round(topEdge / step) * step
 
-  return { x: snappedRelX + layerAbs.x, y: snappedRelY + layerAbs.y }
+  // Recalculate center
+  let newCenterX = snappedLeft + halfW
+  let newCenterY = snappedTop + halfH
+
+  // 5. Apply Constraints
+  newCenterX = Math.max(minX, Math.min(newCenterX, maxX))
+  newCenterY = Math.max(minY, Math.min(newCenterY, maxY))
+
+  return { x: newCenterX + layerAbs.x, y: newCenterY + layerAbs.y }
 }
 </script>
 

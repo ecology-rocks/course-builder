@@ -33,10 +33,8 @@ const handleDragEnd = (e) => {
 
 function dragBoundFunc(pos) {
   const layerAbs = this.getLayer().getAbsolutePosition()
+  const step = props.scale / 6 // 2-inch snap
   
-  let relX = pos.x - layerAbs.x
-  let relY = pos.y - layerAbs.y
-
   // Calculate Zone Dimensions in Pixels
   const zW = props.zone.width * props.scale
   const zH = props.zone.height * props.scale
@@ -44,7 +42,11 @@ function dragBoundFunc(pos) {
   const maxX = (store.ringDimensions.width * props.scale) - zW
   const maxY = (store.ringDimensions.height * props.scale) - zH
 
-  // Clamp
+  // 1. Snap
+  let relX = Math.round((pos.x - layerAbs.x) / step) * step
+  let relY = Math.round((pos.y - layerAbs.y) / step) * step
+
+  // 2. Clamp
   relX = Math.max(0, Math.min(relX, maxX))
   relY = Math.max(0, Math.min(relY, maxY))
 

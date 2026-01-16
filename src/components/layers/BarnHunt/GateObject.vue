@@ -21,8 +21,40 @@ const strokeWidth = computed(() => isSelected.value ? 3 : 2)
 // --- HANDLERS ---
 // [FIX] Use explicit functions instead of inline $emit to prevent "handler.call" errors
 function handleDragStart(e) { emit('dragstart', e) }
-function handleDragMove(e) { emit('dragmove', e) }
-function handleDragEnd(e) { emit('dragend', e) }
+function handleDragMove(e) {
+  emit('dragmove', e)
+
+  if (!props.ringDimensions) return
+
+  const node = e.target
+  const x = node.x() / props.scale
+  const W = props.ringDimensions.width
+
+  // Detect Wall Side: 
+  // If x is 0 (Left) or x is Width (Right), we are on a vertical wall.
+  // We use a small epsilon (0.1) for float safety, though dragBoundFunc snaps to exact values.
+  const isVertical = (Math.abs(x) < 0.1 || Math.abs(x - W) < 0.1)
+
+  // Rotate 90 if vertical, 0 if horizontal
+  const targetRot = isVertical ? 90 : 0
+
+  if (node.rotation() !== targetRot) {
+    node.rotation(targetRot)
+  }
+}
+function handleDragEnd(e) { 
+  // Ensure final rotation state is consistent before saving
+  if (props.ringDimensions) {
+    const node = e.target
+    const x = node.x() / props.scale
+    const W = props.ringDimensions.width
+    const isVertical = (Math.abs(x) < 0.1 || Math.abs(x - W) < 0.1)
+    
+    node.rotation(isVertical ? 90 : 0)
+  }
+  
+  emit('dragend', e) 
+}
 
 function handleClick(e) {
   e.cancelBubble = true
@@ -43,12 +75,13 @@ function handleDblClick(e) {
 
 // --- CONSTRAINTS ---
 // Keeps the gate glued to the perimeter walls
+// --- CONSTRAINTS ---
+// Keeps the gate glued to the perimeter walls
 function dragBoundFunc(pos) {
-  // NOTE: In Konva, 'this' inside dragBoundFunc refers to the Node being dragged.
-  // We capture it here to calculate offsets.
   const node = this 
   const layerAbs = node.getLayer().getAbsolutePosition()
-  
+  const step = props.scale / 6 // 2-inch grid step
+
   if (!props.ringDimensions) return pos
 
   // 1. Convert absolute pointer position to grid coordinates
@@ -70,18 +103,24 @@ function dragBoundFunc(pos) {
   let finalX = rawX
   let finalY = rawY
 
+  const snap = (val) => Math.round(val * 6) / 6
+  
+  // [FIX] Constrain center to keep the 3ft gate fully on the wall segment
+  // Since the gate is 3ft wide and centered, we need a 1.5ft margin from corners.
+  const margin = 1.5 
+
   if (min === distTop) {
     finalY = 0
-    finalX = Math.max(0, Math.min(finalX, W)) // Clamp to width
+    finalX = Math.max(margin, Math.min(snap(finalX), W - margin))
   } else if (min === distBottom) {
     finalY = H
-    finalX = Math.max(0, Math.min(finalX, W))
+    finalX = Math.max(margin, Math.min(snap(finalX), W - margin))
   } else if (min === distLeft) {
     finalX = 0
-    finalY = Math.max(0, Math.min(finalY, H)) // Clamp to height
+    finalY = Math.max(margin, Math.min(snap(finalY), H - margin))
   } else { // Right
     finalX = W
-    finalY = Math.max(0, Math.min(finalY, H))
+    finalY = Math.max(margin, Math.min(snap(finalY), H - margin))
   }
 
   // 4. Return absolute position

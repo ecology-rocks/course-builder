@@ -68,12 +68,16 @@ function handleDragEnd(e) {
 
 function dragBoundFunc(pos) {
   const layerAbs = this.getLayer().getAbsolutePosition()
-  // Use current width/height from props (drag doesn't change size)
+  const step = props.scale / 6 // 2-inch snap
+
   const maxX = (store.ringDimensions.width * props.scale) - (props.note.width * props.scale)
   const maxY = (store.ringDimensions.height * props.scale) - (props.note.height * props.scale)
   
-  let relX = pos.x - layerAbs.x
-  let relY = pos.y - layerAbs.y
+  // 1. Snap
+  let relX = Math.round((pos.x - layerAbs.x) / step) * step
+  let relY = Math.round((pos.y - layerAbs.y) / step) * step
+  
+  // 2. Clamp
   relX = Math.max(0, Math.min(relX, maxX))
   relY = Math.max(0, Math.min(relY, maxY))
 

@@ -123,6 +123,9 @@ function goHome() {
         <button @click="triggerFileUpload">⬆ Import JSON</button>
         
         <button @click="store.exportMapToJSON()">⬇ Export JSON</button>
+        
+        <button @click="store.realignGrid()">📏 Realign All to Grid</button>
+
         <button @click="showRandomizerModal = true">🎲 Randomizer</button>
         <button @click="showBugReportModal = true">🐞 Report Bug</button>
         <button v-if="store.currentMapId" @click="showDeleteModal = true" class="text-danger">

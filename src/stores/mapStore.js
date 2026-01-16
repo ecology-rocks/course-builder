@@ -185,6 +185,95 @@ function openNoteEditor(id) {
     if (stateRefs.validateAllBales) stateRefs.validateAllBales()
   }
 
+  function realignGrid() {
+    // Snap to nearest 2 inches (1/6th of a foot)
+    const snap = (v) => Math.round(v * 6) / 6
+    const data = mapData.value
+    
+    // Get current bale dimensions
+    const { length: L, width: W, height: H } = baleConfig.value || { length: 3, width: 1.5, height: 1.2 }
+
+    // Helper: Snap List
+    const snapList = (list) => {
+      if (!list) return
+      list.forEach(item => {
+        // Snap X/Y (Standard objects)
+        if (typeof item.x === 'number') item.x = snap(item.x)
+        if (typeof item.y === 'number') item.y = snap(item.y)
+        
+        // Snap Line coords (Boards/Walls)
+        if (typeof item.x1 === 'number') {
+            item.x1 = snap(item.x1); item.y1 = snap(item.y1)
+            item.x2 = snap(item.x2); item.y2 = snap(item.y2)
+        }
+        
+        // Snap Measurement Points (Fixes manual tool)
+        if (item.points && Array.isArray(item.points)) {
+            item.points.forEach(p => {
+                p.x = snap(p.x)
+                p.y = snap(p.y)
+            })
+        }
+      })
+    }
+
+    // 1. Snap Standard Objects (Exclude bales for special handling)
+    Object.keys(data).forEach(key => {
+      if (key === 'bales') return 
+      if (Array.isArray(data[key])) snapList(data[key])
+    })
+
+    // 2. Snap Bales (Smarter Visual Edge Snapping)
+    if (data.bales) {
+      data.bales.forEach(b => {
+        // Determine unrotated dimensions based on orientation
+        let w = L, h = W
+        if (b.orientation === 'pillar') { w = W; h = H }
+        else if (b.orientation === 'tall') { w = L; h = H }
+        else { w = L; h = W } // Flat (Default)
+
+        const rot = Math.abs(b.rotation || 0) % 180
+        const isRectilinear = (Math.abs(rot) < 1 || Math.abs(rot - 90) < 1 || Math.abs(rot - 180) < 1)
+
+        if (isRectilinear) {
+            // If rotated 90/270, dimensions swap
+            const isVertical = (Math.abs(rot - 90) < 1) 
+            const effectiveW = isVertical ? h : w
+            const effectiveH = isVertical ? w : h
+            
+            // Calculate Visual Top-Left (The visible edge)
+            // Pivot (Center) = x + w/2
+            const pivotX = b.x + w/2
+            const pivotY = b.y + h/2
+            
+            const currentMinX = pivotX - effectiveW/2
+            const currentMinY = pivotY - effectiveH/2
+            
+            // Snap the VISUAL edge to the grid
+            const newMinX = snap(currentMinX)
+            const newMinY = snap(currentMinY)
+            
+            // Back-calculate the required internal x,y
+            // newPivot = newMin + effective/2
+            // newX = newPivot - w/2
+            b.x = newMinX + (effectiveW / 2) - (w / 2)
+            b.y = newMinY + (effectiveH / 2) - (h / 2)
+        } else {
+            // Fallback for weird angles (15, 30, 45): Just snap the point
+            b.x = snap(b.x)
+            b.y = snap(b.y)
+        }
+      })
+    }
+
+    // 3. Singulars
+    if (data.startBox) { data.startBox.x = snap(data.startBox.x); data.startBox.y = snap(data.startBox.y) }
+    if (data.gate) { data.gate.x = snap(data.gate.x); data.gate.y = snap(data.gate.y) }
+
+    if (stateRefs.snapshot) stateRefs.snapshot() 
+    showNotification("All objects realigned to grid (2-inch snap)")
+  }
+
   function setTool(tool) { activeTool.value = tool }
 
   function toggleAnchor() {
@@ -363,7 +452,7 @@ function openNoteEditor(id) {
 
     // Actions
     setTool, reset, showNotification, resizeRing, toggleAnchor, setComparisonBales,
-    copySelection, pasteSelection, cutSelection,
+    copySelection, pasteSelection, cutSelection, realignGrid,
     
     currentGuidelines: computed(() => sport.value === 'agility' ? (AGILITY_RULES[classLevel.value] || AGILITY_RULES['Other']) : (BH_RULES[classLevel.value] || BH_RULES['Other'])),
 

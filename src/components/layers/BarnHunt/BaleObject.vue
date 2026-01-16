@@ -72,10 +72,12 @@ function getArrowPoints(w, h, direction) {
 // --- 5. Snapping Logic ---
 function baleDragBoundFunc(pos) {
   const node = this
+  
+  // 1. Get Visual Dimensions
   const visualW = dims.value.width * props.scale
   const visualH = dims.value.height * props.scale
 
-  // Calculate Rotated Bounding Box
+  // 2. Calculate Rotated Bounding Box (to handle diagonals)
   const rad = (props.bale.rotation * Math.PI) / 180
   const absCos = Math.abs(Math.cos(rad))
   const absSin = Math.abs(Math.sin(rad))
@@ -83,24 +85,41 @@ function baleDragBoundFunc(pos) {
   const bboxW = (visualW * absCos) + (visualH * absSin)
   const bboxH = (visualW * absSin) + (visualH * absCos)
 
+  // 3. Define Constraints (Keep center inside ring padded by half-size)
   const minX = bboxW / 2
   const maxX = (store.ringDimensions.width * props.scale) - (bboxW / 2)
   const minY = bboxH / 2
   const maxY = (store.ringDimensions.height * props.scale) - (bboxH / 2)
 
+  // 4. Calculate Grid Snapping (Edge-Based)
   const layerAbs = node.getLayer().getAbsolutePosition()
-  const step = props.scale / 6 
+  const step = props.scale / 6 // 2-inch grid
 
   let relX = pos.x - layerAbs.x
   let relY = pos.y - layerAbs.y
 
-  let snappedRelX = Math.round(relX / step) * step
-  let snappedRelY = Math.round(relY / step) * step
+  // [FIX] Snap the VISUAL EDGE (Top-Left) instead of the Center
+  // This ensures that objects with odd widths (e.g. 1.5' = 9 inches) 
+  // still align their edges to the even grid lines (0", 2", 4"...)
+  const halfW = bboxW / 2
+  const halfH = bboxH / 2
+  
+  const leftEdge = relX - halfW
+  const topEdge = relY - halfH
 
-  snappedRelX = Math.max(minX, Math.min(snappedRelX, maxX))
-  snappedRelY = Math.max(minY, Math.min(snappedRelY, maxY))
+  // Snap the edge to the nearest grid line
+  const snappedLeft = Math.round(leftEdge / step) * step
+  const snappedTop = Math.round(topEdge / step) * step
 
-  return { x: snappedRelX + layerAbs.x, y: snappedRelY + layerAbs.y }
+  // Recalculate center based on the snapped edge
+  let newCenterX = snappedLeft + halfW
+  let newCenterY = snappedTop + halfH
+
+  // 5. Apply Constraints
+  newCenterX = Math.max(minX, Math.min(newCenterX, maxX))
+  newCenterY = Math.max(minY, Math.min(newCenterY, maxY))
+
+  return { x: newCenterX + layerAbs.x, y: newCenterY + layerAbs.y }
 }
 </script>
 
