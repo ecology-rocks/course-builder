@@ -19,25 +19,28 @@
             <input type="number" v-model.number="localHeight" @change="applyResize" step="1" min="10" />
           </div>
         </div>
-        <p class="hint">Instinct: 15x20-20x20; Novice & Open: 20x20-20x24; Senior, Master, Crazy 8s: 24x24-24x32</p>
+        <p class="hint">Instinct: 15x20-20x20; Novice & Open: 20x20-20x24; Senior: 20x24-24x32; Master & Crazy 8s: 24x24-24x32</p>
       </div>
-      <div class="settings-section">
-        <h4>Bale Dimensions (ft)</h4>
+<div class="settings-section">
+        <h4>Bale Dimensions (inches)</h4>
         <div class="form-group-row">
           <div class="form-group">
             <label>Length</label>
-            <input type="number" v-model.number="store.baleConfig.length" step="0.1" />
+            <input type="number" v-model.number="baleLength" step="1" />
           </div>
           <div class="form-group">
             <label>Width (Flat)</label>
-            <input type="number" v-model.number="store.baleConfig.width" step="0.1" />
+            <input type="number" v-model.number="baleWidth" step="1" />
           </div>
           <div class="form-group">
             <label>Height (Tall)</label>
-            <input type="number" v-model.number="store.baleConfig.height" step="0.1" />
+            <input type="number" v-model.number="baleHeight" step="1" />
           </div>
         </div>
-        <p class="hint">Standard 2-Stringer Bale: 3.0 x 1.5 x 1.2 ft; Standard 3-Stringer Bale: 3.7 x 1.8 x 1.25</p>
+        <p class="hint">
+          Standard 2-String: ~36" x 18" x 14" <br/> 
+          Standard 3-String: ~44" x 22" x 15"
+        </p>
       </div>
       <div class="settings-section">
         <h4>Trial Information</h4>
@@ -192,7 +195,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 const store = useMapStore()
 
@@ -203,6 +206,22 @@ const loadingMaps = ref(false)
 // Local state for Ring Dimensions
 const localWidth = ref(store.ringDimensions.width)
 const localHeight = ref(store.ringDimensions.height)
+
+// We use a small rounding check to keep the UI clean (e.g. 1.5ft -> 18in, not 17.999in)
+const baleLength = computed({
+  get: () => parseFloat((store.baleConfig.length * 12).toFixed(2)),
+  set: (val) => store.baleConfig.length = val / 12
+})
+
+const baleWidth = computed({
+  get: () => parseFloat((store.baleConfig.width * 12).toFixed(2)),
+  set: (val) => store.baleConfig.width = val / 12
+})
+
+const baleHeight = computed({
+  get: () => parseFloat((store.baleConfig.height * 12).toFixed(2)),
+  set: (val) => store.baleConfig.height = val / 12
+})
 
 onMounted(async () => {
   if (store.sport === 'barnhunt') {
