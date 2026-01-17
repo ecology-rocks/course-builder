@@ -48,6 +48,13 @@ export function useKeyboardShortcuts(store) {
       return
     }
 
+    // Save: Ctrl+S
+    if (isCtrl && key === 's') {
+      e.preventDefault()
+      if (store.saveMap) store.saveMap()
+      return
+    }
+
     // Delete
 if (key === 'delete' || key === 'backspace') {
       if (store.selection.length > 0) {
