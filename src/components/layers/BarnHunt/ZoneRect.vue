@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 const store = useMapStore()
 const props = defineProps(['zone', 'isSelected', 'scale'])
@@ -8,6 +8,34 @@ const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend'
 
 const groupRef = ref(null)
 defineExpose({ getNode: () => groupRef.value?.getNode() })
+
+// [INSERT] Track Ctrl Key for Rotation Snapping
+const isCtrlPressed = ref(false)
+
+const rotationSnaps = computed(() => {
+  if (!isCtrlPressed.value) return [] 
+  return Array.from({ length: 24 }, (_, i) => i * 15) // [0, 15, 30... 345]
+})
+
+function handleKeyDown(e) {
+  if (e.key === 'Control' || e.metaKey) isCtrlPressed.value = true
+}
+
+function handleKeyUp(e) {
+  if (e.key === 'Control' || e.metaKey) isCtrlPressed.value = false
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('keyup', handleKeyUp)
+})
+
+
 
 const labelText = computed(() => props.zone.type === 'dead' ? 'DEAD ZONE' : 'OBSTRUCTION')
 const textColor = computed(() => props.zone.type === 'dead' ? '#b71c1c' : '#424242')
@@ -98,14 +126,14 @@ function dragBoundFunc(pos) {
     />
   </v-group>
   
-  <v-transformer
+<v-transformer
     v-if="isSelected"
     :config="{
       nodes: groupRef ? [groupRef.getNode()] : [],
       rotateEnabled: true,
       ignoreStroke: true,
-      keepRatio: false
-    }"
+      keepRatio: false,
+      rotationSnaps: rotationSnaps,   rotationSnapTolerance: 15       }"
     @transformend="handleTransformEnd"
   />
 </template>

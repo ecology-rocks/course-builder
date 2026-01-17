@@ -46,6 +46,10 @@ defineEmits(['close'])
                 <td>Rotate selection 15 degrees.</td>
               </tr>
               <tr>
+                <td><kbd>Ctrl</kbd> + Drag</td>
+                <td>15 degree snapping on a rotateable object.</td>
+              </tr>
+              <tr>
                 <td><kbd>Shift</kbd> + Right Click</td>
                 <td>Rotate selection 45 degrees.</td>
               </tr>

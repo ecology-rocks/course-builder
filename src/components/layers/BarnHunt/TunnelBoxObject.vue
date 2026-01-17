@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
 const props = defineProps(['board', 'isSelected', 'scale'])
@@ -8,6 +8,33 @@ const store = useMapStore()
 const groupRef = ref(null)
 
 defineExpose({ getNode: () => groupRef.value?.getNode() })
+
+const isCtrlPressed = ref(false)
+
+// 1. Computed Snaps: If Ctrl is held, snap to every 15 degrees
+const rotationSnaps = computed(() => {
+  if (!isCtrlPressed.value) return [] 
+  return Array.from({ length: 24 }, (_, i) => i * 15) // [0, 15, 30... 345]
+})
+
+// 2. Window Listeners
+function handleKeyDown(e) {
+  if (e.key === 'Control' || e.metaKey) isCtrlPressed.value = true
+}
+
+function handleKeyUp(e) {
+  if (e.key === 'Control' || e.metaKey) isCtrlPressed.value = false
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', handleKeyDown)
+  window.addEventListener('keyup', handleKeyUp)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('keyup', handleKeyUp)
+})
 
 // [FIXED] Match NoteObject Logic
 // 1. Do NOT touch the rect (stroke/corners) during drag. This causes shrinking.
@@ -190,14 +217,14 @@ function dragBoundFunc(pos) {
     />
   </v-group>
   
-  <v-transformer
+<v-transformer
     v-if="isSelected"
     :config="{
       nodes: groupRef ? [groupRef.getNode()] : [],
       rotateEnabled: true,
       ignoreStroke: true,
-      keepRatio: false
-    }"
+      keepRatio: false,
+      rotationSnaps: rotationSnaps,   rotationSnapTolerance: 15       }"
     @transform="handleTransform"
     @transformend="handleTransformEnd"
   />
