@@ -43,16 +43,6 @@ function handleDragMove(e) {
   }
 }
 function handleDragEnd(e) { 
-  // Ensure final rotation state is consistent before saving
-  if (props.ringDimensions) {
-    const node = e.target
-    const x = node.x() / props.scale
-    const W = props.ringDimensions.width
-    const isVertical = (Math.abs(x) < 0.1 || Math.abs(x - W) < 0.1)
-    
-    node.rotation(isVertical ? 90 : 0)
-  }
-  
   emit('dragend', e) 
 }
 

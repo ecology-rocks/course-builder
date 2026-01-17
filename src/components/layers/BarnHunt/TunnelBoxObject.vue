@@ -74,7 +74,8 @@ function handleTransformEnd() {
 }
 
 function handleDragEnd(e) {
-  emit('update', { id: props.board.id, x: e.target.x() / props.scale, y: e.target.y() / props.scale })
+  // Was: emit('update', { ... })
+  emit('dragend', e)
 }
 
 // --- 2. Handle Drag Constraints (Grid Snap + Ring Bounds) ---

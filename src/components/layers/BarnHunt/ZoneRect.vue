@@ -27,8 +27,9 @@ const handleTransformEnd = () => {
   })
 }
 
-const handleDragEnd = (e) => {
-  emit('update', { id: props.zone.id, x: e.target.x() / props.scale, y: e.target.y() / props.scale })
+function handleDragEnd(e) {
+  // Was: emit('update', { ... })
+  emit('dragend', e)
 }
 
 function dragBoundFunc(pos) {

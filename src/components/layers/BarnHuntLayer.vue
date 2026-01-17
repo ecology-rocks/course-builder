@@ -12,7 +12,7 @@ import StartBoxObject from './BarnHunt/StartBoxObject.vue'
 import DCMatObject from './BarnHunt/DCMatObject.vue'
 import MeasurementObject from './BarnHunt/MeasurementObject.vue'
 import NoteObject from './BarnHunt/NoteObject.vue'
-import TunnelBoardObject from './BarnHunt/TunnelBoardObject.vue'
+import TunnelBoxObject from './BarnHunt/TunnelBoxObject.vue'
 import GateObject from './BarnHunt/GateObject.vue'
 
 const props = defineProps(['scale', 'showHides', 'GRID_OFFSET'])
@@ -55,9 +55,6 @@ function handleSelect(id, isMulti = false) {
     store.selectObject(id, isMulti)
   }
 }
-
-function handleUpdateNote(attrs) { store.updateNote(attrs.id, attrs) }
-function handleUpdateTunnelBoard(attrs) { store.updateTunnelBoard(attrs.id, attrs) }
 
 // --- HANDLERS ---
 function handleRightClick(e, id) { 
@@ -189,10 +186,6 @@ function handleDragEnd(e, id) {
   store.moveSelection(gridDx, gridDy)
 }
 
-// Helpers for Update Events (Zone/Step specific)
-function handleUpdateZone(attrs) { store.updateZone(attrs.id, attrs) }
-function handleUpdateStep(attrs) { store.updateStep(attrs.id, attrs) }
-
 // --- ANCHOR LINES ---
 // --- ANCHOR LINES ---
 function getAnchorLines(bale) {
@@ -293,7 +286,7 @@ function getAnchorLines(bale) {
     <StartBoxObject v-if="store.startBox" :scale="scale" 
       :isSelected="store.selection.includes(store.startBox?.id)"
       :ref="(el) => setRef(el, store.startBox?.id || 'startbox')"
-      @select="store.selectObject(store.startBox.id)"
+      @select="handleSelect($event)"
       @dragstart="handleDragStart($event, store.startBox?.id)"
       @dragmove="handleDragMove($event, store.startBox?.id)"
       @dragend="handleDragEnd($event, store.startBox?.id)" 
@@ -343,43 +336,43 @@ function getAnchorLines(bale) {
     <StepMarker v-for="step in store.steps" :key="step.id" :step="step" :scale="scale"
       :isSelected="store.selection.includes(step.id)" 
       :ref="(el) => setRef(el, step.id)"
-      @select="store.selectObject(step.id, true)"
-      @update="handleUpdateStep"
+      @select="handleSelect"
+      @update="(attrs) => store.updateStep(attrs.id, attrs)"
       @dragstart="handleDragStart($event, step.id)"
       @dragmove="handleDragMove($event, step.id)"
-      @dragend="handleUpdateStep"
+      @dragend="handleDragEnd($event, step.id)"
       @rotate="store.rotateStep"
     />
     
     <ZoneRect v-for="zone in store.zones" :key="zone.id" :zone="zone" :scale="scale"
       :isSelected="store.selection.includes(zone.id)" 
       :ref="(el) => setRef(el, zone.id)"
-      @select="store.selectObject(zone.id, true)"
-      @update="handleUpdateZone"
+      @select="handleSelect"
+      @update="(attrs) => store.updateZone(attrs.id, attrs)"
       @dragstart="handleDragStart($event, zone.id)"
       @dragmove="handleDragMove($event, zone.id)"
-      @dragend="handleUpdateZone"
+      @dragend="handleDragEnd($event, zone.id)"
     />
     
 
     <NoteObject v-for="note in store.notes" :key="note.id" :note="note" :scale="scale"
       :isSelected="store.selection.includes(note.id)" 
       :ref="(el) => setRef(el, note.id)"
-      @select="store.selectObject(note.id, true)"
-      @update="handleUpdateNote"
+      @select="handleSelect"
+      @update="(attrs) => store.updateNote(attrs.id, attrs)"
       @dragstart="handleDragStart($event, note.id)"
       @dragmove="handleDragMove($event, note.id)"
-      @dragend="handleUpdateNote"
+      @dragend="handleDragEnd($event, note.id)"
     />
 
-<TunnelBoardObject v-for="board in store.tunnelBoards" :key="board.id" :board="board" :scale="scale"
+<TunnelBoxObject v-for="board in store.tunnelBoards" :key="board.id" :board="board" :scale="scale"
       :isSelected="store.selection.includes(board.id)" 
       :ref="(el) => setRef(el, board.id)"
-      @select="store.selectObject(board.id, true)"
-      @update="handleUpdateTunnelBoard"
+      @select="handleSelect"
+      @update="(attrs) => store.updateTunnelBoard(attrs.id, attrs)"
       @dragstart="handleDragStart($event, board.id)"
       @dragmove="handleDragMove($event, board.id)"
-      @dragend="handleUpdateTunnelBoard"
+      @dragend="handleDragEnd($event, board.id)"
     />
     
 <BoardObject v-for="board in store.boardEdges" :key="board.id" :board="board" :scale="scale" 

@@ -52,6 +52,8 @@ function handleTransformEnd() {
   text.width(finalW)
   text.height(finalH)
 
+  
+
   emit('update', {
     id: props.note.id,
     x: group.x() / props.scale,
@@ -61,9 +63,11 @@ function handleTransformEnd() {
     height: finalH / props.scale
   })
 }
-
 function handleDragEnd(e) {
-  emit('update', { id: props.note.id, x: e.target.x() / props.scale, y: e.target.y() / props.scale })
+  // We strictly pass the event up. 
+  // We do NOT emit 'update' here, because the parent layer 
+  // handles the coordinate math for the whole selection group.
+  emit('dragend', e)
 }
 
 function dragBoundFunc(pos) {

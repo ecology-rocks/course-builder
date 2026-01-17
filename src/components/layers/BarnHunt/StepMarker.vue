@@ -25,15 +25,6 @@ const handleContextMenu = (e) => {
 }
 
 function handleDragEnd(e) {
-  // Convert pixel position back to grid coordinates
-  const x = e.target.x() / props.scale
-  const y = e.target.y() / props.scale
-
-  // Update the store directly
-  if (store.updateStep) {
-    store.updateStep(props.step.id, { x, y })
-  }
-  
   emit('dragend', e)
 }
 
