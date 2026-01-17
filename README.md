@@ -25,7 +25,6 @@ This is my one-true-copy of the project roadmap.
  - Premade tunnels should indicate EastCoast/WestCoast dimensions
  - Numbered rat spots for Master
  - Ability to modify subscriptions, add extra seats to club sub, etc. 
- - Documentation + Guides, help button, etc.
  - Bring to front feature for bales? Would require some redesign.
 
 

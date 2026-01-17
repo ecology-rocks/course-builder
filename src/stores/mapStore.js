@@ -13,7 +13,7 @@ import { useHistory } from './mapActions/history'
 import { useMeasurements } from './mapActions/useMeasurements'
 import { useNotes } from './mapActions/useNotes'
 import { useTunnelBoards } from './mapActions/useTunnelBoards'
-
+import { useSteps } from './mapActions/useSteps'
 // ==========================================
 // 0. CONSTANTS & STRATEGIES
 // ==========================================
@@ -347,7 +347,7 @@ function openNoteEditor(id) {
   const measureLogic = useMeasurements(stateRefs, historyModule.snapshot)
   const notesLogic = useNotes(stateRefs, historyModule.snapshot)
   const tunnelBoardsLogic = useTunnelBoards(stateRefs, historyModule.snapshot)
-
+  const stepsLogic = useSteps(stateRefs, historyModule.snapshot)
   // =========================================================
   // DISABLED VALIDATION (User Request)
   // We point validation to an empty function so it never runs.
@@ -462,6 +462,7 @@ function openNoteEditor(id) {
     ...bhLogic,
     ...agLogic,
     ...swLogic,
+    ...stepsLogic,
     ...persistence,
     ...selectionLogic,
     ...measureLogic,

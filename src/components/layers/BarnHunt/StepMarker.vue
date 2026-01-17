@@ -24,6 +24,19 @@ const handleContextMenu = (e) => {
   emit('rotate', props.step.id)
 }
 
+function handleDragEnd(e) {
+  // Convert pixel position back to grid coordinates
+  const x = e.target.x() / props.scale
+  const y = e.target.y() / props.scale
+
+  // Update the store directly
+  if (store.updateStep) {
+    store.updateStep(props.step.id, { x, y })
+  }
+  
+  emit('dragend', e)
+}
+
 // [FIX] Smart Edge Snapping (matches Bales/Mats)
 function dragBoundFunc(pos) {
   const node = this
@@ -88,7 +101,7 @@ function dragBoundFunc(pos) {
     @tap="handleClick"
     @dragstart="emit('dragstart', $event)"
     @dragmove="emit('dragmove', $event)"
-    @dragend="emit('dragend', $event)"
+    @dragend="handleDragEnd"
     @contextmenu="handleContextMenu"
   >
     <v-rect :config="{
