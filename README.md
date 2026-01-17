@@ -10,6 +10,9 @@ This is my one-true-copy of the project roadmap.
  - Fortified judge sponsorship and saves
  - Fixed map placement issue where saves would move objects around upon reopening
  - Fixed map alignment issue; added rescue button under "More Actions": "Realign All To Grid"
+ - Adding expanded folder capabilities.
+ - Adjusting 1-ft grid for printing
+ - Renaming sidebar items for clarity
 
  
 
