@@ -55,18 +55,34 @@ export const useUserStore = defineStore('user', () => {
       judgeName.value = data.judgeName || user.value.displayName || user.value.email
       allowedSports.value = data.allowedSports || ['barnhunt']
       clubLogoUrl.value = data.clubLogoUrl || null
-      clubName.value = data.clubName || '' // <--- NEW
+      clubName.value = data.clubName || '' 
       
-      // If I am a CLUB, load my roster
-if (tier.value === 'club') {
+      const source = data.proSource || null // Check the source of the Pro status
+
+      // CLUB LOGIC
+      if (tier.value === 'club') {
         sponsoredEmails.value = data.sponsoredEmails || []
-        // Load custom limit from DB, or default to 5
         seatLimit.value = data.seatLimit || 5
       }
 
-      // If I am FREE, check if a Club sponsors me
-      if (tier.value === 'free') {
-        await checkSponsorship(user.value.email)
+      // SPONSORED JUDGE LOGIC (Re-Verification)
+      // We check if:
+      // A) They are currently FREE (might have been added recently)
+      // B) They are PRO via SPONSORSHIP (need to verify they are still on the list)
+      if (tier.value === 'free' || (tier.value === 'pro' && source === 'sponsorship')) {
+        
+        // Pass 'true' to indicate we want to persist the result if found
+        const isStillSponsored = await checkSponsorship(user.value.email, true)
+
+        // DOWNGRADE LOGIC:
+        // If they *were* sponsored, but checkSponsorship returned false (removed from list),
+        // we must strip the Pro status immediately.
+        if (!isStillSponsored && tier.value === 'pro' && source === 'sponsorship') {
+          console.log("[DEBUG] Sponsorship lost. Downgrading to Free.")
+          tier.value = 'free'
+          sponsoringClubName.value = null
+          await updateDoc(docRef, { tier: 'free', proSource: null })
+        }
       }
 
     } else {
@@ -97,40 +113,67 @@ async function updateClubName(newName) {
     }
   }
 
-  async function checkSponsorship(myEmail) {
+  // Returns TRUE if found, FALSE if not
+  async function checkSponsorship(myEmail, shouldPersist = false) {
+    console.log(`[DEBUG] Checking sponsorship for: ${myEmail}`)
     try {
+      // 1. Normalize for robust matching (Case Insensitive)
+      const normalizedMyEmail = myEmail.toLowerCase().trim()
+      
       const usersRef = collection(db, "users")
       const q = query(
         usersRef, 
         where("tier", "==", "club"),
-        where("sponsoredEmails", "array-contains", myEmail)
+        where("sponsoredEmails", "array-contains", normalizedMyEmail)
       )
       
       const snapshot = await getDocs(q)
       
       if (!snapshot.empty) {
         const sponsorDoc = snapshot.docs[0].data()
+        console.log(`[DEBUG] Sponsored by: ${sponsorDoc.judgeName}`)
+        
+        // 2. Update Local State
         tier.value = 'pro' 
         sponsoringClubName.value = sponsorDoc.judgeName || "A Club"
         allowedSports.value = ['barnhunt', 'agility', 'scentwork']
+
+        // 3. Persist 'Pro' status to Database (if requested)
+        // We add 'proSource: sponsorship' so we know to check again later.
+        if (shouldPersist && user.value) {
+            const myDocRef = doc(db, "users", user.value.uid)
+            await updateDoc(myDocRef, { 
+              tier: 'pro',
+              proSource: 'sponsorship' 
+            })
+        }
+        return true
+      } else {
+        console.log("[DEBUG] No sponsorship found.")
+        return false
       }
     } catch (e) {
       console.error("Sponsorship check failed", e)
+      return false
     }
   }
 
   async function addSponsoredJudge(targetEmail) {
     if (tier.value !== 'club') return
     if (sponsoredEmails.value.length >= seatLimit.value) {
-      alert(`You have used all ${seatLimit.value} seats. Please contact support to add more.`)
+      alert(`You have used all ${seatLimit.value} seats.`)
       return
     }
+    
+    // [FIX] Normalize input
+    const normalizedEmail = targetEmail.toLowerCase().trim()
+    
     try {
       const docRef = doc(db, "users", user.value.uid)
       await updateDoc(docRef, {
-        sponsoredEmails: arrayUnion(targetEmail)
+        sponsoredEmails: arrayUnion(normalizedEmail)
       })
-      sponsoredEmails.value.push(targetEmail)
+      sponsoredEmails.value.push(normalizedEmail)
     } catch (e) {
       console.error(e)
       alert("Failed to add judge.")
@@ -139,12 +182,13 @@ async function updateClubName(newName) {
 
   async function removeSponsoredJudge(targetEmail) {
     if (tier.value !== 'club') return
+    const normalizedEmail = targetEmail.toLowerCase().trim()
     try {
       const docRef = doc(db, "users", user.value.uid)
       await updateDoc(docRef, {
-        sponsoredEmails: arrayRemove(targetEmail)
+        sponsoredEmails: arrayRemove(normalizedEmail)
       })
-      sponsoredEmails.value = sponsoredEmails.value.filter(e => e !== targetEmail)
+      sponsoredEmails.value = sponsoredEmails.value.filter(e => e !== normalizedEmail)
     } catch (e) {
       console.error(e)
       alert("Failed to remove judge.")
@@ -262,11 +306,18 @@ async function updateClubName(newName) {
     return allowedSports.value.includes(sport)
   }
 
-  function can(action) {
+function can(action) {
     const t = tier.value
+    console.log(`[DEBUG] Permission Check: Action=${action}, Tier=${t}`)
+    
     if (t === 'club' || t === 'pro') return true 
+    
     if (action === 'save_cloud' || action === 'export_json' || action === 'mark_hides') {
-      return t === 'solo'
+      // Logic: If I am NOT pro/club, am I allowed?
+      // "solo" tier is allowed these features. "free" is not.
+      const allowed = t === 'solo'
+      if (!allowed) console.warn(`[DEBUG] Denied ${action} because tier is ${t}`)
+      return allowed
     }
     return true
   }
