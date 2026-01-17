@@ -126,7 +126,7 @@ function goHome() {
         
         <button @click="store.realignGrid()">📏 Realign All to Grid</button>
 
-        <button @click="showRandomizerModal = true">🎲 Randomizer</button>
+        <button @click="showRandomizerModal = true">🎲 Master Random Generator</button>
         <button @click="showBugReportModal = true">🐞 Report Bug</button>
         <button v-if="store.currentMapId" @click="showDeleteModal = true" class="text-danger">
           🗑️ Delete Map

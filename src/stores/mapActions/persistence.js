@@ -212,8 +212,8 @@ export function useMapPersistence(state, userStore, notifications) {
        state.baleConfig.value = source.baleConfig || def
     }
 
-    state.previousBales.value = JSON.parse(JSON.stringify(source.bales || []))
-    state.comparisonMapName.value = "Original File"
+    //state.previousBales.value = JSON.parse(JSON.stringify(source.bales || []))
+    //state.comparisonMapName.value = "Original File"
     
     if (state.validateAllBales) state.validateAllBales()
   }
@@ -224,7 +224,7 @@ export function useMapPersistence(state, userStore, notifications) {
     state.currentMapId.value = id
     state.isShared.value = data.isShared || false
     state.currentFolderId.value = data.folderId || null
-    state.comparisonMapName.value = "Original Save"
+    //state.comparisonMapName.value = "Original Save"
   }
 
   // --- MERGE (Combine files) ---
