@@ -52,7 +52,7 @@ export const useUserStore = defineStore('user', () => {
     if (docSnap.exists()) {
       const data = docSnap.data()
       tier.value = data.tier || 'free'
-      judgeName.value = data.judgeName || user.value.displayName || user.value.email
+      judgeName.value = data.judgeName || user.value.displayName || 'Please set your judge name in your user profile.'
       allowedSports.value = data.allowedSports || ['barnhunt']
       clubLogoUrl.value = data.clubLogoUrl || null
       clubName.value = data.clubName || '' 
