@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 import { useUserStore } from '@/stores/userStore'
 import { useAutosave } from '@/composables/useAutosave'
@@ -33,7 +33,12 @@ const showHides = ref(true)
 const isPrinting = ref(false)
 const showBugReportModal = ref(false)
 const showHelpModal = ref(false)
-
+const isSingleBaleSelected = computed(() => {
+  if (store.selection.length !== 1) return false
+  const id = store.selection[0]
+  // Check if the selected ID exists in the Bales list
+  return store.bales && store.bales.some(b => b.id === id)
+})
 // Context Menu State
 const contextMenu = ref({ visible: false, x: 0, y: 0 })
 
@@ -146,7 +151,12 @@ function handleGlobalClick() {
         <div v-if="store.selection.length > 0" class="selection-bar">
           <span class="sel-count">{{ store.selection.length }} Selected</span>
           <button v-if="store.selection.length > 1" @click="store.rotateSelection()">🔄 Rotate Group</button>
-          <button v-if="store.sport === 'barnhunt' && store.currentLayer === 1" @click="store.toggleAnchor()">⚓ Anchor</button>
+          <button 
+            v-if="store.sport === 'barnhunt' && store.currentLayer === 1 && isSingleBaleSelected" 
+            @click="store.toggleAnchor()"
+          >
+            ⚓ Anchor
+          </button>
           
           <div class="divider"></div>
 
