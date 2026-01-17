@@ -297,22 +297,41 @@ export function useMapPersistence(state, userStore, notifications) {
     await loadUserMaps()
   }
 
-  // --- FOLDER MANAGEMENT ---
-  async function createFolder(name) {
+async function createFolder(name, parentId = null) {
     if (!userStore.user) return
 
     try {
-      await addDoc(collection(db, 'folders'), {
-        name: name,
-        uid: userStore.user.uid, 
-        createdAt: serverTimestamp()
-      })
-      
+      // Call the updated service
+      await mapService.createFolder(userStore.user.uid, name, parentId)
       await loadUserFolders()
-      
     } catch (error) {
       console.error("Error creating folder:", error)
       notifications.show("Failed to create folder", "error")
+    }
+  }
+
+  // [NEW] Rename
+  async function renameFolder(id, newName) {
+    try {
+      await mapService.updateFolder(id, { name: newName })
+      await loadUserFolders() // Refresh list
+    } catch (e) {
+      console.error(e)
+      notifications.show("Failed to rename folder", "error")
+    }
+  }
+
+  // [NEW] Move Folder (Nesting)
+  async function moveFolder(id, targetParentId) {
+    // Prevent dropping a folder into itself
+    if (id === targetParentId) return 
+
+    try {
+      await mapService.updateFolder(id, { parentId: targetParentId })
+      await loadUserFolders()
+    } catch (e) {
+      console.error(e)
+      notifications.show("Failed to move folder", "error")
     }
   }
 
@@ -363,6 +382,17 @@ export function useMapPersistence(state, userStore, notifications) {
         }
       })
       
+const childFolderQuery = query(
+        collection(db, "folders"),
+        where("parentId", "==", fid),
+        where("uid", "==", userStore.user.uid)
+      )
+      const childFolderDocs = await getDocs(childFolderQuery)
+      
+      childFolderDocs.docs.forEach(d => {
+        batch.update(d.ref, { parentId: null })
+      })
+
       batch.delete(folderRef)
       
       await batch.commit()
@@ -390,6 +420,8 @@ export function useMapPersistence(state, userStore, notifications) {
     moveMap,
     createFolder,
     loadUserFolders,
-    deleteFolder
+    deleteFolder,
+    renameFolder,
+    moveFolder,
   }
 }

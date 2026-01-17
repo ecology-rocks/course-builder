@@ -36,8 +36,19 @@ export const mapService = {
     return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
   },
 
-  async createFolder(uid, name) {
-    await addDoc(collection(db, FOLDERS_COLLECTION), { uid, name, createdAt: new Date() })
+  async createFolder(uid, name, parentId = null) {
+    await addDoc(collection(db, FOLDERS_COLLECTION), { 
+      uid, 
+      name, 
+      parentId, // New field
+      createdAt: new Date() 
+    })
+  },
+
+  // [NEW] Generic update (for Renaming or Moving)
+  async updateFolder(folderId, data) {
+    const ref = doc(db, FOLDERS_COLLECTION, folderId)
+    await updateDoc(ref, data)
   },
 
   async deleteFolder(folderId) {

@@ -19,9 +19,48 @@ const localMaps = ref([])
 const showDeleteModal = ref(false)
 const mapToDeleteId = ref(null)
 
+const folderTree = computed(() => {
+  const raw = mapStore.folders
+  
+  const build = (parentId, depth) => {
+    return raw
+      .filter(f => {
+        // If looking for Root (parentId is null), accept null OR undefined
+        if (!parentId) {
+          return !f.parentId 
+        }
+        // Otherwise match exact ID
+        return f.parentId === parentId
+      })
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .flatMap(f => [
+        { ...f, depth },
+        ...build(f.id, depth + 1)
+      ])
+  }
+  
+  return build(null, 0)
+})
+
+
 function handleLogout() {
   userStore.logout()
   router.push('/')
+}
+
+// [NEW] Create Folder (supports subfolders)
+async function handleCreateFolder() {
+  const parentId = mapStore.currentFolderId // Create inside current view?
+  const name = prompt(parentId ? "New Subfolder Name:" : "New Root Folder Name:")
+  if (name) await mapStore.createFolder(name, parentId)
+}
+
+// [NEW] Rename Logic
+async function handleRenameFolder(folder) {
+  const newName = prompt("Rename folder:", folder.name)
+  if (newName && newName !== folder.name) {
+    await mapStore.renameFolder(folder.id, newName)
+  }
 }
 
 function formatDate(timestamp) {
@@ -80,11 +119,6 @@ async function confirmDelete() {
   }
 }
 
-// === FOLDER LOGIC ===
-async function handleCreateFolder() {
-  const name = prompt("Folder Name:")
-  if (name) await mapStore.createFolder(name)
-}
 
 
 function copyToNewMap(map) {
@@ -111,17 +145,26 @@ async function handleDeleteFolder(id) {
   }
 }
 
-function onDragStart(event, mapId) {
-  event.dataTransfer.dropEffect = 'move'
+function onDragStart(event, type, id) {
   event.dataTransfer.effectAllowed = 'move'
-  event.dataTransfer.setData('mapId', mapId)
+  event.dataTransfer.setData('type', type) // 'map' or 'folder'
+  event.dataTransfer.setData('id', id)
 }
 
-async function onDrop(event, folderId) {
-  const mapId = event.dataTransfer.getData('mapId')
-  if (mapId) {
-    await mapStore.moveMap(mapId, folderId)
+// [UPDATED] Drop Handler
+async function onDrop(event, targetFolderId) {
+  const type = event.dataTransfer.getData('type')
+  const id = event.dataTransfer.getData('id')
+
+  if (!id) return
+
+  if (type === 'map') {
+    // Existing Map Logic
+    await mapStore.moveMap(id, targetFolderId)
     localMaps.value = await mapStore.loadUserMaps()
+  } else if (type === 'folder') {
+    // [NEW] Folder Logic
+    await mapStore.moveFolder(id, targetFolderId)
   }
   isDragOver.value = false
 }
@@ -177,7 +220,7 @@ watch(() => userStore.user, async (newUser) => {
           <h3>Folders</h3>
           <button @click="handleCreateFolder" class="btn-icon">+</button>
         </div>
-        <ul>
+<ul>
           <li 
             :class="{ active: mapStore.currentFolderId === null }"
             @click="mapStore.currentFolderId = null"
@@ -186,16 +229,25 @@ watch(() => userStore.user, async (newUser) => {
           >
             📂 All / Unfiled
           </li>
+
           <li 
-            v-for="folder in mapStore.folders" 
+            v-for="folder in folderTree" 
             :key="folder.id"
             :class="{ active: mapStore.currentFolderId === folder.id }"
+            :style="{ paddingLeft: (10 + folder.depth * 15) + 'px' }"
             @click="mapStore.currentFolderId = folder.id"
+            
+            draggable="true"
+            @dragstart.stop="onDragStart($event, 'folder', folder.id)"
             @dragover.prevent
-            @drop="onDrop($event, folder.id)"
+            @drop.stop="onDrop($event, folder.id)"
           >
             📁 {{ folder.name }}
-            <button @click.stop="handleDeleteFolder(folder.id)" class="btn-xs">×</button>
+            
+            <div class="folder-actions">
+              <button @click.stop="handleRenameFolder(folder)" class="btn-xs" title="Rename">✎</button>
+              <button @click.stop="handleDeleteFolder(folder.id)" class="btn-xs" title="Delete">×</button>
+            </div>
           </li>
         </ul>
       </aside>
@@ -254,7 +306,7 @@ watch(() => userStore.user, async (newUser) => {
               :key="map.id" 
               class="map-card"
               draggable="true"
-              @dragstart="onDragStart($event, map.id)"
+              @dragstart="onDragStart($event, 'map', map.id)"
             >
               <div class="map-preview" @click="openMap(map)">
                 <div class="preview-placeholder">
@@ -356,4 +408,14 @@ watch(() => userStore.user, async (newUser) => {
 .toast-notification.success { background-color: #388e3c; }
 .toast-notification.error { background-color: #d32f2f; }
 .toast-notification.info { background-color: #2196f3; }
+
+.folder-actions {
+  display: flex;
+  gap: 5px;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+.sidebar li:hover .folder-actions {
+  opacity: 1;
+}
 </style>

@@ -2,8 +2,15 @@
 This is my one-true-copy of the project roadmap.
 
 ## Updates in Progress
- - Adding code documentation
- - Adding people documentation
+ - Adding help box
+ - Fixed measurement tool saves, math, and display
+ - Fixed step display sizing issue
+ - Remove Anchor button from contextmenu if selected item is not a bale
+ - Revised instructions for blank judge name
+ - Fortified judge sponsorship and saves
+ - Fixed map placement issue where saves would move objects around upon reopening
+ - Fixed map alignment issue; added rescue button under "More Actions": "Realign All To Grid"
+
  
 
 ## Feature Requests & Future Updates (Long Term)
