@@ -60,8 +60,8 @@
           </div>
           <div class="form-group-row">
             <div class="form-group">
-              <label>Day</label>
-              <input v-model="store.trialDay" placeholder="e.g. Saturday" />
+              <label>Date</label>
+              <input v-model="store.trialDay" placeholder="e.g. Thurs Jan 15, 2026" />
             </div>
             <div class="form-group">
               <label>Trial #</label>

@@ -31,7 +31,7 @@ function finishMeasurement() {
     if (state.activeMeasurement.value) {
       // Only save if we have at least 2 points (a line)
       if (state.activeMeasurement.value.points.length >= 2) {
-        snapshot()
+        
         // [FIX] Use array spread to ensure reactivity triggers properly
         // Check if array exists (handling legacy saves)
         const current = state.measurements.value || []
@@ -43,7 +43,7 @@ function finishMeasurement() {
   }
 
   function removeMeasurement(id) {
-    snapshot()
+    
     state.measurements.value = state.measurements.value.filter(m => m.id !== id)
   }
 

@@ -116,7 +116,7 @@ export const useMapStore = defineStore('map', () => {
     notification.value = { message, type }
     setTimeout(() => { notification.value = null }, 3000)
   }
-
+ 
 function openNoteEditor(id) {
     editingNoteId.value = id
   }

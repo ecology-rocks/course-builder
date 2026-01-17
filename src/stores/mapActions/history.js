@@ -5,10 +5,22 @@ export function useHistory(state, changeCallback) {
   const historyIndex = ref(-1)
   const MAX_HISTORY = 50
   const isUndoing = ref(false)
+  const isRedoing = ref(false) // [NEW]
+  const measurementRedoStack = ref([])
+
+  watch(
+    () => state.activeMeasurement?.value?.points?.length,
+    () => {
+      // If length changed, and we aren't Undoing or Redoing, it's a manual click.
+      if (!isUndoing.value && !isRedoing.value) {
+        measurementRedoStack.value = []
+      }
+    }
+  )
 
   // Create a Snapshot of the current unified mapData
   function snapshot() {
-    if (isUndoing.value) return
+    if (isUndoing.value || isRedoing.value) return
 
     // Remove any "future" history if we are in the middle of the stack
     if (historyIndex.value < historyStack.value.length - 1) {
@@ -28,15 +40,36 @@ export function useHistory(state, changeCallback) {
   }
 
   function undo() {
+    // 1. SMART UNDO (Active Measurement)
+    if (state.activeMeasurement && state.activeMeasurement.value) {
+      const pts = state.activeMeasurement.value.points
+      if (pts.length > 0) {
+        isUndoing.value = true 
+        
+        const p = pts.pop()
+        measurementRedoStack.value.push(p)
+        
+        if (pts.length === 0) {
+          state.activeMeasurement.value = null
+          measurementRedoStack.value = []
+        }
+        
+        // [FIX] Wait for watcher to fire before resetting flag
+        nextTick(() => {
+          isUndoing.value = false
+        })
+        return 
+      }
+    }
+
+    // 2. STANDARD UNDO
     if (historyIndex.value > 0) {
       isUndoing.value = true
       historyIndex.value--
       const data = historyStack.value[historyIndex.value]
       
-      // Restore the Unified State
       state.mapData.value = JSON.parse(JSON.stringify(data))
       
-      // Force UI refresh if needed
       nextTick(() => {
         isUndoing.value = false
         if (changeCallback) changeCallback()
@@ -45,15 +78,30 @@ export function useHistory(state, changeCallback) {
   }
 
   function redo() {
+    // 1. SMART REDO (Active Measurement)
+    if (state.activeMeasurement && state.activeMeasurement.value && measurementRedoStack.value.length > 0) {
+      isRedoing.value = true
+      
+      const p = measurementRedoStack.value.pop()
+      state.activeMeasurement.value.points.push(p)
+      
+      // [FIX] Wait for watcher to fire before resetting flag
+      nextTick(() => {
+        isRedoing.value = false
+      })
+      return 
+    }
+
+    // 2. STANDARD REDO
     if (historyIndex.value < historyStack.value.length - 1) {
-      isUndoing.value = true
+      isRedoing.value = true
       historyIndex.value++
       const data = historyStack.value[historyIndex.value]
       
       state.mapData.value = JSON.parse(JSON.stringify(data))
       
       nextTick(() => {
-        isUndoing.value = false
+        isRedoing.value = false
         if (changeCallback) changeCallback()
       })
     }
