@@ -1,4 +1,4 @@
-export function useBoardEdges(state) {
+export function useBoardEdges(state, snapshot) {
   function snapToGrid(val) {
     return Math.round(val * 6) / 6
   }
@@ -12,6 +12,7 @@ export function useBoardEdges(state) {
       id, x1: snappedX, y1: snappedY, x2: snappedX, y2: snappedY 
     })
     state.isDrawingBoard.value = id
+    if (snapshot) snapshot()
   }
 
   function updateDrawingBoard(x, y) {
@@ -31,10 +32,12 @@ export function useBoardEdges(state) {
       state.boardEdges.value = state.boardEdges.value.filter(b => b.id !== state.isDrawingBoard.value)
     }
     state.isDrawingBoard.value = null
+    if (snapshot) snapshot()
   }
 
   function removeBoardEdge(id) {
     state.boardEdges.value = state.boardEdges.value.filter(b => b.id !== id)
+    if (snapshot) snapshot()
   }
 
   function updateBoardEndpoint(id, p, x, y) {
@@ -45,6 +48,7 @@ export function useBoardEdges(state) {
       } else {
         b.x2 = snapToGrid(x); b.y2 = snapToGrid(y)
       }
+      if (snapshot) snapshot()
     }
   }
 
@@ -67,6 +71,8 @@ export function useBoardEdges(state) {
       
       board.x1 = snapToGrid(rx1); board.y1 = snapToGrid(ry1)
       board.x2 = snapToGrid(rx2); board.y2 = snapToGrid(ry2)
+
+      if (snapshot) snapshot()
     }
   }
 

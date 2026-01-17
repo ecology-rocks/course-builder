@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
 const props = defineProps(['board', 'scale'])
@@ -9,6 +9,12 @@ const groupRef = ref(null)
 
 // Expose the node for the Layer to control
 defineExpose({ getNode: () => groupRef.value?.getNode() })
+
+watch(() => props.board, () => {
+  if (groupRef.value) {
+    groupRef.value.getNode().position({ x: 0, y: 0 })
+  }
+}, { deep: true })
 
 // --- 1. Handle Endpoint Dragging ---
 function handleHandleDragStart(e) {
@@ -49,24 +55,16 @@ function handleHandleDragEnd(e, whichPoint) {
 }
 
 function handleGroupDragEnd(e) {
-  // If the event came from a bubble (endpoint drag), ignore it
   if (e.target !== groupRef.value.getNode()) return
 
-  const node = e.target
-  // Calculate delta in Grid Units
-  const dx = node.x() / props.scale
-  const dy = node.y() / props.scale
-  
-  // Update Store (both endpoints)
-  store.updateBoardEndpoint(props.board.id, 'start', props.board.x1 + dx, props.board.y1 + dy)
-  store.updateBoardEndpoint(props.board.id, 'end', props.board.x2 + dx, props.board.y2 + dy)
-
-  // [IMPORTANT] Reset Group Position to (0,0)
-  // Since the store now contains the new absolute coordinates, 
-  // we must remove the group's offset to prevent double-movement.
-  node.position({ x: 0, y: 0 })
-  
+  // 1. Emit FIRST so the Layer can calculate the full delta 
+  // (e.g., "The user dragged this 50px right")
   emit('dragend', e)
+
+  // 2. Reset immediately. 
+  // We don't need setTimeout anymore because the 'watch' above 
+  // covers us, but this makes the snap-back instant and snappy.
+  e.target.position({ x: 0, y: 0 })
 }
 
 // --- 2. Handle Whole Board Drag ---

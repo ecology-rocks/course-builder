@@ -247,21 +247,39 @@ function rotateSelection(angle = 90) {
     const ids = state.selection.value
     if (ids.length === 0) return
 
-    // Optimization: We loop through mapData once
     Object.keys(state.mapData.value).forEach(key => {
       const collection = state.mapData.value[key]
+      
+      // Helper to move a single item
+      const moveItem = (item) => {
+        if (!ids.includes(item.id)) return
+
+        if (item.x1 !== undefined && item.y1 !== undefined) {
+          // [FIX] Handle Boards (Line Segments)
+          item.x1 += dx; item.y1 += dy
+          item.x2 += dx; item.y2 += dy
+        } 
+        else if (item.points && Array.isArray(item.points)) {
+          // [FIX] Handle Measurements (Array of points)
+          item.points.forEach(p => { p.x += dx; p.y += dy })
+        } 
+        else {
+          // Standard Objects
+          item.x += dx
+          item.y += dy
+        }
+      }
+
+      // Handle Arrays vs Singletons
       if (Array.isArray(collection)) {
-         collection.forEach(item => {
-           if (ids.includes(item.id)) {
-             item.x += dx
-             item.y += dy
-           }
-         })
+         collection.forEach(moveItem)
       } else if (collection && ids.includes(collection.id)) {
-         collection.x += dx
-         collection.y += dy
+         moveItem(collection)
       }
     })
+
+    // [IMPORTANT] Save to History
+    if (snapshot) snapshot()
   }
 
   return {
