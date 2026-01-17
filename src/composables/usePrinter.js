@@ -6,6 +6,8 @@ export function usePrinter(store, userStore, stageRef, scale) {
     store.clearSelection()
     const originalScale = scale.value
     scale.value = 40 // Force standard print resolution
+    const originalStep = store.gridStep
+    store.gridStep = 1
     await nextTick()
     const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
     await wait(100)
@@ -313,7 +315,10 @@ export function usePrinter(store, userStore, stageRef, scale) {
     `)
     win.document.close()
     setTimeout(() => { win.focus(); win.print(); }, 500);
+    store.gridStep = originalStep
   }
 
+
+  
   return { handlePrint }
 }

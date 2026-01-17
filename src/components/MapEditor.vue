@@ -177,18 +177,18 @@ function handleGlobalClick() {
 
           <template v-for="n in store.ringDimensions.width + 1" :key="'v'+n">
             <v-line v-if="store.sport === 'agility' && (n - 1) % 10 === 0" :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#ccc', strokeWidth: 1 }" />
-            <v-line v-if="store.sport === 'barnhunt' && (n - 1) % 2 === 0" :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#999', strokeWidth: 1 }" />
+            <v-line v-if="store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0" :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#999', strokeWidth: 1 }" />
             <v-line v-if="store.sport === 'scentwork' && (n - 1) % 5 === 0" :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#ccc', strokeWidth: 1 }" />
           </template>
 
           <template v-for="n in store.ringDimensions.height + 1" :key="'h'+n">
             <v-line v-if="store.sport === 'agility' && (n - 1) % 10 === 0" :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#ccc', strokeWidth: 1 }" />
-            <v-line v-if="store.sport === 'barnhunt' && (n - 1) % 2 === 0" :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#999', strokeWidth: 1 }" />
+            <v-line v-if="store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0" :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#999', strokeWidth: 1 }" />
             <v-line v-if="store.sport === 'scentwork' && (n - 1) % 5 === 0" :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#ccc', strokeWidth: 1 }" />
           </template>
 
           <template v-for="n in store.ringDimensions.width + 1" :key="'lx'+n">
-            <v-text v-if="(store.sport === 'agility' && (n-1)%10===0) || (store.sport === 'barnhunt' && (n-1)%2===0) || (store.sport === 'scentwork' && (n-1)%5===0)" 
+            <v-text v-if="(store.sport === 'agility' && (n-1)%10===0) || (store.sport === 'barnhunt' && (n-1)%store.gridStep===0) || (store.sport === 'scentwork' && (n-1)%5===0)" 
               :config="{
                 x: (n - 1) * scale, y: getXAxisY(),
                 text: getGridLabelX(n - 1),
@@ -197,7 +197,7 @@ function handleGlobalClick() {
           </template>
 
           <template v-for="n in store.ringDimensions.height + 1" :key="'ly'+n">
-            <v-text v-if="(store.sport === 'agility' && (n-1)%10===0) || (store.sport === 'barnhunt' && (n-1)%2===0) || (store.sport === 'scentwork' && (n-1)%5===0)"
+            <v-text v-if="(store.sport === 'agility' && (n-1)%10===0) || (store.sport === 'barnhunt' && (n-1)%store.gridStep===0) || (store.sport === 'scentwork' && (n-1)%5===0)"
               :config="{
                 x: getYAxisX(), y: (n - 1) * scale - 6,
                 text: getGridLabelY(n - 1),

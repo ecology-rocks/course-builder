@@ -107,6 +107,7 @@ export const useMapStore = defineStore('map', () => {
   const activeTool = ref('bale')
   const nextNumber = ref(1) 
   const isDrawingBoard = ref(false) 
+  const gridStep = ref(2)
 
   // ==========================================
   // 2. ACTIONS (Internal & External)
@@ -320,6 +321,7 @@ function openNoteEditor(id) {
     tunnelBoards: createMapRef('tunnelBoards'),
     gate: createMapRef('gate'),
     measurements: createMapRef('measurements'), 
+    gridStep,
     activeMeasurement, 
 
     gridSize, activeTool, previousClassCount,
@@ -443,7 +445,7 @@ function openNoteEditor(id) {
     selection, isDraggingSelection, clipboard, previousBales, 
     wallTypes, gridStartCorner, trialLocation, trialDay, 
     trialNumber, baleConfig, comparisonMapName, dcMatConfig, showMapStats,
-    isDrawingBoard, savedMaps,previousClassCount,
+    isDrawingBoard, savedMaps,previousClassCount, gridStep,
 
     editingNoteId, openNoteEditor, closeNoteEditor,
 
