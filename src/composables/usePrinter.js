@@ -63,10 +63,16 @@ export function usePrinter(store, userStore, stageRef, scale) {
       // [NEW] Total Sign Calculation
       const totalSign = diffs.totalNet > 0 ? '+' : ''
       
+      // [NEW] Comparison Name Logic
+      const comparisonName = store.comparisonMapName 
+        ? `<div style="color: #d32f2f; font-style: italic; margin-bottom: 2px;">${store.comparisonMapName}</div>` 
+        : ''
+
       return `
         <div class="legend-sub-section">
           <h4 style="margin-bottom: 2px;">Changes vs. Previous</h4>
           <div style="font-size: 10px; line-height: 1.2;">
+            ${comparisonName}
             <div style="border-bottom: 1px solid #eee; margin-bottom: 2px; padding-bottom: 2px;">
                 <strong>TOTAL:</strong> ${totalSign}${diffs.totalNet} Bales
             </div>
