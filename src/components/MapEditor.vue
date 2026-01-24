@@ -11,17 +11,20 @@ import { useCanvasControls } from '@/composables/editor/useCanvasControls'
 import { useGridSystem } from '@/composables/editor/useGridSystem'
 import { useExportTools } from '@/composables/editor/useExportTools'
 import { useStageInteraction } from '@/composables/editor/useStageInteraction'
+import { useContextMenu } from '@/composables/editor/useContextMenu'
+
 
 
 // Sub-Layers & Components
 import EditorSidebar from './editor/EditorSidebar.vue'
+import SelectionBar from './editor/SelectionBar.vue'
 import AgilityLayer from './layers/AgilityLayer.vue'
 import BarnHuntLayer from './layers/BarnHuntLayer.vue'
 import ScentWorkLayer from './layers/ScentWorkLayer.vue'
 import MapLegend from './layers/MapLegend.vue'
 import EditNoteModal from './modals/EditNoteModal.vue'
-import BugReportModal from './modals/BugReportModal.vue'
 import HelpModal from './modals/HelpModal.vue'
+
 
 // Setup
 const store = useMapStore()
@@ -31,46 +34,27 @@ const stageRef = ref(null)
 const GRID_OFFSET = 30
 const showHides = ref(true)
 const isPrinting = ref(false)
-const showBugReportModal = ref(false)
 const showHelpModal = ref(false)
-// [UPDATED] Returns the bale object if found, otherwise undefined/null
-const isSingleBaleSelected = computed(() => {
-  if (store.selection.length !== 1) return null
-  const id = store.selection[0]
-  // Return the actual object instead of just 'true'
-  return store.bales.find(b => b.id === id) || null
-})
-// Context Menu State
-const contextMenu = ref({ visible: false, x: 0, y: 0 })
 
 useAutosave(3000)
-
-// 1. Keyboard
 useKeyboardShortcuts(store)
 
-// 2. Controls (Zoom/Fit)
 const { scale, stageConfig, zoom, fitToScreen } = useCanvasControls(store, wrapperRef, GRID_OFFSET)
-
-// 3. Grid Helpers
 const { getWallStroke, getGridLabelX, getGridLabelY, getXAxisY, getYAxisX, getYAxisAlign } = useGridSystem(store, scale)
-
-// 4. Export Tools
 const { handleSaveMap, handleLibrarySave } = useExportTools(store, stageRef, scale, GRID_OFFSET)
+const { selectionRect, handleStageMouseDown, handleStageMouseMove, 
+        handleStageMouseUp, handleDragStart } = useStageInteraction(store, scale, GRID_OFFSET)
+const { contextMenu, handleStageContextMenu, closeContextMenu } = useContextMenu(store)
+const { handlePrint: printLogic } = usePrinter(store, userStore, stageRef, scale)
 
-// 5. Interaction (Mouse/Tools)
-const {
-  selectionRect,
-  handleStageMouseDown,
-  handleStageMouseMove,
-  handleStageMouseUp,
-  handleDragStart
-} = useStageInteraction(store, scale, GRID_OFFSET)
-
-// Watchers
 watch(() => [store.sport, store.ringDimensions.width], () => { nextTick(fitToScreen) }, { immediate: true })
 
-// Printer Logic
-const { handlePrint: printLogic } = usePrinter(store, userStore, stageRef, scale)
+
+function handleGlobalClick() {
+  closeContextMenu()
+}
+
+
 async function handlePrint(withHides) {
   isPrinting.value = true
   showHides.value = withHides
@@ -80,30 +64,6 @@ async function handlePrint(withHides) {
   setTimeout(() => { showHides.value = true }, 2000)
 }
 
-function handleStageContextMenu(e) {
-  e.evt.preventDefault()
-
-  // 1. Priority: Finish Measurement (consumes event)
-  if (store.activeTool === 'measure' && store.activeMeasurement) {
-    store.finishMeasurement()
-    return
-  }
-
-  // 2. Only show menu on background click (not on objects)
-  if (e.target !== e.target.getStage()) return
-
-  // 3. Show Menu
-  contextMenu.value = {
-    visible: true,
-    x: e.evt.clientX,
-    y: e.evt.clientY
-  }
-}
-
-// Close menu on any click inside the editor
-function handleGlobalClick() {
-  if (contextMenu.value.visible) contextMenu.value.visible = false
-}
 </script>
 
 <template>
@@ -131,6 +91,8 @@ function handleGlobalClick() {
 
       <HelpModal :show="showHelpModal" @close="showHelpModal = false" />
 
+      <SelectionBar />
+
       <div v-if="contextMenu.visible" class="context-menu"
         :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }">
         <button @click="store.clearSelection()" :disabled="store.selection.length === 0">
@@ -138,43 +100,6 @@ function handleGlobalClick() {
         </button>
         <button @click="fitToScreen">Fit to Screen</button>
       </div>
-
-      <Transition name="slide-up">
-        <div v-if="store.selection.length > 0" class="selection-bar">
-          <span class="sel-count">{{ store.selection.length }} Selected</span>
-          <button v-if="store.selection.length > 1" @click="store.rotateSelection()">🔄 Rotate Group</button>
-
-          <div v-if="isSingleBaleSelected" style="display: flex; align-items: center; gap: 8px;">
-            <div class="divider"></div>
-
-            <button @click="store.cycleOrientation(isSingleBaleSelected.id)" title="Toggle Orientation">
-              🔀 Orientation
-            </button>
-
-            <button @click="store.cycleLean(isSingleBaleSelected.id)" title="Toggle Lean">
-              ↗️ Lean
-            </button>
-
-            <div class="divider"></div>
-          </div>
-
-          <button v-if="store.sport === 'barnhunt' && store.currentLayer === 1 && isSingleBaleSelected"
-            @click="store.toggleAnchor()" title="Mark Anchor Bale">
-            ⚓ Anchor
-          </button>
-          <button v-if="store.sport === 'barnhunt' && isSingleBaleSelected"
-            @click="store.rotateBale(isSingleBaleSelected.id)"
-            title="Rotate Item">
-            🔄Rotate
-          </button>
-
-          <div class="divider"></div>
-
-          <button @click="store.clearSelection()" title="Clear Selection">Deselect</button>
-
-          <button @click="store.deleteSelection()" class="btn-delete">🗑️ Delete</button>
-        </div>
-      </Transition>
 
       <v-stage ref="stageRef" :config="stageConfig" @mousedown="handleStageMouseDown" @dragstart="handleDragStart"
         @mousemove="handleStageMouseMove" @mouseup="handleStageMouseUp" @contextmenu="handleStageContextMenu">
@@ -236,7 +161,6 @@ function handleGlobalClick() {
             :GRID_OFFSET="GRID_OFFSET" />
           <ScentWorkLayer v-if="store.sport === 'scentwork'" :scale="scale" :showHides="showHides"
             :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale / 2)) * (scale / 2), y: Math.round(pos.y / (scale / 2)) * (scale / 2) })" />
-
 
           <v-rect v-if="selectionRect"
             :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
@@ -349,63 +273,6 @@ function handleGlobalClick() {
   background: none;
 }
 
-/* FLOATING BAR (Updated) */
-.selection-bar {
-  position: fixed;
-  bottom: 30px;
-  left: calc(50% + 150px);
-  transform: translateX(-50%);
-  background: white;
-  padding: 8px 15px;
-  border-radius: 30px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 1000;
-  border: 1px solid #ddd;
-}
-
-.sel-count {
-  font-weight: bold;
-  color: #555;
-  font-size: 0.9rem;
-  padding-right: 5px;
-}
-
-.selection-bar button {
-  background: #f5f5f5;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 20px;
-  cursor: pointer;
-  font-size: 0.85rem;
-  font-weight: 500;
-  transition: all 0.2s;
-  color: #333;
-}
-
-.selection-bar button:hover {
-  background: #e3f2fd;
-  color: #1565c0;
-}
-
-.btn-delete {
-  background: #ffebee !important;
-  color: #c62828 !important;
-}
-
-.btn-delete:hover {
-  background: #ffcdd2 !important;
-}
-
-/* Removed .btn-close style as it's no longer used */
-
-.divider {
-  width: 1px;
-  height: 20px;
-  background: #ddd;
-}
 
 .slide-up-enter-active,
 .slide-up-leave-active {
@@ -417,8 +284,6 @@ function handleGlobalClick() {
   transform: translate(-50%, 20px);
   opacity: 0;
 }
-
-/* ... existing styles ... */
 
 .help-fab {
   position: absolute;
