@@ -33,11 +33,12 @@ const showHides = ref(true)
 const isPrinting = ref(false)
 const showBugReportModal = ref(false)
 const showHelpModal = ref(false)
+// [UPDATED] Returns the bale object if found, otherwise undefined/null
 const isSingleBaleSelected = computed(() => {
-  if (store.selection.length !== 1) return false
+  if (store.selection.length !== 1) return null
   const id = store.selection[0]
-  // Check if the selected ID exists in the Bales list
-  return store.bales && store.bales.some(b => b.id === id)
+  // Return the actual object instead of just 'true'
+  return store.bales.find(b => b.id === id) || null
 })
 // Context Menu State
 const contextMenu = ref({ visible: false, x: 0, y: 0 })
@@ -57,12 +58,12 @@ const { getWallStroke, getGridLabelX, getGridLabelY, getXAxisY, getYAxisX, getYA
 const { handleSaveMap, handleLibrarySave } = useExportTools(store, stageRef, scale, GRID_OFFSET)
 
 // 5. Interaction (Mouse/Tools)
-const { 
-  selectionRect, 
-  handleStageMouseDown, 
-  handleStageMouseMove, 
-  handleStageMouseUp, 
-  handleDragStart 
+const {
+  selectionRect,
+  handleStageMouseDown,
+  handleStageMouseMove,
+  handleStageMouseUp,
+  handleDragStart
 } = useStageInteraction(store, scale, GRID_OFFSET)
 
 // Watchers
@@ -81,7 +82,7 @@ async function handlePrint(withHides) {
 
 function handleStageContextMenu(e) {
   e.evt.preventDefault()
-  
+
   // 1. Priority: Finish Measurement (consumes event)
   if (store.activeTool === 'measure' && store.activeMeasurement) {
     store.finishMeasurement()
@@ -125,23 +126,14 @@ function handleGlobalClick() {
       </div>
 
       <button class="help-fab" @click="showHelpModal = true" title="Keyboard Shortcuts & Help">
-      ?
-    </button>
+        ?
+      </button>
 
-    <HelpModal 
-      :show="showHelpModal" 
-      @close="showHelpModal = false" 
-    />
+      <HelpModal :show="showHelpModal" @close="showHelpModal = false" />
 
-      <div 
-        v-if="contextMenu.visible" 
-        class="context-menu" 
-        :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }"
-      >
-        <button 
-          @click="store.clearSelection()" 
-          :disabled="store.selection.length === 0"
-        >
+      <div v-if="contextMenu.visible" class="context-menu"
+        :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }">
+        <button @click="store.clearSelection()" :disabled="store.selection.length === 0">
           Deselect All
         </button>
         <button @click="fitToScreen">Fit to Screen</button>
@@ -151,44 +143,65 @@ function handleGlobalClick() {
         <div v-if="store.selection.length > 0" class="selection-bar">
           <span class="sel-count">{{ store.selection.length }} Selected</span>
           <button v-if="store.selection.length > 1" @click="store.rotateSelection()">🔄 Rotate Group</button>
-          <button 
-            v-if="store.sport === 'barnhunt' && store.currentLayer === 1 && isSingleBaleSelected" 
-            @click="store.toggleAnchor()"
-          >
+
+          <div v-if="isSingleBaleSelected" style="display: flex; align-items: center; gap: 8px;">
+            <div class="divider"></div>
+
+            <button @click="store.cycleOrientation(isSingleBaleSelected.id)" title="Toggle Orientation">
+              🔀 Orientation
+            </button>
+
+            <button @click="store.cycleLean(isSingleBaleSelected.id)" title="Toggle Lean">
+              ↗️ Lean
+            </button>
+
+            <div class="divider"></div>
+          </div>
+
+          <button v-if="store.sport === 'barnhunt' && store.currentLayer === 1 && isSingleBaleSelected"
+            @click="store.toggleAnchor()" title="Mark Anchor Bale">
             ⚓ Anchor
           </button>
-          
+          <button v-if="store.sport === 'barnhunt' && isSingleBaleSelected"
+            @click="store.rotateBale(isSingleBaleSelected.id)"
+            title="Rotate Item">
+            🔄Rotate
+          </button>
+
           <div class="divider"></div>
 
-          <button @click="store.clearSelection()">Deselect</button>
-          
+          <button @click="store.clearSelection()" title="Clear Selection">Deselect</button>
+
           <button @click="store.deleteSelection()" class="btn-delete">🗑️ Delete</button>
         </div>
       </Transition>
 
-      <v-stage ref="stageRef" :config="stageConfig" 
-        @mousedown="handleStageMouseDown" 
-        @dragstart="handleDragStart"
-        @mousemove="handleStageMouseMove" 
-        @mouseup="handleStageMouseUp" 
-        @contextmenu="handleStageContextMenu">
-        
+      <v-stage ref="stageRef" :config="stageConfig" @mousedown="handleStageMouseDown" @dragstart="handleDragStart"
+        @mousemove="handleStageMouseMove" @mouseup="handleStageMouseUp" @contextmenu="handleStageContextMenu">
+
         <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
 
           <template v-for="n in store.ringDimensions.width + 1" :key="'v'+n">
-            <v-line v-if="store.sport === 'agility' && (n - 1) % 10 === 0" :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#ccc', strokeWidth: 1 }" />
-            <v-line v-if="store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0" :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#999', strokeWidth: 1 }" />
-            <v-line v-if="store.sport === 'scentwork' && (n - 1) % 5 === 0" :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#ccc', strokeWidth: 1 }" />
+            <v-line v-if="store.sport === 'agility' && (n - 1) % 10 === 0"
+              :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#ccc', strokeWidth: 1 }" />
+            <v-line v-if="store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0"
+              :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#999', strokeWidth: 1 }" />
+            <v-line v-if="store.sport === 'scentwork' && (n - 1) % 5 === 0"
+              :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#ccc', strokeWidth: 1 }" />
           </template>
 
           <template v-for="n in store.ringDimensions.height + 1" :key="'h'+n">
-            <v-line v-if="store.sport === 'agility' && (n - 1) % 10 === 0" :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#ccc', strokeWidth: 1 }" />
-            <v-line v-if="store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0" :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#999', strokeWidth: 1 }" />
-            <v-line v-if="store.sport === 'scentwork' && (n - 1) % 5 === 0" :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#ccc', strokeWidth: 1 }" />
+            <v-line v-if="store.sport === 'agility' && (n - 1) % 10 === 0"
+              :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#ccc', strokeWidth: 1 }" />
+            <v-line v-if="store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0"
+              :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#999', strokeWidth: 1 }" />
+            <v-line v-if="store.sport === 'scentwork' && (n - 1) % 5 === 0"
+              :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#ccc', strokeWidth: 1 }" />
           </template>
 
           <template v-for="n in store.ringDimensions.width + 1" :key="'lx'+n">
-            <v-text v-if="(store.sport === 'agility' && (n-1)%10===0) || (store.sport === 'barnhunt' && (n-1)%store.gridStep===0) || (store.sport === 'scentwork' && (n-1)%5===0)" 
+            <v-text
+              v-if="(store.sport === 'agility' && (n - 1) % 10 === 0) || (store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0) || (store.sport === 'scentwork' && (n - 1) % 5 === 0)"
               :config="{
                 x: (n - 1) * scale, y: getXAxisY(),
                 text: getGridLabelX(n - 1),
@@ -197,7 +210,8 @@ function handleGlobalClick() {
           </template>
 
           <template v-for="n in store.ringDimensions.height + 1" :key="'ly'+n">
-            <v-text v-if="(store.sport === 'agility' && (n-1)%10===0) || (store.sport === 'barnhunt' && (n-1)%store.gridStep===0) || (store.sport === 'scentwork' && (n-1)%5===0)"
+            <v-text
+              v-if="(store.sport === 'agility' && (n - 1) % 10 === 0) || (store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0) || (store.sport === 'scentwork' && (n - 1) % 5 === 0)"
               :config="{
                 x: getYAxisX(), y: (n - 1) * scale - 6,
                 text: getGridLabelY(n - 1),
@@ -206,20 +220,29 @@ function handleGlobalClick() {
           </template>
 
           <v-group v-if="store.sport === 'barnhunt'">
-            <v-line :config="{ points: [0, 0, store.ringDimensions.width * scale, 0], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.top) }" />
-            <v-line :config="{ points: [0, store.ringDimensions.height * scale, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.bottom) }" />
-            <v-line :config="{ points: [0, 0, 0, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.left) }" />
-            <v-line :config="{ points: [store.ringDimensions.width * scale, 0, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right) }" />
+            <v-line
+              :config="{ points: [0, 0, store.ringDimensions.width * scale, 0], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.top) }" />
+            <v-line
+              :config="{ points: [0, store.ringDimensions.height * scale, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.bottom) }" />
+            <v-line
+              :config="{ points: [0, 0, 0, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.left) }" />
+            <v-line
+              :config="{ points: [store.ringDimensions.width * scale, 0, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right) }" />
           </v-group>
 
-          <AgilityLayer v-if="store.sport === 'agility'" :scale="scale" :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale / 2)) * (scale / 2), y: Math.round(pos.y / (scale / 2)) * (scale / 2) })" />
-          <BarnHuntLayer v-if="store.sport === 'barnhunt'" :scale="scale" :showHides="showHides" :GRID_OFFSET="GRID_OFFSET" />
-          <ScentWorkLayer v-if="store.sport === 'scentwork'" :scale="scale" :showHides="showHides" :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale / 2)) * (scale / 2), y: Math.round(pos.y / (scale / 2)) * (scale / 2) })" />
+          <AgilityLayer v-if="store.sport === 'agility'" :scale="scale"
+            :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale / 2)) * (scale / 2), y: Math.round(pos.y / (scale / 2)) * (scale / 2) })" />
+          <BarnHuntLayer v-if="store.sport === 'barnhunt'" :scale="scale" :showHides="showHides"
+            :GRID_OFFSET="GRID_OFFSET" />
+          <ScentWorkLayer v-if="store.sport === 'scentwork'" :scale="scale" :showHides="showHides"
+            :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale / 2)) * (scale / 2), y: Math.round(pos.y / (scale / 2)) * (scale / 2) })" />
 
 
-          <v-rect v-if="selectionRect" :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
-          
-          <MapLegend v-if="store.sport === 'barnhunt' && store.showMapStats && !isPrinting" :scale="scale" :GRID_OFFSET="GRID_OFFSET" />
+          <v-rect v-if="selectionRect"
+            :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
+
+          <MapLegend v-if="store.sport === 'barnhunt' && store.showMapStats && !isPrinting" :scale="scale"
+            :GRID_OFFSET="GRID_OFFSET" />
 
         </v-layer>
       </v-stage>
@@ -229,25 +252,69 @@ function handleGlobalClick() {
 
 <style scoped>
 /* (Existing Styles) */
-.editor-container { display: flex; height: 100vh; width: 100vw; overflow: hidden; background: #f0f0f0; }
-.canvas-wrapper { 
-  flex: 1; 
-  overflow: auto; 
-  display: flex; 
-  justify-content: center; 
-  align-items: flex-start; 
-  /* INCREASED bottom padding from 40px to 150px to clear the selection bar */
-  padding: 40px 40px 150px 40px; 
-  background: #e0e0e0; 
-  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1); 
-  position: relative; 
+.editor-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  background: #f0f0f0;
 }
-.toast-notification { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 8px; color: white; font-weight: bold; z-index: 2000; pointer-events: none; }
-.toast-notification.error { background-color: #d32f2f; }
-.toast-notification.success { background-color: #388e3c; }
-.toast-notification.info { background-color: #2196f3; }
-.zoom-controls { position: fixed; bottom: 20px; right: 20px; background: white; padding: 5px; border-radius: 8px; display: flex; gap: 5px; z-index: 100; }
-.zoom-controls button { width: 30px; height: 30px; cursor: pointer; }
+
+.canvas-wrapper {
+  flex: 1;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  /* INCREASED bottom padding from 40px to 150px to clear the selection bar */
+  padding: 40px 40px 150px 40px;
+  background: #e0e0e0;
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1);
+  position: relative;
+}
+
+.toast-notification {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  z-index: 2000;
+  pointer-events: none;
+}
+
+.toast-notification.error {
+  background-color: #d32f2f;
+}
+
+.toast-notification.success {
+  background-color: #388e3c;
+}
+
+.toast-notification.info {
+  background-color: #2196f3;
+}
+
+.zoom-controls {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: white;
+  padding: 5px;
+  border-radius: 8px;
+  display: flex;
+  gap: 5px;
+  z-index: 100;
+}
+
+.zoom-controls button {
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+}
 
 /* CONTEXT MENU */
 .context-menu {
@@ -255,7 +322,7 @@ function handleGlobalClick() {
   background: white;
   border: 1px solid #ddd;
   border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   z-index: 3000;
@@ -286,12 +353,12 @@ function handleGlobalClick() {
 .selection-bar {
   position: fixed;
   bottom: 30px;
-  left: 50%;
+  left: calc(50% + 150px);
   transform: translateX(-50%);
   background: white;
   padding: 8px 15px;
   border-radius: 30px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;
   gap: 12px;
@@ -323,15 +390,33 @@ function handleGlobalClick() {
   color: #1565c0;
 }
 
-.btn-delete { background: #ffebee !important; color: #c62828 !important; }
-.btn-delete:hover { background: #ffcdd2 !important; }
+.btn-delete {
+  background: #ffebee !important;
+  color: #c62828 !important;
+}
+
+.btn-delete:hover {
+  background: #ffcdd2 !important;
+}
 
 /* Removed .btn-close style as it's no longer used */
 
-.divider { width: 1px; height: 20px; background: #ddd; }
+.divider {
+  width: 1px;
+  height: 20px;
+  background: #ddd;
+}
 
-.slide-up-enter-active, .slide-up-leave-active { transition: all 0.3s ease; }
-.slide-up-enter-from, .slide-up-leave-to { transform: translate(-50%, 20px); opacity: 0; }
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.3s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  transform: translate(-50%, 20px);
+  opacity: 0;
+}
 
 /* ... existing styles ... */
 
@@ -345,7 +430,7 @@ function handleGlobalClick() {
   background-color: #2c3e50;
   color: white;
   border: 2px solid white;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
   font-size: 24px;
   font-weight: bold;
   cursor: pointer;
