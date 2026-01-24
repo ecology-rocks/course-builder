@@ -273,18 +273,6 @@ async function handlePrint(withHides) {
   background: none;
 }
 
-
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: all 0.3s ease;
-}
-
-.slide-up-enter-from,
-.slide-up-leave-to {
-  transform: translate(-50%, 20px);
-  opacity: 0;
-}
-
 .help-fab {
   position: absolute;
   top: 20px;
