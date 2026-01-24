@@ -1,8 +1,14 @@
 # 🗺️ Project Roadmap: K9 Course Builder
 This is my one-true-copy of the project roadmap.
 
-## Updates in Progress
- - Adding help box
+## End of Month Update
+ - (NEED) Create Print Settings module instead of multiple print buttons
+    - (NEED) Course map 4 per page builder
+ - (DONE) Persist measurements when file reopens
+ - (DONE) Persist comparison map when file reopens
+
+## Mid Month Update
+ - Added help button with description of different keyboard shortcuts and button functions
  - Fixed measurement tool saves, math, and display
  - Fixed step display sizing issue
  - Remove Anchor button from contextmenu if selected item is not a bale

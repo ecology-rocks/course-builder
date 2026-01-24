@@ -418,6 +418,20 @@ function openNoteEditor(id) {
     copySelection()
     selectionLogic.deleteSelection()
   }
+
+// [FIX] Wrapper: Finish measurements before manual saves
+  // This ensures that if a user draws a line and immediately clicks "Save",
+  // we commit that line instead of losing it.
+  const saveToCloud = async (isAutoSave = false, thumbnail = null) => {
+    // Only force-finish on MANUAL save. 
+    // We don't want autosave to interrupt a user mid-drawing.
+    if (!isAutoSave && stateRefs.activeMeasurement.value) {
+      measureLogic.finishMeasurement()
+    }
+    await persistence.saveToCloud(isAutoSave, thumbnail)
+  }
+
+
   // ==========================================
   // 4. EXPORTS
   // ==========================================
@@ -467,6 +481,7 @@ function openNoteEditor(id) {
     ...stepsLogic,
     ...boardEdgesLogic,
     ...persistence,
+    saveToCloud,
     ...selectionLogic,
     ...measureLogic,
     ...notesLogic,
