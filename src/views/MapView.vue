@@ -2,8 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { doc, getDoc } from 'firebase/firestore'
-import { db } from '../firebase'
-import { auth } from '../firebase' // <--- Add this
+import { db, auth } from '../firebase'
 
 const route = useRoute()
 const loading = ref(true)
@@ -11,11 +10,11 @@ const error = ref(null)
 
 // Local state
 const mapData = ref(null)
-const currentLayer = ref(1) // Default to Layer 1
+const currentLayer = ref(1) 
 const scale = 40
 const GRID_OFFSET = 30
 
-// --- 1. VISUAL HELPERS (Copied from Editor) ---
+// --- 1. VISUAL HELPERS ---
 
 const hatchPattern = (() => {
   const canvas = document.createElement('canvas')
@@ -49,7 +48,6 @@ function getBaleColor(layer) {
 }
 
 function getOpacity(layer) {
-  // In View Mode, we dim other layers significantly so the active one pops
   if (layer === currentLayer.value) return 1
   return 0.3 
 }
@@ -73,22 +71,26 @@ function getArrowPoints(width, height, direction) {
   }
 }
 
+// Helper to format feet/inches
+const fmtDist = (val) => {
+  const total = Math.round(val * 12)
+  const ft = Math.floor(total / 12)
+  const inch = total % 12
+  return inch === 0 ? `${ft}'` : `${ft}' ${inch}"`
+}
+
 // --- 2. COMPUTED DATA ---
 
 const stageConfig = computed(() => {
   if (!mapData.value) return { width: 300, height: 300 }
-  // Calculate size based on map dimensions + gutter
   return {
     width: (mapData.value.dimensions.width * scale) + (GRID_OFFSET * 2),
     height: (mapData.value.dimensions.height * scale) + (GRID_OFFSET * 2)
   }
 })
 
-// Sort and filter bales exactly like the editor
 const visibleBales = computed(() => {
   if (!mapData.value || !mapData.value.bales) return []
-  
-  // We show ALL layers in View mode (ghosted), but sort them correctly
   return mapData.value.bales.slice().sort((a, b) => {
     if (a.layer !== b.layer) return a.layer - b.layer
     const aIsLeaner = a.lean !== null
@@ -97,6 +99,36 @@ const visibleBales = computed(() => {
     if (!aIsLeaner && bIsLeaner) return -1
     return 0
   })
+})
+
+// [NEW] Measurement Segment Calculator
+const processedMeasurements = computed(() => {
+  if (!mapData.value || !mapData.value.measurements) return []
+  
+  return mapData.value.measurements.map(m => {
+    if (!m.points || m.points.length < 2) return null
+    
+    const segments = []
+    let runningTotal = 0
+    
+    for (let i = 0; i < m.points.length - 1; i++) {
+      const p1 = m.points[i]
+      const p2 = m.points[i+1]
+      const dx = p2.x - p1.x
+      const dy = p2.y - p1.y
+      const dist = Math.sqrt(dx*dx + dy*dy)
+      runningTotal += dist
+      
+      segments.push({
+        p1, 
+        p2, 
+        midX: (p1.x + p2.x) / 2, 
+        midY: (p1.y + p2.y) / 2,
+        label: fmtDist(runningTotal)
+      })
+    }
+    return { id: m.id, segments }
+  }).filter(Boolean)
 })
 
 // --- 3. FETCH DATA ---
@@ -116,36 +148,32 @@ onMounted(async () => {
     if (docSnap.exists()) {
       const fullDoc = docSnap.data()
       
-      // 1. OWNER CHECK (The "Gotcha" Fix)
-      // If the map is NOT shared, but we can see it, we must be the owner.
       if (!fullDoc.isShared) {
         const currentUid = auth.currentUser ? auth.currentUser.uid : null
-        
-        // If we are the owner, show a warning so they know it's still private
         if (currentUid === fullDoc.uid) {
-          alert("⚠️ NOTE: This map is currently PRIVATE.\n\nYou can see this because you are the owner, but the public link will NOT work for others until you click 'Share' in the editor.")
+          alert("⚠️ NOTE: This map is currently PRIVATE.\n\nOnly you can see this.")
         } else {
-          // If we aren't the owner (and rules failed), block access manually
           error.value = "This map is private."
           return
         }
       }
 
-      // 2. SECURITY: Strip Hides (Rat/Litter)
-      // We delete this array so the dots never render for course builders
-      if (fullDoc.data.hides) {
-        fullDoc.data.hides = [] 
-      }
+      if (fullDoc.data.hides) fullDoc.data.hides = [] 
       
-      // 3. Load the Map
       mapData.value = fullDoc.data
+      
+      const d = mapData.value
+      if (!d.tunnelBoards) d.tunnelBoards = []
+      if (!d.steps) d.steps = []
+      if (!d.zones) d.zones = []
+      if (!d.notes) d.notes = []
+      if (!d.measurements) d.measurements = []
+      
     } else {
       error.value = "Map not found."
     }
   } catch (e) {
     console.error(e)
-    // If Firestore Security Rules block the read (because it's private and user is anon),
-    // it jumps straight here.
     error.value = "This map is private or deleted."
   } finally {
     loading.value = false
@@ -187,14 +215,87 @@ onMounted(async () => {
             <v-line v-for="n in mapData.dimensions.width + 1" :key="'v'+n" :config="{ points: [(n-1)*scale, 0, (n-1)*scale, mapData.dimensions.height * scale], stroke: (n-1)%5===0?'#ccc':'#eee', strokeWidth: 1 }" />
             <v-line v-for="n in mapData.dimensions.height + 1" :key="'h'+n" :config="{ points: [0, (n-1)*scale, mapData.dimensions.width * scale, (n-1)*scale], stroke: (n-1)%5===0?'#ccc':'#eee', strokeWidth: 1 }" />
 
-            <v-group v-if="mapData.startBox" :config="{ x: mapData.startBox.x * scale, y: mapData.startBox.y * scale }">
-              <v-rect :config="{ width: 4 * scale, height: 4 * scale, stroke: '#9c27b0', strokeWidth: 4, fill: 'rgba(156, 39, 176, 0.1)', cornerRadius: 2 }" />
-              <v-text :config="{ text: 'START', fontSize: 14, fontStyle: 'bold', fill: '#9c27b0', width: 4 * scale, padding: 5, align: 'center', y: (4 * scale) / 2 - 7 }" />
+            <v-group v-for="zone in mapData.zones" :key="zone.id" :config="{ x: zone.x * scale, y: zone.y * scale, rotation: zone.rotation }">
+               <v-rect 
+                :config="{ 
+                  width: zone.width * scale, 
+                  height: zone.height * scale, 
+                  stroke: zone.type === 'dead' ? 'red' : 'black', 
+                  strokeWidth: 2, 
+                  dash: [10, 5],
+                  fill: zone.type === 'dead' ? 'rgba(255, 0, 0, 0.3)' : 'rgba(100, 100, 100, 0.5)',
+                }" 
+              />
+              <v-text :config="{ 
+                text: zone.type === 'dead' ? 'DEAD ZONE' : 'OBSTRUCTION', 
+                width: zone.width * scale,
+                height: zone.height * scale,
+                fontSize: 14, 
+                fontStyle: 'bold',
+                fill: zone.type === 'dead' ? '#b71c1c' : '#424242',
+                align: 'center',
+                verticalAlign: 'middle',
+              }" />
             </v-group>
 
             <v-group v-for="mat in mapData.dcMats" :key="mat.id" :config="{ x: mat.x * scale, y: mat.y * scale, rotation: mat.rotation, offsetX: (2 * scale) / 2, offsetY: (3 * scale) / 2 }">
               <v-rect :config="{ width: 2 * scale, height: 3 * scale, stroke: '#ff9800', strokeWidth: 3, fill: 'rgba(255, 152, 0, 0.2)', cornerRadius: 2, dash: [10, 5] }" />
               <v-text :config="{ text: 'DC', fontSize: 16, fontStyle: 'bold', fill: '#e65100', width: 2 * scale, padding: 0, align: 'center', y: (3 * scale) / 2 - 8 }" />
+            </v-group>
+
+            <v-group v-if="mapData.startBox" :config="{ x: mapData.startBox.x * scale, y: mapData.startBox.y * scale }">
+              <v-rect :config="{ width: 4 * scale, height: 4 * scale, stroke: '#9c27b0', strokeWidth: 4, fill: 'rgba(156, 39, 176, 0.1)', cornerRadius: 2 }" />
+              <v-text :config="{ text: 'START', fontSize: 14, fontStyle: 'bold', fill: '#9c27b0', width: 4 * scale, padding: 5, align: 'center', y: (4 * scale) / 2 - 7 }" />
+            </v-group>
+
+            <v-group v-if="mapData.gate" :config="{ x: mapData.gate.x * scale, y: mapData.gate.y * scale, rotation: mapData.gate.rotation }">
+              <v-rect :config="{ width: 3 * scale, height: 1 * scale, stroke: '#2E7D32', strokeWidth: 3, fill: 'rgba(46, 125, 50, 0.1)', cornerRadius: 2 }" />
+              <v-text :config="{ text: 'GATE', fontSize: 12, fontStyle: 'bold', fill: '#1B5E20', width: 3 * scale, padding: 0, align: 'center', y: (0.5 * scale) - 6 }" />
+            </v-group>
+
+            <v-group v-for="step in mapData.steps" :key="step.id" :config="{ x: step.x * scale, y: step.y * scale, rotation: step.rotation }">
+               <v-rect :config="{ 
+                 width: 2 * scale, 
+                 height: 1.5 * scale, 
+                 fill: '#8D6E63', 
+                 stroke: 'black', 
+                 strokeWidth: 2, 
+                 cornerRadius: 5,
+                 offsetX: (2 * scale) / 2,
+                 offsetY: (1.5 * scale) / 2
+               }" />
+               <v-text :config="{ 
+                 text: 'STEP', 
+                 fontSize: scale * 0.45, 
+                 fontStyle: 'bold',
+                 fill: 'white', 
+                 width: 2 * scale, 
+                 height: 1.5 * scale,
+                 offsetX: (2 * scale) / 2,
+                 offsetY: (1.5 * scale) / 2,
+                 align: 'center', 
+                 verticalAlign: 'middle'
+               }" />
+            </v-group>
+
+            <v-group v-for="tb in mapData.tunnelBoards" :key="tb.id" :config="{ x: tb.x * scale, y: tb.y * scale, rotation: tb.rotation }">
+               <v-rect :config="{ 
+                 width: tb.width * scale, 
+                 height: tb.height * scale, 
+                 fill: 'rgba(139, 69, 19, 0.4)', 
+                 stroke: '#5D4037', 
+                 strokeWidth: 2, 
+                 cornerRadius: 10 
+               }" />
+               <v-text :config="{
+                 text: 'BOARD',
+                 width: tb.width * scale,
+                 height: tb.height * scale,
+                 fontSize: 12,
+                 fill: '#3e2723',
+                 align: 'center',
+                 verticalAlign: 'middle'
+               }" />
             </v-group>
 
             <v-group
@@ -243,7 +344,29 @@ onMounted(async () => {
 
             <v-group v-for="board in mapData.boardEdges" :key="board.id" :config="{ x: board.x * scale, y: board.y * scale, rotation: board.rotation }">
               <v-rect :config="{ width: board.length * scale, height: 6, offsetX: (board.length * scale) / 2, offsetY: 3, fill: '#2e7d32', cornerRadius: 2 }" />
+              <v-circle :config="{ x: board.x1 * scale - (board.x * scale), y: board.y1 * scale - (board.y * scale), radius: 4, fill: '#1b5e20' }" />
+              <v-circle :config="{ x: board.x2 * scale - (board.x * scale), y: board.y2 * scale - (board.y * scale), radius: 4, fill: '#1b5e20' }" />
             </v-group>
+
+            <v-group v-for="m in processedMeasurements" :key="m.id">
+                <template v-for="(seg, i) in m.segments" :key="i">
+                  <v-line :config="{
+                    points: [seg.p1.x * scale, seg.p1.y * scale, seg.p2.x * scale, seg.p2.y * scale],
+                    stroke: '#d32f2f',
+                    strokeWidth: 3,
+                    dash: [6, 4]
+                  }" />
+                  <v-label :config="{ x: seg.midX * scale, y: seg.midY * scale }">
+                    <v-tag :config="{ fill: 'white', stroke: '#d32f2f', strokeWidth: 1, cornerRadius: 4, pointerDirection: 'down', pointerWidth: 8, pointerHeight: 6 }" />
+                    <v-text :config="{ text: seg.label, fontSize: 16, fontStyle: 'bold', fill: '#d32f2f', padding: 4 }" />
+                  </v-label>
+                </template>
+             </v-group>
+
+             <v-group v-for="note in mapData.notes" :key="note.id" :config="{ x: note.x * scale, y: note.y * scale }">
+               <v-rect :config="{ width: 150, height: 'auto', fill: '#FFF9C4', stroke: '#FBC02D', strokeWidth: 1, shadowBlur: 2 }" />
+               <v-text :config="{ text: note.text, fontSize: 14, fill: '#333', padding: 5, width: 150 }" />
+             </v-group>
 
           </v-layer>
         </v-stage>
@@ -270,6 +393,14 @@ onMounted(async () => {
   color: #666;
 }
 .state-msg.error { color: #d32f2f; }
+
+/* Simple Spinner */
+.spinner {
+  border: 4px solid #f3f3f3; border-top: 4px solid #3498db;
+  border-radius: 50%; width: 40px; height: 40px;
+  animation: spin 1s linear infinite; margin-bottom: 15px;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
 .view-header {
   background: #fff;
@@ -300,10 +431,10 @@ onMounted(async () => {
 
 .canvas-scroll {
   flex: 1;
-  overflow: auto; /* Allow panning */
-  -webkit-overflow-scrolling: touch; /* Smooth iOS scroll */
+  overflow: auto; 
+  -webkit-overflow-scrolling: touch; 
   display: flex;
-  justify-content: center; /* Center map if smaller than screen */
+  justify-content: center; 
   padding: 20px;
 }
 </style>
