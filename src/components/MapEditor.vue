@@ -37,7 +37,7 @@ const isPrinting = ref(false)
 const showHelpModal = ref(false)
 
 useAutosave(3000)
-useKeyboardShortcuts(store)
+
 
 const { scale, stageConfig, zoom, fitToScreen } = useCanvasControls(store, wrapperRef, GRID_OFFSET)
 const { getWallStroke, getGridLabelX, getGridLabelY, getXAxisY, getYAxisX, getYAxisAlign } = useGridSystem(store, scale)
@@ -46,6 +46,8 @@ const { selectionRect, handleStageMouseDown, handleStageMouseMove,
         handleStageMouseUp, handleDragStart } = useStageInteraction(store, scale, GRID_OFFSET)
 const { contextMenu, handleStageContextMenu, closeContextMenu } = useContextMenu(store)
 const { handlePrint: printLogic } = usePrinter(store, userStore, stageRef, scale)
+
+useKeyboardShortcuts(store, handleSaveMap)
 
 watch(() => [store.sport, store.ringDimensions.width], () => { nextTick(fitToScreen) }, { immediate: true })
 

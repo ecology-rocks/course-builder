@@ -1,162 +1,213 @@
 <script setup>
-import { useUserStore } from '../stores/userStore'
 import { useRouter } from 'vue-router'
-import AppFooter from '@/components/AppFooter.vue'
+import { useUserStore } from '../stores/userStore'
+import AppFooter from '../components/AppFooter.vue'
 
-const userStore = useUserStore()
 const router = useRouter()
+const userStore = useUserStore()
 
 function handleCta() {
-  router.push('/dashboard')
+  if (userStore.user) {
+    router.push('/dashboard')
+  } else {
+    router.push('/dashboard')
+  }
 }
 </script>
 
 <template>
   <div class="landing-page">
+    
     <nav class="navbar">
-      <div class="logo">🐾 K9CourseBuilder.com</div>
-      <div class="nav-links">
-        <button v-if="userStore.user" @click="router.push('/dashboard')" class="btn-nav">
-          Go to Dashboard
-        </button>
-        <button v-else @click="router.push('/dashboard')" class="btn-nav">
-          Login
-        </button>
+      <div class="logo">🐾 K9CourseBuilder</div>
+      <div class="nav-actions">
+        <button v-if="!userStore.user" @click="handleCta" class="btn-text">Log In</button>
+        <button v-else @click="router.push('/dashboard')" class="btn-primary small">Go to Dashboard</button>
       </div>
     </nav>
 
     <header class="hero">
-<h1>The Professional Map Builder for <span class="highlight">Dog Sports</span></h1>
-      <p class="subtitle">
-        Stop using spreadsheets and paint. Design legal, safe, and beautiful maps in minutes.
-        Now for <strong>Barn Hunt, Agility, and Scent Work</strong>.
-      </p>
-      <button @click="handleCta" class="btn-cta">Start Building for Free</button>
-      <div class="hero-image">
-        <div class="fake-browser">
-          <div class="browser-dots"><span></span><span></span><span></span></div>
-          <div class="browser-content">📦 🐀 📦 📦 📦</div>
+      <div class="hero-content">
+        <div class="badge-pill">✨ New for 2026: Founder's Pricing</div>
+        <h1>Stop Fighting with Excel. <br>Start Designing Courses.</h1>
+        <p class="subtitle">
+          Built for the judge who wants to spend more time with their dogs.
+          The professional design tool that handles the rules so you don't have to.
+        </p>
+        
+        <div class="cta-row">
+          <button @click="handleCta" class="btn-primary big">Start Designing for Free</button>
+          <span class="sub-text">No credit card required.</span>
         </div>
       </div>
     </header>
 
     <section class="features">
-      <div class="feature-card">
-        <div class="icon">✅</div>
-        <h3>Smart Validation</h3>
-        <p>Never build an illegal map again. Our tool checks for tunnel darkness, safety steps, and bale support automatically.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">🖨️</div>
-        <h3>Print Ready</h3>
-        <p>Generate PDF-ready layouts for Layer 1, 2, and 3 instantly. Your course builders will love you.</p>
-      </div>
-      <div class="feature-card">
-        <div class="icon">☁️</div>
-        <h3>Cloud Storage</h3>
-        <p>Save your maps to the cloud. Access them from your phone at the trial site or your laptop at home.</p>
+      <div class="container">
+        <h2>Built for the Rules, Not just the Grid</h2>
+        <div class="feature-grid">
+          
+          <div class="feature-card">
+            <div class="icon">📐</div>
+            <h3>Smart Scaling</h3>
+            <p>Change ring size instantly or rearrange your course in a flash. Select, move, and rotate entire groups of objects without breaking a sweat.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">🪺</div>
+            <h3>Made For Nesting</h3>
+            <p>Design your whole day in one sitting. Compare against any other map and automatically calculate statistics within and between maps.</p>
+          </div>
+
+          <div class="feature-card">
+            <div class="icon">⚖️</div>
+            <h3>Perfect Prints</h3>
+            <p>Generate fully legal maps with measurements, anchor bales, grid labels, legends, and statistics. No more revising fifty times because you forgot something.</p>
+          </div>
+
+        </div>
       </div>
     </section>
 
     <section class="pricing">
-      <h2>Simple Pricing</h2>
-      <div class="pricing-grid">
-        
-        <div class="price-card">
-          <h3>Solo</h3>
-          <div class="price">$7.99<span>/mo</span></div>
-          <ul>
-            <li>✅ <strong>Barn Hunt Only</strong></li>
-            <li>✅ Cloud Saving & Sharing</li>
-            <li>✅ Export JSON</li>
-            <li>✅ Master Hide Markers</li>
-          </ul>
-          <button @click="router.push('/dashboard')" class="btn-outline">Get Solo</button>
-        </div>
+      <div class="container">
+        <h2>Simple, Transparent Pricing</h2>
+        <div class="pricing-cards">
+          
+          <div class="card">
+            <div class="card-header">
+              <h3>The Sandbox</h3>
+              <div class="price">$0</div>
+              <p class="term">Forever</p>
+            </div>
+            <ul>
+              <li>✅ Unlimited Map Creation</li>
+              <li>✅ Access to All Tools</li>
+              <li>✅ <strong>JSON Import/Export</strong></li>
+              <li>✅ Browser Autosave</li>
+              <li class="dim">❌ Watermarked Prints</li>
+              <li class="dim">❌ Cloud Sync</li>
+            </ul>
+            <button @click="handleCta" class="btn-outline">Try Free</button>
+          </div>
 
-<div class="price-card popular">
-          <div class="badge">BEST VALUE</div>
-          <h3>Pro</h3>
-          <div class="price">$14.99<span>/mo</span></div>
-          <ul>
-            <li>✅ <strong>All Sports Access</strong></li>
-            <li>✅ Barn Hunt, Agility, Scent Work, Rally (coming soon)</li>
-            <li>✅ Priority Support</li>
-            <li>✅ Early Access to New Features</li>
-          </ul>
-          <button @click="router.push('/dashboard')" class="btn-solid">Get Pro</button>
-        </div>
+          <div class="card highlight">
+            <div class="badge">LIMITED TIME OFFER</div>
+            <div class="card-header">
+              <h3>Founder's Tier</h3>
+              <div class="price">$59<span>/year</span></div>
+              <p class="lock-in">Lock in this price forever.</p>
+            </div>
+            <ul>
+              <li>✅ <strong>Clean, Legal Printouts</strong></li>
+              <li>✅ <strong>Cloud Save & Sync</strong></li>
+              <li>✅ <strong>Share Live Links</strong></li>
+              <li>✨ <strong>Offline Desktop App</strong> <small>(Coming Late 2026)</small></li>
+            </ul>
+            <button @click="handleCta" class="btn-primary">Get the Deal</button>
+          </div>
 
-        <div class="price-card">
-          <h3>Club</h3>
-          <div class="price">$49.99<span>/mo</span></div>
-          <ul>
-            <li>✅ <strong>5 Pro Seats</strong></li>
-            <li>✅ Sponsor your Judges</li>
-            <li>✅ Central Billing</li>
-            <li>✅ Great for Event Hosts</li>
-          </ul>
-          <button @click="router.push('/dashboard')" class="btn-outline">Get Club</button>
         </div>
-
+        <div class="guarantee">
+          <p>Standard pricing will be <strong>$89/year</strong> after launch. <br>Join now to keep the $59 rate for life.</p>
+        </div>
       </div>
     </section>
 
-  <AppFooter />
+    <AppFooter />
   </div>
 </template>
 
 <style scoped>
-/* RESET & BASE */
-.landing-page { font-family: 'Inter', sans-serif; color: #333; line-height: 1.6; }
-h1, h2, h3 { margin: 0; font-weight: 700; }
+.landing-page { font-family: 'Inter', sans-serif; color: #333; background: #fff; }
+.container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
 
 /* NAVBAR */
-.navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; max-width: 1200px; margin: 0 auto; }
-.logo { font-size: 1.5rem; font-weight: 800; color: #2c3e50; }
-.btn-nav { background: none; border: 2px solid #2c3e50; padding: 8px 20px; border-radius: 6px; cursor: pointer; font-weight: 600; color: #2c3e50; transition: 0.2s; }
-.btn-nav:hover { background: #2c3e50; color: white; }
+.navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; }
+.logo { font-weight: 900; font-size: 1.2rem; color: #2c3e50; }
+.btn-text { background: none; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; color: #2c3e50; }
+.small { padding: 8px 16px; font-size: 0.9rem; }
 
 /* HERO */
-.hero { text-align: center; padding: 80px 20px 40px; background: linear-gradient(to bottom, #fdfbf7, #fff); }
-.hero h1 { font-size: 3rem; margin-bottom: 20px; color: #2c3e50; }
-.highlight { color: #4CAF50; }
-.subtitle { font-size: 1.2rem; color: #666; max-width: 600px; margin: 0 auto 40px; }
-.btn-cta { background: #4CAF50; color: white; border: none; padding: 15px 40px; font-size: 1.2rem; border-radius: 8px; cursor: pointer; font-weight: bold; transition: transform 0.2s; box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3); }
-.btn-cta:hover { transform: translateY(-2px); }
+.hero {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  padding: 80px 0 100px 0;
+  text-align: center;
+}
+.hero-content { max-width: 800px; margin: 0 auto; padding: 0 20px; }
+.badge-pill { 
+  display: inline-block; background: #e8f5e9; color: #2e7d32; 
+  padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; 
+  margin-bottom: 20px; border: 1px solid #c8e6c9;
+}
+.hero h1 { font-size: 3.5rem; margin-bottom: 20px; line-height: 1.1; color: #2c3e50; letter-spacing: -1px; }
+.subtitle { font-size: 1.25rem; color: #555; margin-bottom: 40px; line-height: 1.6; }
 
-/* FAKE BROWSER IMAGE */
-.hero-image { margin-top: 50px; display: flex; justify-content: center; }
-.fake-browser { width: 80%; max-width: 800px; height: 300px; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); overflow: hidden; }
-.browser-dots { background: #f1f1f1; padding: 10px; display: flex; gap: 6px; }
-.browser-dots span { width: 10px; height: 10px; border-radius: 50%; background: #ccc; }
-.browser-content { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 3rem; color: #eee; background: #fafafa; }
+.cta-row { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.big { padding: 18px 45px; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(44, 62, 80, 0.2); }
+.sub-text { font-size: 0.9rem; color: #777; }
 
 /* FEATURES */
-.features { display: flex; flex-wrap: wrap; justify-content: center; gap: 30px; padding: 80px 20px; background: white; max-width: 1200px; margin: 0 auto; }
-.feature-card { flex: 1; min-width: 250px; max-width: 350px; padding: 30px; border-radius: 12px; background: #f9f9f9; text-align: center; }
-.icon { font-size: 2.5rem; margin-bottom: 20px; }
+.features { padding: 80px 0; background: white; }
+.features h2 { text-align: center; font-size: 2rem; margin-bottom: 60px; color: #2c3e50; }
+.feature-grid { display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; }
+.feature-card { flex: 1; min-width: 250px; max-width: 300px; text-align: center; }
+.icon { font-size: 3.5rem; margin-bottom: 20px; display: inline-block; background: #f0f4f8; padding: 20px; border-radius: 50%; }
+.feature-card h3 { margin-bottom: 10px; font-size: 1.3rem; color: #2c3e50; }
+.feature-card p { color: #666; line-height: 1.6; }
 
 /* PRICING */
-.pricing { background: #f4f6f8; padding: 80px 20px; text-align: center; }
-.pricing h2 { margin-bottom: 50px; font-size: 2.5rem; }
-.pricing-grid { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; max-width: 1000px; margin: 0 auto; align-items: stretch; }
-.price-card { background: white; padding: 40px; border-radius: 12px; width: 280px; position: relative; box-shadow: 0 5px 20px rgba(0,0,0,0.05); display: flex; flex-direction: column; }
-.price-card.popular { border: 2px solid #4CAF50; transform: scale(1.05); z-index: 2; box-shadow: 0 10px 30px rgba(76, 175, 80, 0.15); }
-.badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: #4CAF50; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; }
-.price { font-size: 3rem; font-weight: 800; color: #2c3e50; margin: 20px 0; }
-.price span { font-size: 1rem; color: #999; font-weight: 400; }
-.price-card ul { list-style: none; padding: 0; margin-bottom: 30px; text-align: left; flex-grow: 1; }
-.price-card li { margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
-.btn-outline { background: white; border: 2px solid #ddd; color: #333; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: auto; }
-.btn-solid { background: #2c3e50; border: none; color: white; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; margin-top: auto; }
+.pricing { padding: 100px 0; background: #f8f9fa; border-top: 1px solid #eee; }
+.pricing h2 { text-align: center; margin-bottom: 60px; font-size: 2.2rem; color: #2c3e50; }
+.pricing-cards { display: flex; justify-content: center; gap: 40px; flex-wrap: wrap; align-items: flex-start; }
 
-/* FOOTER */
-footer { text-align: center; padding: 40px; color: #666; font-size: 0.9rem; }
+.card { 
+  background: white; border: 1px solid #e1e4e8; border-radius: 16px; 
+  padding: 40px; width: 320px; text-align: center; 
+  transition: transform 0.2s;
+}
+.card:hover { transform: translateY(-5px); }
 
-/* MOBILE */
+.card.highlight { 
+  border: 2px solid #4CAF50; 
+  background: #ffffff; 
+  box-shadow: 0 10px 30px rgba(76, 175, 80, 0.15); 
+  position: relative; 
+  transform: scale(1.05);
+}
+.card.highlight:hover { transform: scale(1.08); }
+
+.badge { 
+  position: absolute; top: -14px; left: 50%; transform: translateX(-50%); 
+  background: #4CAF50; color: white; padding: 6px 16px; 
+  border-radius: 20px; font-weight: bold; font-size: 0.8rem; letter-spacing: 1px;
+}
+
+.card-header { border-bottom: 1px solid #eee; padding-bottom: 20px; margin-bottom: 20px; }
+.card-header h3 { margin: 0 0 10px 0; color: #555; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px; }
+.price { font-size: 3rem; font-weight: 800; color: #2c3e50; }
+.price span { font-size: 1.2rem; color: #999; font-weight: normal; }
+.term { color: #999; }
+.lock-in { font-size: 0.9rem; color: #2e7d32; font-weight: bold; margin-top: 5px; background: #e8f5e9; display: inline-block; padding: 4px 10px; border-radius: 4px; }
+
+.card ul { list-style: none; padding: 0; margin-bottom: 30px; text-align: left; }
+.card ul li { margin-bottom: 12px; font-size: 1rem; color: #444; display: flex; align-items: center; gap: 8px; }
+.dim { opacity: 0.5; }
+
+.btn-primary { background: #2c3e50; color: white; border: none; padding: 14px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.2s; width: 100%; }
+.btn-primary:hover { background: #34495e; }
+.card.highlight .btn-primary { background: #4CAF50; }
+.card.highlight .btn-primary:hover { background: #43a047; }
+
+.btn-outline { background: white; border: 2px solid #e1e4e8; color: #333; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; }
+.btn-outline:hover { border-color: #333; background: #f8f9fa; }
+
+.guarantee { text-align: center; margin-top: 50px; color: #666; font-size: 1.1rem; }
+
 @media (max-width: 768px) {
-  .hero h1 { font-size: 2rem; }
-  .price-card.popular { transform: none; }
+  .hero h1 { font-size: 2.5rem; }
+  .feature-grid { flex-direction: column; align-items: center; }
+  .pricing-cards { flex-direction: column; align-items: center; }
+  .card.highlight { transform: scale(1); }
 }
 </style>

@@ -79,15 +79,8 @@ function createNewMap(sportType) {
 
   // 2. Reset & Configure
   mapStore.reset()
-  mapStore.sport = sportType 
-  
-  if (sportType === 'agility') {
-    mapStore.ringDimensions = { width: 80, height: 100 }
-  } else if (sportType === 'scentwork') {
-    mapStore.ringDimensions = { width: 40, height: 40 }
-  } else {
-    mapStore.ringDimensions = { width: 24, height: 24 }
-  }
+  mapStore.sport = 'barnhunt' 
+  mapStore.ringDimensions = { width: 24, height: 24 }
 
   router.push('/editor')
 }
@@ -95,13 +88,6 @@ function createNewMap(sportType) {
 async function openMap(map) {
   mapStore.loadMapFromData(map.id, map)
   router.push('/editor')
-}
-
-async function handleDelete(id) {
-  if(confirm("Are you sure you want to delete this map?")) {
-    await mapStore.deleteMap(id)
-    localMaps.value = await mapStore.loadUserMaps() 
-  }
 }
 
 // --- Delete Logic ---
@@ -254,7 +240,7 @@ watch(() => userStore.user, async (newUser) => {
 
       <main class="main-area">
         
-        <section class="create-section">
+       <section class="create-section">
           <h2>Create New Map</h2>
           <div class="sport-grid">
             
@@ -264,31 +250,11 @@ watch(() => userStore.user, async (newUser) => {
               :class="{ disabled: !userStore.canAccessSport('barnhunt') }"
             >
               <span class="emoji">📦</span>
-              <span class="label">Barn Hunt</span>
+              <span class="label">New Barn Hunt Map</span>
               <span v-if="!userStore.canAccessSport('barnhunt')" class="lock-icon">🔒</span>
             </button>
 
-            <button 
-              @click="createNewMap('agility')" 
-              class="sport-card"
-              :class="{ disabled: !userStore.canAccessSport('agility') }"
-            >
-              <span class="emoji">🐕</span>
-              <span class="label">Agility (α version)</span>
-              <span v-if="!userStore.canAccessSport('agility')" class="lock-icon">🔒</span>
-            </button>
-
-            <button 
-              @click="createNewMap('scentwork')" 
-              class="sport-card"
-              :class="{ disabled: !userStore.canAccessSport('scentwork') }"
-            >
-              <span class="emoji">👃</span>
-              <span class="label">Scent Work (α version)</span>
-              <span v-if="!userStore.canAccessSport('scentwork')" class="lock-icon">🔒</span>
-            </button>
-
-          </div>
+            </div>
         </section>
 
         <hr />

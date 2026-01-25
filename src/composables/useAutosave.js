@@ -1,12 +1,17 @@
 import { watch } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
+import { useUserStore } from '@/stores/userStore' // [NEW] Import
 
 export function useAutosave(delay = 3000) {
   const store = useMapStore()
+  const userStore = useUserStore() // [NEW] Initialize
   let timeout = null
 
   // Watch the entire state for changes
   store.$subscribe((mutation, state) => {
+    // [NEW] 0. Guard Clause for Free Tier
+    if (!userStore.isPro) return
+
     // 1. Don't autosave if we are currently dragging/drawing (performance)
     if (store.isDrawingBoard) return
 

@@ -1,12 +1,11 @@
 import { onMounted, onUnmounted } from 'vue'
 
-export function useKeyboardShortcuts(store) {
+// [UPGRADE] Accept 'onSave' callback as the second argument
+export function useKeyboardShortcuts(store, onSave) {
   function handleKeydown(e) {
     if (!e.key) return
 
     // --- 1. IGNORE INPUTS ---
-    // If the user is typing in a form field (Map Title, etc.), 
-    // let the browser handle the event (native copy/paste/undo).
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
       return
     }
@@ -28,6 +27,7 @@ export function useKeyboardShortcuts(store) {
       return
     }
 
+    // Cut: Ctrl+X
     if (isCtrl && key === 'x') {
       e.preventDefault()
       store.cutSelection()
@@ -51,37 +51,34 @@ export function useKeyboardShortcuts(store) {
     // Save: Ctrl+S
     if (isCtrl && key === 's') {
       e.preventDefault()
-      if (store.saveMap) store.saveMap()
+      // [UPGRADE] Call the secure handler passed in, not the store directly
+      if (onSave) onSave() 
       return
     }
 
     // Delete
-if (key === 'delete' || key === 'backspace') {
+    if (key === 'delete' || key === 'backspace') {
       if (store.selection.length > 0) {
         store.deleteSelection()
       }
     }
 
-if (key === 'r') {
+    // Rotate: R
+    if (key === 'r') {
       if (store.selection.length > 0) {
         e.preventDefault()
-        // Shift+R = 45 deg, R = 15 deg (Matches Right-Click behavior)
         const angle = e.shiftKey ? 45 : 15
         store.rotateSelection(angle)
       }
       return
     }
 
-
+    // Nudge: Arrow Keys
     if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
       if (store.selection.length > 0) {
         e.preventDefault()
-        
-        // Step size: Shift = 1 ft, Default = 2 inches (1/6 ft)
         const step = e.shiftKey ? 1 : (1 / 6)
-        
-        let dx = 0
-        let dy = 0
+        let dx = 0, dy = 0
 
         if (key === 'arrowleft') dx = -step
         if (key === 'arrowright') dx = step
@@ -93,13 +90,11 @@ if (key === 'r') {
       return
     }
 
-
+    // Cycle Elevation: U
     if (key === 'u') {
       if (store.selection.length > 0) {
         e.preventDefault()
-        // Apply to all selected items (if they are hides)
         store.selection.forEach(id => {
-          // Check if it's a hide by seeing if it exists in the hides array
           if (store.hides.find(h => h.id === id)) {
             store.cycleHideElevation(id)
           }
@@ -107,14 +102,7 @@ if (key === 'r') {
       }
       return
     }
-
-
-
-
   }
-
-  // Arrow Keys: Nudge Selection
-
 
   onMounted(() => window.addEventListener('keydown', handleKeydown))
   onUnmounted(() => window.removeEventListener('keydown', handleKeydown))

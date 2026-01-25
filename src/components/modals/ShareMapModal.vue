@@ -12,6 +12,12 @@ const shareLink = ref('')
 
 // Changed: Generate QR on mount
 onMounted(async () => {
+if (!store.currentMapId) {
+    alert("Map must be saved to the cloud before sharing.")
+    emit('close')
+    return
+  }
+
   if (store.currentMapId) {
     shareLink.value = `${window.location.origin}/view/${store.currentMapId}`
     try {

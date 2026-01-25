@@ -1,8 +1,15 @@
 import { nextTick } from 'vue'
+import { useUserStore } from '../stores/userStore'
 
 export function usePrinter(store, userStore, stageRef, scale) {
-
+  
   async function handlePrint(withHides = true) {
+
+const isPro = userStore.isPro // Accessed from the store getter we added in Phase 2
+  const watermarkHtml = !isPro 
+    ? `<div class="watermark">DRAFT - UPGRADE TO REMOVE</div>` 
+    : ''
+
     store.clearSelection()
     const originalScale = scale.value
     scale.value = 40 // Force standard print resolution
@@ -89,6 +96,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
       <div class="legend-sidebar">
         <h3>Legend</h3>
         
+        ${isPro ? `
         <div class="legend-section">
           <h4>Statistics</h4>
           <div class="stats-grid">
@@ -99,6 +107,14 @@ export function usePrinter(store, userStore, stageRef, scale) {
           </div>
           ${getDiffHtml()}
         </div>
+        ` : `
+        <div class="legend-section" style="opacity: 0.6; border: 1px dashed #ccc; padding: 4px; background: #f9f9f9;">
+          <h4 style="margin-bottom: 2px;">Statistics</h4>
+          <div style="font-size: 9px; font-style: italic;">
+             Bale counts & Change log<br>available in Founder's Tier.
+          </div>
+        </div>
+        `}
 
         <div class="legend-section">
           <h4>Bales & Orientation</h4>
@@ -253,6 +269,22 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .hide-rat-under { color: black; stroke-width: 2; border-style: dashed}
       .hide-litter { background: yellow; color: black; }
       .hide-empty { background: white; color: black; }
+      .watermark {
+      position: fixed;
+      top: 50%; 
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-size: 80px;
+      font-weight: bold;
+      color: rgba(0, 0, 0, 0.08); /* Very light gray */
+      z-index: 9999;
+      pointer-events: none;
+      white-space: nowrap;
+      user-select: none;
+      width: 100%;
+      text-align: center;
+    }
+     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     `
 
     if (store.sport === 'agility') {
@@ -301,7 +333,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
 
     const pagesHtml = pages.map(p => `
       <div class="print-page">
-        ${getHeader(p.title)}
+        ${watermarkHtml}${getHeader(p.title)}
         <div class="page-body">
           <div class="map-container">
             <img src="${p.img}" class="map-img" />

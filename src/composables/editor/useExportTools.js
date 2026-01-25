@@ -1,6 +1,13 @@
 export function useExportTools(store, stageRef, scale, GRID_OFFSET) {
 
-  function handleSaveMap() {
+function handleSaveMap() {
+    // [NEW] The Guard Clause
+    if (!userStore.isPro) {
+      store.showNotification("Saving to Cloud is a paid feature", "error")
+      return // Stop execution
+    }
+
+    // --- Existing Logic Below ---
     if (!stageRef.value) return
     const stage = stageRef.value.getStage()
 

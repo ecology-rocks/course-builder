@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { auth, db, storage } from '../firebase' // <--- Added storage here
 import { 
   createUserWithEmailAndPassword, 
@@ -39,10 +39,12 @@ export const useUserStore = defineStore('user', () => {
   const clubName = ref('') // <--- NEW
   // Club Data (If user is a Club)
   const sponsoredEmails = ref([]) 
-  const seatLimit = ref(4)
+  const seatLimit = ref(50)
 
   // Sponsorship Data (If user is a Sponsored Judge)
   const sponsoringClubName = ref(null)
+
+  const isPro = computed(() => ['pro', 'club'].includes(tier.value))
 
   // 1. LOAD PROFILE
   async function loadUserProfile(uid) {
@@ -62,7 +64,7 @@ export const useUserStore = defineStore('user', () => {
       // CLUB LOGIC
       if (tier.value === 'club') {
         sponsoredEmails.value = data.sponsoredEmails || []
-        seatLimit.value = data.seatLimit || 5
+        seatLimit.value = data.seatLimit || 50
       }
 
       // SPONSORED JUDGE LOGIC (Re-Verification)
@@ -253,7 +255,7 @@ async function updateClubName(newName) {
   })
 
   // 4. AUTH ACTIONS
-  async function register(email, password, primarySport = 'barnhunt') {
+  async function register(email, password) {
     authError.value = null
     try {
       const res = await createUserWithEmailAndPassword(auth, email, password)
@@ -264,7 +266,7 @@ async function updateClubName(newName) {
         tier: 'free', 
         email: email,
         judgeName: '',
-        allowedSports: [primarySport],
+        allowedSports: ['barnhunt'],
         createdAt: new Date()
       })
     } catch (e) {
@@ -300,24 +302,18 @@ async function updateClubName(newName) {
   }
 
   // 5. PERMISSIONS
-  function canAccessSport(sport) {
-    const t = tier.value
-    if (t === 'pro' || t === 'club') return true
+function canAccessSport(sport) {
+    if (isPro.value) return true // Founder/Club gets everything
     return allowedSports.value.includes(sport)
   }
 
 function can(action) {
-    const t = tier.value
-    console.log(`[DEBUG] Permission Check: Action=${action}, Tier=${t}`)
+    // Basic actions allowed for everyone
+    if (action === 'create_map') return true
     
-    if (t === 'club' || t === 'pro') return true 
-    
-    if (action === 'save_cloud' || action === 'export_json' || action === 'mark_hides') {
-      // Logic: If I am NOT pro/club, am I allowed?
-      // "solo" tier is allowed these features. "free" is not.
-      const allowed = t === 'solo'
-      if (!allowed) console.warn(`[DEBUG] Denied ${action} because tier is ${t}`)
-      return allowed
+    // Gated actions
+    if (action === 'save_cloud' || action === 'print_clean') {
+        return isPro.value
     }
     return true
   }
@@ -338,14 +334,15 @@ function can(action) {
     isAuthReady, 
     authError, 
     tier, 
+    isPro,
     judgeName, 
     allowedSports, 
-    clubLogoUrl, // <--- Exported
+    clubLogoUrl, 
     sponsoredEmails, 
     sponsoringClubName, 
     loadUserProfile,
     updateJudgeName,
-    uploadLogo, // <--- Exported
+    uploadLogo, 
     register, 
     login, 
     logout, 

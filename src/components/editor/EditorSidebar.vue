@@ -6,8 +6,8 @@ import { useRouter } from 'vue-router'
 
 // Toolboxes
 import BarnHuntToolbox from './toolboxes/BarnHuntToolbox.vue'
-import AgilityToolbox from './toolboxes/AgilityToolbox.vue'
-import ScentWorkToolbox from './toolboxes/ScentWorkToolbox.vue'
+//import AgilityToolbox from './toolboxes/AgilityToolbox.vue'
+//import ScentWorkToolbox from './toolboxes/ScentWorkToolbox.vue'
 
 // Modals
 import ShareMapModal from '../modals/ShareMapModal.vue'
@@ -17,6 +17,7 @@ import RandomizerModal from '../modals/RandomizerModal.vue'
 import BugReportModal from '../modals/BugReportModal.vue'
 import DeleteMapModal from '../modals/DeleteMapModal.vue'
 import LibraryModal from '../modals/LibraryModal.vue'
+import UpgradeModal from '../modals/UpgradeModal.vue' // [NEW]
 
 const store = useMapStore()
 const userStore = useUserStore()
@@ -33,6 +34,7 @@ const showDeleteModal = ref(false)
 const showLibraryModal = ref(false)
 const showMoreMenu = ref(false)
 const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
+const showUpgradeModal = ref(false) // [NEW]
 
 // --- FILE IMPORT LOGIC ---
 const fileInput = ref(null)
@@ -55,17 +57,27 @@ const handleFileUpload = (event) => {
 // -------------------------
 
 const toolboxComponent = computed(() => {
-  switch (store.sport) {
+    return BarnHuntToolbox
+    /* switch (store.sport) {
     case 'agility': return AgilityToolbox
     case 'scentwork': return ScentWorkToolbox
     default: return BarnHuntToolbox
   }
+  */
 })
 
 function goHome() {
   if (confirm("Leave editor? Unsaved changes will be lost.")) {
     store.reset()
     router.push('/dashboard')
+  }
+}
+
+function handleSave() {
+  if (userStore.isPro) {
+    emit('save-map')
+  } else {
+    showUpgradeModal.value = true
   }
 }
 </script>
@@ -75,15 +87,21 @@ function goHome() {
     <div class="zone-top">
       <div class="header-row">
         <button @click="goHome" class="btn-icon" title="Home">🏠</button>
+        <button 
+          v-if="!userStore.isPro" 
+          @click="showUpgradeModal = true" 
+          class="btn-upgrade-icon" 
+          title="Upgrade to Pro"
+        >👑</button>
         <div class="map-title-wrapper">
           <input v-model="store.mapName" class="map-title-input" placeholder="Untitled Map" />
         </div>
-        <button @click="emit('save-map')" class="btn-icon" title="Quick Save">💾</button>
+        <button @click="handleSave" class="btn-icon" title="Quick Save">💾<span v-if="!userStore.isPro">🔒</span></button>
         <button @click="showSettingsModal = true" class="btn-icon" title="Settings">⚙️</button>
       </div>
 
       <div class="control-row">
-        <div class="layer-pills" v-if="store.sport === 'barnhunt'">
+        <div class="layer-pills">
           <button @click="store.currentLayer = 1" :class="{ active: store.currentLayer === 1 }">L1</button>
           <button @click="store.currentLayer = 2" :class="{ active: store.currentLayer === 2 }">L2</button>
           <button @click="store.currentLayer = 3" :class="{ active: store.currentLayer === 3 }">L3</button>
@@ -102,13 +120,15 @@ function goHome() {
 
     <div class="zone-bottom">
       <div class="primary-actions">
-        <button @click="emit('save-map')" class="btn-primary">💾 Save</button>
+        <button @click="handleSave" class="btn-primary">
+      <span v-if="!userStore.isPro">🔒</span> 💾 Save
+    </button>
         <button @click="emit('print', true)" class="btn-secondary">🖨️ Print</button>
       </div>
       
       <div class="secondary-actions">
         <button @click="showLoadModal = true">📂 Load</button>
-        <button @click="showShareModal = true">🔗 Share</button>
+        <button v-if="userStore.isPro" @click="showShareModal = true">🔗 Share</button>
         <button @click="showLibraryModal = true">📖 Lib</button>
       </div>
 
@@ -149,6 +169,7 @@ function goHome() {
     <BugReportModal v-if="showBugReportModal" @close="showBugReportModal = false" />
     <DeleteMapModal v-if="showDeleteModal" @close="showDeleteModal = false" />
     <LibraryModal v-if="showLibraryModal" @close="showLibraryModal = false" />
+    <UpgradeModal v-if="showUpgradeModal" @close="showUpgradeModal = false" />
   </div>
 </template>
 
@@ -319,5 +340,20 @@ function goHome() {
 }
 .text-danger:hover {
   background: #ffebee !important;
+}
+
+.btn-upgrade-icon {
+  background: #fff9c4; /* Pale yellow */
+  border: 1px solid #fbc02d;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 5px 8px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(251, 192, 45, 0.4); }
+  70% { box-shadow: 0 0 0 6px rgba(251, 192, 45, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(251, 192, 45, 0); }
 }
 </style>

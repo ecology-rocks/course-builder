@@ -130,12 +130,13 @@ function openNoteEditor(id) {
   function reset() {
     mapData.value = JSON.parse(JSON.stringify(DEFAULT_MAP_DATA))
 
-    currentMapId.value = null; mapName.value = "Untitled Map"; 
-    classLevel.value = "Novice"; sport.value = 'barnhunt'
+    currentMapId.value = null; 
+    mapName.value = "Untitled Map"; 
+    classLevel.value = "Novice"; 
+    sport.value = 'barnhunt'
     ringDimensions.value = { width: 24, height: 24 }
     currentLayer.value = 1; activeTool.value = 'bale'; nextNumber.value = 1
     selection.value = []; previousBales.value = []; comparisonMapName.value = null
-    
     wallTypes.value = { top: 'fence', right: 'fence', bottom: 'fence', left: 'fence' }
     gridStartCorner.value = 'top-left'
     trialLocation.value = ''; trialDay.value = ''; trialNumber.value = ''
@@ -481,7 +482,7 @@ function openNoteEditor(id) {
     ...stepsLogic,
     ...boardEdgesLogic,
     ...persistence,
-    saveToCloud,
+    saveToCloud, 
     ...selectionLogic,
     ...measureLogic,
     ...notesLogic,
