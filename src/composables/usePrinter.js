@@ -2,14 +2,15 @@ import { nextTick } from 'vue'
 
 export function usePrinter(store, userStore, stageRef, scale) {
 
-  // [UPDATED] Accepts a config object OR a boolean (for backward compatibility)
+  // Accepts a config object OR a boolean (for backward compatibility)
   async function handlePrint(configOrBool = true) {
     
     // 1. Normalize Configuration
     let config = { 
       layers: [1, 2, 3], 
       withHides: true, 
-      layout: 'full' // 'full' or 'quarter'
+      layout: 'full', // 'full' or 'quarter'
+      randoms: null   // { trials: 2, blinds: 5 }
     }
 
     if (typeof configOrBool === 'boolean') {
@@ -19,7 +20,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
     }
 
     // 2. Setup Watermark (The Gate)
-    // We use the getter we added to userStore in Phase 2
+    // We use the getter added to userStore
     const isPro = userStore.isPro 
     const watermarkHtml = !isPro 
       ? `<div class="watermark">DRAFT - UPGRADE TO REMOVE</div>` 
@@ -42,7 +43,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
     const clubName = store.trialLocation || userStore.clubName
     const clubHtml = clubName ? `<div class="meta"><strong>Club:</strong> ${clubName}</div>` : ''
 
-    // [UPDATED] Header Generator (Supports Full & Compact)
+    // Header Generator (Supports Full & Compact)
     const getHeader = (subtitleSuffix = '', isCompact = false) => {
       // Quarter Page Header
       if (isCompact) {
@@ -123,7 +124,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
       `
     }
 
-    // [UPDATED] Legend Generator (Hides Stats for Free Users)
+    // Legend Generator (Hides Stats for Free Users)
     const getLegendHtml = () => `
       <div class="legend-sidebar">
         <h3>Legend</h3>
@@ -294,6 +295,13 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .meta-compact { font-size: 10px; color: #666; }
       .quarter-item .map-img-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; }
       .quarter-item img { max-width: 98%; max-height: 98%; object-fit: contain; }
+
+      /* [NEW] Randoms Page Styles */
+      .randoms-page .randoms-body { column-count: 2; column-gap: 40px; padding: 20px; font-size: 14px; }
+      .trial-block { break-inside: avoid; margin-bottom: 30px; border: 1px solid #eee; padding: 15px; border-radius: 4px; }
+      .trial-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #333; margin-bottom: 10px; }
+      .blind-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; }
+      .blind-numbers { font-family: monospace; font-size: 16px; font-weight: bold; letter-spacing: 2px; }
     `
 
     // [NEW] Logic to hide hides via CSS
@@ -325,26 +333,14 @@ export function usePrinter(store, userStore, stageRef, scale) {
     const originalLayer = store.currentLayer
     const pages = []
 
-    // Helper to capture layer
     const captureLayer = async (layerNum) => {
       store.currentLayer = layerNum
-      // Note: Hides are rendered by components. If we want to hide them in the IMAGE capture,
-      // we would need to toggle them in the store or use a prop.
-      // However, typical HTML printing relies on the captured image.
-      // If we want hides GONE from the image, we rely on the logic that hides are on a separate layer
-      // OR we just accept they are in the image and use the Config.withHides for the LEGEND only?
-      // BETTER: If 'withHides' is false, let's toggle a class on the wrapperRef or similar before capture.
-      // Since that is complex, we assume 'withHides' refers to LEGEND or we rely on the CSS injection 
-      // affecting the PRINT window, but the capture happens on the CANVAS.
-      // For now, we will capture what is visible. Users can toggle hides in editor if they want them off image.
-      
       await wait(150)
       return stageRef.value.getStage().toDataURL({ pixelRatio: 3 })
     }
 
     for (const layerNum of config.layers) {
        // Only print layers that exist or are forced
-       // Check if layer has items?
        const hasItems = layerNum === 1 || store.bales.some(b => b.layer === layerNum)
        if (hasItems) {
          const imgData = await captureLayer(layerNum)
@@ -392,7 +388,38 @@ export function usePrinter(store, userStore, stageRef, scale) {
       `).join('')
     }
 
-    // 9. Open Print Window
+    // 9. Generate Randoms Page (Extras)
+    if (config.randoms) {
+      const { trials, blinds } = config.randoms
+      let randomsHtml = ''
+      
+      for (let t = 1; t <= trials; t++) {
+        randomsHtml += `<div class="trial-block"><div class="trial-title">Trial ${t}</div>`
+        for (let b = 1; b <= blinds; b++) {
+          // Generate 5 random numbers between 1 and 5 (Simulate blind draw)
+          const nums = Array(5).fill(0).map(() => Math.floor(Math.random() * 5) + 1)
+          randomsHtml += `
+            <div class="blind-row">
+              <span class="blind-label">Blind ${b}</span>
+              <span class="blind-numbers">${nums.join(' - ')}</span>
+            </div>`
+        }
+        randomsHtml += `</div>`
+      }
+
+      pagesHtml += `
+        <div class="print-page randoms-page">
+          ${watermarkHtml}
+          <div class="header">
+             <div class="title-block"><h1>Master Blind Randoms</h1></div>
+             <div class="header-right"><div class="meta"><strong>Judge:</strong> ${userStore.judgeName || '___'}</div></div>
+          </div>
+          <div class="randoms-body">${randomsHtml}</div>
+        </div>
+      `
+    }
+
+    // 10. Open Print Window
     const win = window.open('', '_blank')
     win.document.write(`
       <!DOCTYPE html>

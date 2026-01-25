@@ -13,7 +13,6 @@ import BarnHuntToolbox from './toolboxes/BarnHuntToolbox.vue'
 import ShareMapModal from '../modals/ShareMapModal.vue'
 import LoadMapModal from '../modals/LoadMapModal.vue'
 import CourseSettingsModal from '../modals/CourseSettingsModal.vue'
-import RandomizerModal from '../modals/RandomizerModal.vue'
 import BugReportModal from '../modals/BugReportModal.vue'
 import DeleteMapModal from '../modals/DeleteMapModal.vue'
 import LibraryModal from '../modals/LibraryModal.vue'
@@ -29,7 +28,6 @@ const emit = defineEmits(['print', 'save-map', 'save-library'])
 const showShareModal = ref(false)
 const showLoadModal = ref(false)
 const showSettingsModal = ref(false)
-const showRandomizerModal = ref(false)
 const showBugReportModal = ref(false)
 const showDeleteModal = ref(false)
 const showLibraryModal = ref(false)
@@ -156,7 +154,6 @@ function handleSave() {
 
         <button @click="store.realignGrid()">📏 Realign All to Grid</button>
 
-        <button @click="showRandomizerModal = true">🎲 Master Random Generator</button>
         <button @click="showBugReportModal = true">🐞 Report Bug</button>
         <button v-if="store.currentMapId" @click="showDeleteModal = true" class="text-danger">
           🗑️ Delete Map
@@ -169,7 +166,6 @@ function handleSave() {
     <ShareMapModal v-if="showShareModal" @close="showShareModal = false" />
     <LoadMapModal v-if="showLoadModal" @close="showLoadModal = false" />
     <CourseSettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
-    <RandomizerModal v-if="showRandomizerModal" @close="showRandomizerModal = false" />
     <BugReportModal v-if="showBugReportModal" @close="showBugReportModal = false" />
     <DeleteMapModal v-if="showDeleteModal" @close="showDeleteModal = false" />
     <LibraryModal v-if="showLibraryModal" @close="showLibraryModal = false" />

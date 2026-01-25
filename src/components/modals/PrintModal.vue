@@ -17,10 +17,14 @@ const selectedLayers = ref({
 })
 
 const includeHides = ref(true)
-const layout = ref('full') // 'full' or 'quarter'
+const layout = ref('full') 
+
+// [NEW] Randomizer State
+const includeRandoms = ref(false)
+const numTrials = ref(2)
+const numBlinds = ref(5)
 
 function handlePrint() {
-  // Convert object {1: true, 2: false} to array [1]
   const layersToPrint = Object.entries(selectedLayers.value)
     .filter(([_, active]) => active)
     .map(([layer]) => parseInt(layer))
@@ -28,7 +32,9 @@ function handlePrint() {
   emit('confirm', {
     layers: layersToPrint,
     withHides: includeHides.value,
-    layout: layout.value
+    layout: layout.value,
+    // [NEW] Pass Randomizer Config
+    randoms: includeRandoms.value ? { trials: numTrials.value, blinds: numBlinds.value } : null
   })
   emit('close')
 }
@@ -49,25 +55,13 @@ function handlePrint() {
             <input type="checkbox" v-model="selectedLayers[1]" />
             Layer 1 (Base)
           </label>
-          
           <label class="checkbox-row" :class="{ disabled: !hasLayer2 }">
             <input type="checkbox" v-model="selectedLayers[2]" :disabled="!hasLayer2" />
-            Layer 2
-            <span v-if="!hasLayer2" class="pill">Empty</span>
+            Layer 2 <span v-if="!hasLayer2" class="pill">Empty</span>
           </label>
-          
           <label class="checkbox-row" :class="{ disabled: !hasLayer3 }">
             <input type="checkbox" v-model="selectedLayers[3]" :disabled="!hasLayer3" />
-            Layer 3
-            <span v-if="!hasLayer3" class="pill">Empty</span>
-          </label>
-        </div>
-
-        <div class="section">
-          <h4>Options</h4>
-          <label class="checkbox-row">
-            <input type="checkbox" v-model="includeHides" />
-            Show Hides (Rats/Litter)
+            Layer 3 <span v-if="!hasLayer3" class="pill">Empty</span>
           </label>
         </div>
 
@@ -78,15 +72,38 @@ function handlePrint() {
               <input type="radio" v-model="layout" value="full" />
               <div class="icon">📄</div>
               <span>Full Page</span>
-              <small>Standard Judge's Map</small>
             </label>
-
             <label class="radio-card" :class="{ active: layout === 'quarter' }">
               <input type="radio" v-model="layout" value="quarter" />
               <div class="icon">田</div>
               <span>Quarter Page</span>
-              <small>4 Copies (For Helpers)</small>
             </label>
+          </div>
+        </div>
+
+        <div class="section">
+          <h4>Extras</h4>
+          <label class="checkbox-row">
+            <input type="checkbox" v-model="includeHides" />
+            Show Hides (Rats/Litter)
+          </label>
+          
+          <div class="divider"></div>
+
+          <label class="checkbox-row">
+            <input type="checkbox" v-model="includeRandoms" />
+            <strong>Generate Master Randoms</strong>
+          </label>
+
+          <div v-if="includeRandoms" class="sub-options">
+            <div class="input-group">
+              <label>Trials:</label>
+              <input type="number" v-model.number="numTrials" min="1" max="10">
+            </div>
+            <div class="input-group">
+              <label>Blinds/Trial:</label>
+              <input type="number" v-model.number="numBlinds" min="1" max="20">
+            </div>
           </div>
         </div>
       </div>
@@ -105,32 +122,20 @@ function handlePrint() {
   display: flex; justify-content: center; align-items: center;
   z-index: 2000;
 }
-
 .modal-content {
   background: white; padding: 25px; border-radius: 8px;
   width: 90%; max-width: 500px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
-
 .modal-header {
   display: flex; justify-content: space-between; align-items: center;
   margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;
 }
-
-.options-grid {
-  display: flex; flex-direction: column; gap: 20px; margin-bottom: 25px;
-}
-
-.section h4 { margin: 0 0 10px 0; color: #555; font-size: 0.9rem; text-transform: uppercase; }
-
-.checkbox-row {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer;
-}
+.options-grid { display: flex; flex-direction: column; gap: 20px; margin-bottom: 25px; }
+.section h4 { margin: 0 0 10px 0; color: #555; font-size: 0.9rem; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+.checkbox-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer; }
 .checkbox-row.disabled { opacity: 0.5; cursor: not-allowed; }
-
-.pill {
-  background: #eee; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; color: #777;
-}
+.pill { background: #eee; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; color: #777; }
 
 /* Radio Cards */
 .radio-group { display: flex; gap: 10px; }
@@ -142,7 +147,18 @@ function handlePrint() {
 .radio-card input { display: none; }
 .radio-card.active { border-color: #2196f3; background: #e3f2fd; }
 .radio-card .icon { font-size: 1.5rem; margin-bottom: 5px; }
-.radio-card small { font-size: 0.7rem; color: #666; margin-top: 4px; }
+
+/* Sub Options */
+.divider { height: 1px; background: #eee; margin: 10px 0; }
+.sub-options { 
+  margin-left: 28px; background: #f9f9f9; padding: 10px; 
+  border-radius: 4px; display: flex; gap: 15px; 
+}
+.input-group { display: flex; flex-direction: column; gap: 2px; }
+.input-group label { font-size: 0.8rem; color: #666; }
+.input-group input { 
+  width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; 
+}
 
 .actions { display: flex; justify-content: flex-end; }
 .btn-primary {

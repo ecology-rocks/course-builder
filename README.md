@@ -2,10 +2,10 @@
 This is my one-true-copy of the project roadmap.
 
 ## End of Month Update
- - (NEED) Create Print Settings module instead of multiple print buttons
-    - (NEED) Course map 4 per page builder
+ - (DONE) Create Print Settings module instead of multiple print buttons
  - (DONE) Persist measurements when file reopens
  - (DONE) Persist comparison map when file reopens
+ - (DONE) Getting additional features on the context menu
 
 ## Mid Month Update
  - Added help button with description of different keyboard shortcuts and button functions
