@@ -18,6 +18,7 @@ import BugReportModal from '../modals/BugReportModal.vue'
 import DeleteMapModal from '../modals/DeleteMapModal.vue'
 import LibraryModal from '../modals/LibraryModal.vue'
 import UpgradeModal from '../modals/UpgradeModal.vue' // [NEW]
+import PrintModal from '../modals/PrintModal.vue' // [NEW]
 
 const store = useMapStore()
 const userStore = useUserStore()
@@ -32,9 +33,16 @@ const showRandomizerModal = ref(false)
 const showBugReportModal = ref(false)
 const showDeleteModal = ref(false)
 const showLibraryModal = ref(false)
+const showPrintModal = ref(false) // [NEW]
 const showMoreMenu = ref(false)
 const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
+const isPro = computed(() => ['pro', 'club'].includes(userStore.tier))
 const showUpgradeModal = ref(false) // [NEW]
+
+function onPrintConfirm(config) {
+  // Config contains: { layers: [], withHides: bool, layout: string }
+  emit('print', config)
+}
 
 // --- FILE IMPORT LOGIC ---
 const fileInput = ref(null)
@@ -57,13 +65,13 @@ const handleFileUpload = (event) => {
 // -------------------------
 
 const toolboxComponent = computed(() => {
-    return BarnHuntToolbox
-    /* switch (store.sport) {
-    case 'agility': return AgilityToolbox
-    case 'scentwork': return ScentWorkToolbox
-    default: return BarnHuntToolbox
-  }
-  */
+  return BarnHuntToolbox
+  /* switch (store.sport) {
+  case 'agility': return AgilityToolbox
+  case 'scentwork': return ScentWorkToolbox
+  default: return BarnHuntToolbox
+}
+*/
 })
 
 function goHome() {
@@ -87,16 +95,19 @@ function handleSave() {
     <div class="zone-top">
       <div class="header-row">
         <button @click="goHome" class="btn-icon" title="Home">🏠</button>
-        <button 
-          v-if="!userStore.isPro" 
-          @click="showUpgradeModal = true" 
-          class="btn-upgrade-icon" 
-          title="Upgrade to Pro"
-        >👑</button>
+        <button v-if="!userStore.isPro" @click="showUpgradeModal = true" class="btn-upgrade-icon"
+          title="Upgrade to Pro">👑</button>
         <div class="map-title-wrapper">
-          <input v-model="store.mapName" class="map-title-input" placeholder="Untitled Map" />
+          <input 
+            v-model="store.mapName" 
+            class="map-title-input" 
+            :placeholder="isPro ? 'Untitled Map' : 'Untitled Map (Read Only)'"
+            :disabled="!isPro"
+            :title="!isPro ? 'Upgrade to rename map' : ''"
+          />
         </div>
-        <button @click="handleSave" class="btn-icon" title="Quick Save">💾<span v-if="!userStore.isPro">🔒</span></button>
+        <button @click="handleSave" class="btn-icon" title="Quick Save">💾<span
+            v-if="!userStore.isPro">🔒</span></button>
         <button @click="showSettingsModal = true" class="btn-icon" title="Settings">⚙️</button>
       </div>
 
@@ -106,7 +117,7 @@ function handleSave() {
           <button @click="store.currentLayer = 2" :class="{ active: store.currentLayer === 2 }">L2</button>
           <button @click="store.currentLayer = 3" :class="{ active: store.currentLayer === 3 }">L3</button>
         </div>
-        
+
         <div class="history-pills">
           <button @click="store.undo()" title="Undo (Ctrl+Z)">↩</button>
           <button @click="store.redo()" title="Redo (Ctrl+Y)">↪</button>
@@ -121,11 +132,11 @@ function handleSave() {
     <div class="zone-bottom">
       <div class="primary-actions">
         <button @click="handleSave" class="btn-primary">
-      <span v-if="!userStore.isPro">🔒</span> 💾 Save
-    </button>
-        <button @click="emit('print', true)" class="btn-secondary">🖨️ Print</button>
+          <span v-if="!userStore.isPro">🔒</span> 💾 Save
+        </button>
+        <button @click="showPrintModal = true" class="btn-secondary">🖨️ Print</button>
       </div>
-      
+
       <div class="secondary-actions">
         <button @click="showLoadModal = true">📂 Load</button>
         <button v-if="userStore.isPro" @click="showShareModal = true">🔗 Share</button>
@@ -137,13 +148,12 @@ function handleSave() {
       </button>
 
       <div v-if="showMoreMenu" class="more-menu">
-        <button @click="emit('print', false)">🖨️ Print (No Hides)</button>
         <button v-if="isAdmin" @click="emit('save-library')">📚 Save to Library</button>
-        
+
         <button @click="triggerFileUpload">⬆ Import JSON</button>
-        
+
         <button @click="store.exportMapToJSON()">⬇ Export JSON</button>
-        
+
         <button @click="store.realignGrid()">📏 Realign All to Grid</button>
 
         <button @click="showRandomizerModal = true">🎲 Master Random Generator</button>
@@ -154,13 +164,7 @@ function handleSave() {
       </div>
     </div>
 
-    <input 
-      type="file" 
-      ref="fileInput" 
-      accept=".json" 
-      style="display: none" 
-      @change="handleFileUpload" 
-    />
+    <input type="file" ref="fileInput" accept=".json" style="display: none" @change="handleFileUpload" />
 
     <ShareMapModal v-if="showShareModal" @close="showShareModal = false" />
     <LoadMapModal v-if="showLoadModal" @close="showLoadModal = false" />
@@ -170,6 +174,7 @@ function handleSave() {
     <DeleteMapModal v-if="showDeleteModal" @close="showDeleteModal = false" />
     <LibraryModal v-if="showLibraryModal" @close="showLibraryModal = false" />
     <UpgradeModal v-if="showUpgradeModal" @close="showUpgradeModal = false" />
+    <PrintModal v-if="showPrintModal" @close="showPrintModal = false" @confirm="onPrintConfirm" />
   </div>
 </template>
 
@@ -222,14 +227,16 @@ function handleSave() {
   gap: 10px;
 }
 
-.layer-pills, .history-pills {
+.layer-pills,
+.history-pills {
   display: flex;
   background: #f5f5f5;
   border-radius: 4px;
   padding: 2px;
 }
 
-.layer-pills button, .history-pills button {
+.layer-pills button,
+.history-pills button {
   border: none;
   background: none;
   padding: 4px 10px;
@@ -243,7 +250,7 @@ function handleSave() {
 .layer-pills button.active {
   background: white;
   color: #2196f3;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .history-pills button:hover {
@@ -281,10 +288,23 @@ function handleSave() {
   cursor: pointer;
 }
 
-.btn-primary { background: #2196f3; color: white; }
-.btn-primary:hover { background: #1976d2; }
-.btn-secondary { background: #5c6bc0; color: white; }
-.btn-secondary:hover { background: #3949ab; }
+.btn-primary {
+  background: #2196f3;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #1976d2;
+}
+
+.btn-secondary {
+  background: #5c6bc0;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background: #3949ab;
+}
 
 .secondary-actions {
   display: flex;
@@ -338,12 +358,14 @@ function handleSave() {
 .text-danger {
   color: #c62828 !important;
 }
+
 .text-danger:hover {
   background: #ffebee !important;
 }
 
 .btn-upgrade-icon {
-  background: #fff9c4; /* Pale yellow */
+  background: #fff9c4;
+  /* Pale yellow */
   border: 1px solid #fbc02d;
   border-radius: 4px;
   cursor: pointer;
@@ -352,8 +374,16 @@ function handleSave() {
 }
 
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(251, 192, 45, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(251, 192, 45, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(251, 192, 45, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(251, 192, 45, 0.4);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px rgba(251, 192, 45, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(251, 192, 45, 0);
+  }
 }
 </style>
