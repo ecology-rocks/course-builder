@@ -1,6 +1,9 @@
-export function useExportTools(store, stageRef, scale, GRID_OFFSET) {
+import { useUserStore } from '@/stores/userStore' // [FIX] Import the store
 
+export function useExportTools(store, stageRef, scale, GRID_OFFSET) {
+const userStore = useUserStore()
 function handleSaveMap() {
+
     // [NEW] The Guard Clause
     if (!userStore.isPro) {
       store.showNotification("Saving to Cloud is a paid feature", "error")
