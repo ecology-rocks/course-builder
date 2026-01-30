@@ -57,11 +57,18 @@ function handleGlobalClick() {
 }
 
 
-async function handlePrint(withHides) {
+async function handlePrint(options) {
   isPrinting.value = true
-  showHides.value = withHides
+  
+  // [CHECK] Extracting orientation here is correct
+  const orientation = options.orientation || 'landscape' 
+  
+  showHides.value = options.withHides
   await nextTick()
-  await printLogic(withHides)
+
+  // [FIX] Ensure orientation is passed as the second argument explicitly
+  await printLogic(options, orientation) 
+  
   isPrinting.value = false
   setTimeout(() => { showHides.value = true }, 2000)
 }

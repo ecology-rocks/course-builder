@@ -4,6 +4,7 @@ import { useMapStore } from '@/stores/mapStore'
 
 const emit = defineEmits(['close', 'confirm'])
 const store = useMapStore()
+const orientation = ref('landscape')
 
 // 1. Detect Active Layers
 const hasLayer2 = computed(() => store.bales.some(b => b.layer === 2))
@@ -17,7 +18,7 @@ const selectedLayers = ref({
 })
 
 const includeHides = ref(true)
-const layout = ref('full') 
+const layout = ref('full')
 
 // [NEW] Randomizer State
 const includeRandoms = ref(false)
@@ -33,7 +34,7 @@ function handlePrint() {
     layers: layersToPrint,
     withHides: includeHides.value,
     layout: layout.value,
-    // [NEW] Pass Randomizer Config
+    orientation: orientation.value, // [NEW] Pass orientation choice
     randoms: includeRandoms.value ? { trials: numTrials.value, blinds: numBlinds.value } : null
   })
   emit('close')
@@ -66,6 +67,21 @@ function handlePrint() {
         </div>
 
         <div class="section">
+          <h4>Page Orientation</h4>
+          <div class="radio-group">
+            <label class="radio-card" :class="{ active: orientation === 'landscape' }">
+              <input type="radio" v-model="orientation" value="landscape" />
+              <span class="icon">↔</span>
+              <span>Landscape</span>
+            </label>
+            <label class="radio-card" :class="{ active: orientation === 'portrait' }">
+              <input type="radio" v-model="orientation" value="portrait" />
+              <span class="icon">↕</span>
+              <span>Portrait</span>
+            </label>
+          </div>
+        </div>
+        <div class="section">
           <h4>Layout</h4>
           <div class="radio-group">
             <label class="radio-card" :class="{ active: layout === 'full' }">
@@ -87,7 +103,7 @@ function handlePrint() {
             <input type="checkbox" v-model="includeHides" />
             Show Hides (Rats/Litter)
           </label>
-          
+
           <div class="divider"></div>
 
           <label class="checkbox-row">
@@ -117,54 +133,164 @@ function handlePrint() {
 
 <style scoped>
 .modal-backdrop {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0, 0, 0, 0.5);
-  display: flex; justify-content: center; align-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   z-index: 2000;
 }
+
 .modal-content {
-  background: white; padding: 25px; border-radius: 8px;
-  width: 90%; max-width: 500px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  background: white;
+  padding: 25px;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
+
 .modal-header {
-  display: flex; justify-content: space-between; align-items: center;
-  margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 10px;
 }
-.options-grid { display: flex; flex-direction: column; gap: 20px; margin-bottom: 25px; }
-.section h4 { margin: 0 0 10px 0; color: #555; font-size: 0.9rem; text-transform: uppercase; border-bottom: 1px solid #eee; padding-bottom: 4px; }
-.checkbox-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer; }
-.checkbox-row.disabled { opacity: 0.5; cursor: not-allowed; }
-.pill { background: #eee; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; color: #777; }
+
+.options-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-bottom: 25px;
+}
+
+.section h4 {
+  margin: 0 0 10px 0;
+  color: #555;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 4px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+}
+
+.checkbox-row.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pill {
+  background: #eee;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: #777;
+}
 
 /* Radio Cards */
-.radio-group { display: flex; gap: 10px; }
-.radio-card {
-  flex: 1; border: 1px solid #ddd; border-radius: 6px; padding: 10px;
-  cursor: pointer; text-align: center; transition: all 0.2s;
-  display: flex; flex-direction: column; align-items: center;
+.radio-group {
+  display: flex;
+  gap: 10px;
 }
-.radio-card input { display: none; }
-.radio-card.active { border-color: #2196f3; background: #e3f2fd; }
-.radio-card .icon { font-size: 1.5rem; margin-bottom: 5px; }
+
+.radio-card {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.radio-card input {
+  display: none;
+}
+
+.radio-card.active {
+  border-color: #2196f3;
+  background: #e3f2fd;
+}
+
+.radio-card .icon {
+  font-size: 1.5rem;
+  margin-bottom: 5px;
+}
 
 /* Sub Options */
-.divider { height: 1px; background: #eee; margin: 10px 0; }
-.sub-options { 
-  margin-left: 28px; background: #f9f9f9; padding: 10px; 
-  border-radius: 4px; display: flex; gap: 15px; 
-}
-.input-group { display: flex; flex-direction: column; gap: 2px; }
-.input-group label { font-size: 0.8rem; color: #666; }
-.input-group input { 
-  width: 60px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; 
+.divider {
+  height: 1px;
+  background: #eee;
+  margin: 10px 0;
 }
 
-.actions { display: flex; justify-content: flex-end; }
-.btn-primary {
-  background: #2196f3; color: white; border: none; padding: 10px 20px;
-  border-radius: 4px; font-weight: bold; cursor: pointer;
+.sub-options {
+  margin-left: 28px;
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 4px;
+  display: flex;
+  gap: 15px;
 }
-.btn-primary:hover { background: #1976d2; }
-.close-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #999; }
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.input-group label {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.input-group input {
+  width: 60px;
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.btn-primary {
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #1976d2;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #999;
+}
 </style>

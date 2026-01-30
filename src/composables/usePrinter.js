@@ -3,14 +3,14 @@ import { nextTick } from 'vue'
 export function usePrinter(store, userStore, stageRef, scale) {
 
   // Accepts a config object OR a boolean (for backward compatibility)
-  async function handlePrint(configOrBool = true) {
+  async function handlePrint(configOrBool = true, orientation = 'landscape') {
     
     // 1. Normalize Configuration
     let config = { 
       layers: [1, 2, 3], 
       withHides: true, 
-      layout: 'full', // 'full' or 'quarter'
-      randoms: null   // { trials: 2, blinds: 5 }
+      layout: 'full', 
+      randoms: null   
     }
 
     if (typeof configOrBool === 'boolean') {
@@ -193,7 +193,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
 
     // 5. CSS Styles
     const printStyles = `
-      @page { size: landscape; margin: 0.25in; }
       
       * {
         -webkit-print-color-adjust: exact !important;
@@ -224,13 +223,36 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .print-page { height: 98vh; width: 100%; display: flex; flex-direction: column; break-after: page; page-break-after: always; position: relative; }
       .print-page:last-child { break-after: auto; page-break-after: auto; }
       
-      .header { flex: 0 0 auto; display: flex; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 10px; }
+      .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #333;
+      padding-bottom: 10px;
+      margin-bottom: 20px;
+      /* [FIX] Added horizontal padding to prevent edges from feeling too wide */
+      padding-left: 15px;
+      padding-right: 15px;
+    }
       .header-left { display: flex; align-items: center; gap: 15px; }
       .print-logo { height: 60px; width: auto; object-fit: contain; }
-      .title-block h1 { margin: 0; font-size: 24px; line-height: 1.2; color: #000; }
+      .title-block {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      /* [FIX] Added margin to push logo/title away from the far left edge */
+      margin-left: 5px;
+    }
       .title-block h2 { margin: 0; font-size: 16px; font-weight: normal; color: #666; }
-      .header-right { text-align: right; }
-      .meta { font-size: 14px; margin-bottom: 2px; }
+      .header-right {
+      text-align: right;
+      /* [FIX] Added margin to push judge info away from the far right edge */
+      margin-right: 5px;
+    }
+      .meta {
+      font-size: 1rem;
+      line-height: 1.4;
+    }
       .sub-meta { font-size: 11px; color: #888; margin-top: 4px; }
 
       /* Layout */
@@ -315,7 +337,12 @@ export function usePrinter(store, userStore, stageRef, scale) {
       scale.value = originalScale
 
       const win = window.open('', '_blank')
-      win.document.write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>${printStyles}</style></head><body>
+      win.document.write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>
+            @media print {
+              @page { size: ${orientation}; margin: 0; }
+            }
+            ${printStyles}
+          </style></head><body>
         ${watermarkHtml}
         <div class="print-page">
           ${getHeader()}
@@ -427,8 +454,11 @@ export function usePrinter(store, userStore, stageRef, scale) {
         <head>
           <title>${store.mapName}</title>
           <style>
+            @media print {
+              @page { size: ${orientation}; margin: 0; }
+            }
             ${printStyles}
-            ${hideCss} 
+            ${hideCss}
           </style>
         </head>
         <body>${pagesHtml}</body>
