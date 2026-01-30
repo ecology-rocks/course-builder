@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
 const store = useMapStore()
@@ -7,36 +7,83 @@ const props = defineProps(['step', 'isSelected', 'scale'])
 const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend', 'rotate'])
 
 const groupRef = ref(null)
+const transformerRef = ref(null)
 
-// [FIX] Use Grid Units (Feet) instead of fixed pixels
-// This ensures the object scales up on print, matching the map view.
-const UNIT_W = 2   // 2 feet wide
-const UNIT_H = 1.5 // 1.5 feet deep
-
-defineExpose({ getNode: () => groupRef.value?.getNode() })
-
-const handleClick = (e) => {
-  if (e.evt.button === 0) emit('select', props.step.id)
+const syncTransformer = () => {
+  const tr = transformerRef.value?.getNode()
+  if (tr) {
+    tr.forceUpdate()
+    tr.getLayer()?.batchDraw()
+  }
 }
 
-const handleContextMenu = (e) => {
-  e.evt.preventDefault()
-  emit('rotate', props.step.id)
+watch(() => props.isSelected, async (val) => {
+  await nextTick()
+  const node = groupRef.value?.getNode()
+  const tr = transformerRef.value?.getNode()
+  if (tr && node) {
+    if (val) {
+      tr.nodes([node])
+      syncTransformer()
+    } else {
+      tr.nodes([])
+    }
+  }
+})
+
+function handleTransform() {
+  const node = groupRef.value.getNode();
+  const rect = node.findOne('Rect');
+  const text = node.findOne('Text');
+  
+  // 1. Calculate new dimensions based on the group's scale
+  const newWidth = Math.max(15, node.width() * node.scaleX());
+  const newHeight = Math.max(15, node.height() * node.scaleY());
+
+  // 2. Reset Group scale to 1 IMMEDIATELY
+  node.scaleX(1);
+  node.scaleY(1);
+
+  // 3. Apply the new size to the Group AND the Rect
+  node.width(newWidth);
+  node.height(newHeight);
+  
+  if (rect) {
+    rect.width(newWidth);
+    rect.height(newHeight);
+  }
+
+  // 4. Update text dimensions to match
+if (text) {
+    text.width(newWidth);
+    text.height(newHeight);
+    // [OPTIONAL] If you want to ensure it's perfectly sharp during drag:
+    text.scaleX(1);
+    text.scaleY(1);
+  }
+
+  syncTransformer();
 }
 
-function handleDragEnd(e) {
-  emit('dragend', e)
+function handleTransformEnd() {
+  const node = groupRef.value.getNode();
+
+  // Sync the final calculated width/height back to the store
+  emit('update', props.step.id, {
+    width: node.width() / props.scale,
+    height: node.height() / props.scale,
+    x: node.x() / props.scale,
+    y: node.y() / props.scale,
+    rotation: node.rotation()
+  });
+  
+  nextTick(syncTransformer);
 }
 
-// [FIX] Smart Edge Snapping (matches Bales/Mats)
 function dragBoundFunc(pos) {
   const node = this
-  
-  // 1. Visual Dimensions
-  const visualW = UNIT_W * props.scale
-  const visualH = UNIT_H * props.scale
-
-  // 2. Rotated Bounding Box
+  const visualW = props.step.width * props.scale
+  const visualH = props.step.height * props.scale
   const rad = (props.step.rotation || 0) * Math.PI / 180
   const absCos = Math.abs(Math.cos(rad))
   const absSin = Math.abs(Math.sin(rad))
@@ -44,15 +91,13 @@ function dragBoundFunc(pos) {
   const bboxW = (visualW * absCos) + (visualH * absSin)
   const bboxH = (visualW * absSin) + (visualH * absCos)
 
-  // 3. Constraints
   const minX = bboxW / 2
   const maxX = (store.ringDimensions.width * props.scale) - (bboxW / 2)
   const minY = bboxH / 2
   const maxY = (store.ringDimensions.height * props.scale) - (bboxH / 2)
 
-  // 4. Snap Top-Left Edge
   const layerAbs = node.getLayer().getAbsolutePosition()
-  const step = props.scale / 6 // 2-inch grid
+  const step = props.scale / 6 
 
   let relX = pos.x - layerAbs.x
   let relY = pos.y - layerAbs.y
@@ -69,58 +114,73 @@ function dragBoundFunc(pos) {
   let newCenterX = snappedLeft + halfW
   let newCenterY = snappedTop + halfH
 
-  // 5. Apply Constraints
   newCenterX = Math.max(minX, Math.min(newCenterX, maxX))
   newCenterY = Math.max(minY, Math.min(newCenterY, maxY))
 
   return { x: newCenterX + layerAbs.x, y: newCenterY + layerAbs.y }
 }
+
+defineExpose({ getNode: () => groupRef.value?.getNode() })
 </script>
 
 <template>
-  <v-group
-    ref="groupRef"
-    :config="{
-      id: step.id,
-      x: step.x * scale, 
-      y: step.y * scale, 
-      rotation: step.rotation || 0,
-      draggable: true,
-      dragBoundFunc: dragBoundFunc
-    }"
-    @click="handleClick"
-    @tap="handleClick"
-    @dragstart="emit('dragstart', $event)"
-    @dragmove="emit('dragmove', $event)"
-    @dragend="handleDragEnd"
-    @contextmenu="handleContextMenu"
-  >
-    <v-rect :config="{
-      width: UNIT_W * scale,
-      height: UNIT_H * scale,
-      fill: '#8D6E63',
-      stroke: isSelected ? '#00a1ff' : 'black',
-      strokeWidth: isSelected ? 3 : 2,
-      offsetX: (UNIT_W * scale) / 2,
-      offsetY: (UNIT_H * scale) / 2,
-      shadowColor: '#00a1ff',
-      shadowBlur: isSelected ? 5 : 0,
-      cornerRadius: 5
-    }" />
-    
-    <v-text :config="{
-      text: 'STEP',
-      fontSize: scale * 0.45, 
-      fontStyle: 'bold',
-      fill: 'white',
-      width: UNIT_W * scale,
-      height: UNIT_H * scale,
-      offsetX: (UNIT_W * scale) / 2,
-      offsetY: (UNIT_H * scale) / 2,
-      align: 'center',
-      verticalAlign: 'middle',
-      rotation: 0,
-      listening: false
-    }" />
+  <v-group>
+    <v-group
+      ref="groupRef"
+      :config="{
+        id: step.id,
+        x: step.x * scale, 
+        y: step.y * scale, 
+        width: step.width * scale,
+        height: step.height * scale,
+        rotation: step.rotation || 0,
+        draggable: true,
+        dragBoundFunc: dragBoundFunc,
+        // Center the pivot point
+        offsetX: (step.width * scale) / 2,
+        offsetY: (step.height * scale) / 2
+      }"
+      @click="emit('select', step.id, $event.evt.shiftKey)"
+      @dragend="emit('dragend', $event)"
+      @transform="handleTransform"
+      @transformend="handleTransformEnd"
+    >
+      <v-rect :config="{
+        width: step.width * scale,
+        height: step.height * scale,
+        fill: '#8D6E63',
+        stroke: isSelected ? '#00a1ff' : 'black',
+        strokeWidth: isSelected ? 3 : 2,
+        cornerRadius: 5
+      }" />
+      
+      <v-text :config="{
+        text: 'STEP',
+        fontSize:  scale * 0.5,
+        fill: 'white',
+        width: step.width * scale,
+        height: step.height * scale,
+        align: 'center',
+        verticalAlign: 'middle',
+        listening: false
+      }" />
+    </v-group>
+
+    <v-transformer
+      v-if="isSelected"
+      ref="transformerRef"
+      :config="{
+        enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+        rotateEnabled: true,
+        // Crucial: tells transformer to update width/height instead of scale
+        anchorDragLeave: true,
+        boundBoxFunc: (oldBox, newBox) => {
+          if (Math.abs(newBox.width) < 20 || Math.abs(newBox.height) < 20) {
+            return oldBox;
+          }
+          return newBox;
+        }
+      }"
+    />
   </v-group>
 </template>
