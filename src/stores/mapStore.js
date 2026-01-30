@@ -92,7 +92,7 @@ export const useMapStore = defineStore('map', () => {
   const trialLocation = ref('') 
   const trialDay = ref('')      
   const trialNumber = ref('')   
-  const baleConfig = ref({ length: 3, width: 1.5, height: 1.2 }) 
+  const baleConfig = ref({ length: (36/12), width: (18/12), height: (14/12) }) 
   const dcMatConfig = ref({ width: 2, height: 3 }) 
 
 
@@ -194,7 +194,7 @@ function openNoteEditor(id) {
     const data = mapData.value
     
     // Get current bale dimensions
-    const { length: L, width: W, height: H } = baleConfig.value || { length: 3, width: 1.5, height: 1.2 }
+    const { length: L, width: W, height: H } = baleConfig.value 
 
     // Helper: Snap List
     const snapList = (list) => {
@@ -241,8 +241,8 @@ function openNoteEditor(id) {
         if (isRectilinear) {
             // If rotated 90/270, dimensions swap
             const isVertical = (Math.abs(rot - 90) < 1) 
-            const effectiveW = isVertical ? h : w
-            const effectiveH = isVertical ? w : h
+          const effectiveW = isVertical ? h : w
+          const effectiveH = isVertical ? w : h
             
             // Calculate Visual Top-Left (The visible edge)
             // Pivot (Center) = x + w/2
@@ -256,11 +256,9 @@ function openNoteEditor(id) {
             const newMinX = snap(currentMinX)
             const newMinY = snap(currentMinY)
             
-            // Back-calculate the required internal x,y
-            // newPivot = newMin + effective/2
-            // newX = newPivot - w/2
-            b.x = newMinX + (effectiveW / 2) - (w / 2)
-            b.y = newMinY + (effectiveH / 2) - (h / 2)
+            /// [FIX] The back-calculation now correctly uses the dynamic w/h
+          b.x = newMinX + (effectiveW / 2) - (w / 2)
+          b.y = newMinY + (effectiveH / 2) - (h / 2)
         } else {
             // Fallback for weird angles (15, 30, 45): Just snap the point
             b.x = snap(b.x)

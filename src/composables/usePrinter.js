@@ -306,8 +306,8 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .step { background: #8D6E63; border: 1px solid black;}
       .obstruction { border: 1px dashed black; background: rgba(100, 100, 100, 0.5); }
       .dead-zone { border: 1px dashed red; background: rgba(255, 0, 0, 0.3); }
-      .fence { height: 1px; background: black; border: none; }
-      .wall { height: 6px; background: black; border: none; }
+      .fence { border: 1px solid black; background-color: transparent; }
+      .wall { background-color: #333; border: 1px solid black; box-shadow: inset 0 0 0 4px #333; }
       
       .hide-rat, .hide-litter, .hide-empty, .hide-rat-under {
         width: 16px; height: 16px; border-radius: 50%; border: 2px solid black;

@@ -20,14 +20,14 @@ export function useGridSystem(store, scale) {
 
   function getXAxisY() {
     return store.gridStartCorner.includes('bottom')
-      ? (store.ringDimensions.height * scale.value) + 10
-      : -20
+      ? (store.ringDimensions.height * scale.value) + 15
+      : -25
   }
 
   function getYAxisX() {
     return store.gridStartCorner.includes('right')
-      ? (store.ringDimensions.width * scale.value) + 5
-      : -25
+      ? (store.ringDimensions.width * scale.value) + 12
+      : -32
   }
 
   function getYAxisAlign() {
