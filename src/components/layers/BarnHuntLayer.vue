@@ -15,7 +15,14 @@ import NoteObject from './BarnHunt/NoteObject.vue'
 import TunnelBoxObject from './BarnHunt/TunnelBoxObject.vue'
 import GateObject from './BarnHunt/GateObject.vue'
 
-const props = defineProps(['scale', 'showHides', 'GRID_OFFSET'])
+const props = defineProps({
+  bale: Object,
+  scale: Number,
+  opacity: {
+    type: Number,
+    default: 1
+  }
+})
 const store = useMapStore()
 
 defineExpose({ 
@@ -27,7 +34,11 @@ const dragStartPos = ref({})
 
 // --- COMPUTED ---
 const visibleBales = computed(() => {
-  const filtered = store.bales.filter(b => b.layer <= store.currentLayer)
+  // [FIX] If overlay is OFF, only show bales that match the current layer exactly
+  const filtered = store.multiLayerView 
+    ? store.bales 
+    : store.bales.filter(b => b.layer === store.currentLayer)
+    
   return filtered.sort((a, b) => {
     if (a.layer !== b.layer) return a.layer - b.layer
     const aIsLeaner = a.lean !== null
@@ -301,10 +312,19 @@ function getAnchorLines(bale) {
 
 
 
-    <BaleObject v-for="bale in visibleBales" :key="bale.id" :bale="bale" :scale="scale"
-      :ref="(el) => setRef(el, bale.id)" @contextmenu="handleRightClick($event, bale.id)"
-      @click="handleLeftClick($event, bale.id)" @dragstart="handleDragStart($event, bale.id)"
-      @dragmove="handleDragMove($event, bale.id)" @dragend="handleDragEnd($event, bale.id)" />
+    <BaleObject 
+  v-for="bale in visibleBales" 
+  :key="bale.id" 
+  :bale="bale" 
+  :scale="scale"
+  :opacity="store.multiLayerView && bale.layer !== store.currentLayer ? store.layerOpacity : 1"
+  :ref="(el) => setRef(el, bale.id)"
+  @contextmenu="handleRightClick($event, bale.id)"
+  @click="handleLeftClick($event, bale.id)"
+  @dragstart="handleDragStart($event, bale.id)"
+  @dragmove="handleDragMove($event, bale.id)"
+  @dragend="handleDragEnd($event, bale.id)"
+/>
 
     <template v-if="props.showHides">
       <HideMarker v-for="hide in store.hides" :key="hide.id" :hide="hide" :scale="scale"

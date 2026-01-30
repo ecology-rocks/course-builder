@@ -1,74 +1,88 @@
-import { nextTick } from 'vue'
+import { nextTick } from "vue";
 
 export function usePrinter(store, userStore, stageRef, scale) {
-
   // Accepts a config object OR a boolean (for backward compatibility)
-  async function handlePrint(configOrBool = true, orientation = 'landscape') {
-    
+  async function handlePrint(configOrBool = true, orientation = "landscape") {
     // 1. Normalize Configuration
-    let config = { 
-      layers: [1, 2, 3], 
-      withHides: true, 
-      layout: 'full', 
-      randoms: null   
-    }
+    let config = {
+      layers: [1, 2, 3],
+      withHides: true,
+      layout: "full",
+      overlayAll: false,
+      randoms: null,
+    };
 
-    if (typeof configOrBool === 'boolean') {
-      config.withHides = configOrBool
+    const prevMultiView = store.multiLayerView;
+
+    if (typeof configOrBool === "boolean") {
+      config.withHides = configOrBool;
     } else {
-      config = { ...config, ...configOrBool }
+      config = { ...config, ...configOrBool };
     }
 
     // 2. Setup Watermark (The Gate)
     // We use the getter added to userStore
-    const isPro = userStore.isPro 
-    const watermarkHtml = !isPro 
-      ? `<div class="watermark">DRAFT - UPGRADE TO REMOVE</div>` 
-      : ''
+    const isPro = userStore.isPro;
+    const watermarkHtml = !isPro
+      ? `<div class="watermark">DRAFT - UPGRADE TO REMOVE</div>`
+      : "";
 
     // 3. Prepare Stage (Zoom in for high-res capture)
-    store.clearSelection()
-    const originalScale = scale.value
-    scale.value = 40 // Force standard print resolution (high quality)
-    const originalStep = store.gridStep
-    store.gridStep = 1 // Hide grid dots usually, or make them fine
-    await nextTick()
-    
+    store.clearSelection();
+    const originalScale = scale.value;
+    scale.value = 40; // Force standard print resolution (high quality)
+    const originalStep = store.gridStep;
+    store.gridStep = 1; // Hide grid dots usually, or make them fine
+
+    const originalMultiView = store.multiLayerView;
+    if (config.overlayAll) {
+      store.multiLayerView = true;
+    }
+
+    await nextTick();
+
     // Slight delay to ensure canvas renders at new scale
-    const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms))
-    await wait(100)
+    const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+    await wait(100);
 
     // 4. HTML Helpers
-    const logoHtml = userStore.clubLogoUrl ? `<img src="${userStore.clubLogoUrl}" class="print-logo" />` : ''
-    const clubName = store.trialLocation || userStore.clubName
-    const clubHtml = clubName ? `<div class="meta"><strong>Club:</strong> ${clubName}</div>` : ''
+    const logoHtml = userStore.clubLogoUrl
+      ? `<img src="${userStore.clubLogoUrl}" class="print-logo" />`
+      : "";
+    const clubName = store.trialLocation || userStore.clubName;
+    const clubHtml = clubName
+      ? `<div class="meta"><strong>Club:</strong> ${clubName}</div>`
+      : "";
+
+      
+    store.multiLayerView = originalMultiView;
 
     // Header Generator (Supports Full & Compact)
-    const getHeader = (subtitleSuffix = '', isCompact = false) => {
+    const getHeader = (subtitleSuffix = "", isCompact = false) => {
       // Quarter Page Header
       if (isCompact) {
-         return `
+        return `
           <div class="header compact">
             <div class="title-block">
                <h1>${store.mapName} ${subtitleSuffix}</h1>
             </div>
-             <div class="meta-compact">Judge: ${userStore.judgeName || '___'}</div>
+             <div class="meta-compact">Judge: ${userStore.judgeName || "___"}</div>
           </div>
-         `
+         `;
       }
 
       // Full Page Header
-      let subtitle = store.classLevel
-      if (store.trialNumber) subtitle += ` Trial ${store.trialNumber}`
-      if (store.trialDay) subtitle += `, ${store.trialDay}`
-      if (subtitleSuffix) subtitle += ` ${subtitleSuffix}`
+      let subtitle = store.classLevel;
+      if (store.trialNumber) subtitle += ` Trial ${store.trialNumber}`;
+      if (store.trialDay) subtitle += `, ${store.trialDay}`;
+      if (subtitleSuffix) subtitle += ` ${subtitleSuffix}`;
 
       // Fallback for other sports
       if (!store.trialNumber && !store.trialDay) {
-        let sportLabel = 'Barn Hunt'
-        if (store.sport === 'agility') sportLabel = 'Agility'
-        if (store.sport === 'scentwork') sportLabel = 'Scent Work'
-        subtitle = `${store.classLevel} ${sportLabel} ${subtitleSuffix}`
+        let sportLabel = "Barn Hunt";
+        if (store.sport === "agility") sportLabel = "Agility";
+        if (store.sport === "scentwork") sportLabel = "Scent Work";
+        subtitle = `${store.classLevel} ${sportLabel} ${subtitleSuffix}`;
       }
 
       return `
@@ -81,32 +95,32 @@ export function usePrinter(store, userStore, stageRef, scale) {
           </div>
         </div>
         <div class="header-right">
-          <div class="meta"><strong>Judge:</strong> ${userStore.judgeName || '__________________'}</div>
+          <div class="meta"><strong>Judge:</strong> ${userStore.judgeName || "__________________"}</div>
           ${clubHtml}
           <div class="meta"><strong>Size:</strong> ${store.ringDimensions.width}' x ${store.ringDimensions.height}'</div>
           <div class="sub-meta">Generated by K9CourseBuilder.com</div>
         </div>
       </div>
-      `
-    }
+      `;
+    };
 
     // Helper for Differentials (Changes vs Previous)
     const getDiffHtml = () => {
-      const diffs = store.differentials
-      if (!diffs) return ''
-      
+      const diffs = store.differentials;
+      if (!diffs) return "";
+
       const fmt = (l) => {
-        const d = diffs[l]
-        if (!d) return ''
-        const sign = d.net > 0 ? '+' : ''
-        const movedText = d.moved > 0 ? `, ${d.moved} moved` : '' 
-        return `<div><strong>L${l}:</strong> ${sign}${d.net}${movedText}</div>`
-      }
-      
-      const totalSign = diffs.totalNet > 0 ? '+' : ''
-      const comparisonName = store.comparisonMapName 
-        ? `<div style="color: #d32f2f; font-style: italic; margin-bottom: 2px;">${store.comparisonMapName}</div>` 
-        : ''
+        const d = diffs[l];
+        if (!d) return "";
+        const sign = d.net > 0 ? "+" : "";
+        const movedText = d.moved > 0 ? `, ${d.moved} moved` : "";
+        return `<div><strong>L${l}:</strong> ${sign}${d.net}${movedText}</div>`;
+      };
+
+      const totalSign = diffs.totalNet > 0 ? "+" : "";
+      const comparisonName = store.comparisonMapName
+        ? `<div style="color: #d32f2f; font-style: italic; margin-bottom: 2px;">${store.comparisonMapName}</div>`
+        : "";
 
       return `
         <div class="legend-sub-section">
@@ -121,15 +135,17 @@ export function usePrinter(store, userStore, stageRef, scale) {
             ${fmt(3)}
           </div>
         </div>
-      `
-    }
+      `;
+    };
 
     // Legend Generator (Hides Stats for Free Users)
     const getLegendHtml = () => `
       <div class="legend-sidebar">
         <h3>Legend</h3>
         
-        ${isPro ? `
+        ${
+          isPro
+            ? `
         <div class="legend-section">
           <h4>Statistics</h4>
           <div class="stats-grid">
@@ -140,14 +156,16 @@ export function usePrinter(store, userStore, stageRef, scale) {
           </div>
           ${getDiffHtml()}
         </div>
-        ` : `
+        `
+            : `
         <div class="legend-section" style="opacity: 0.6; border: 1px dashed #ccc; padding: 4px; background: #f9f9f9;">
           <h4 style="margin-bottom: 2px;">Statistics</h4>
           <div style="font-size: 9px; font-style: italic;">
              Bale counts & Change log<br>available in Founder's Tier.
           </div>
         </div>
-        `}
+        `
+        }
 
         <div class="legend-section">
           <h4>Bales & Orientation</h4>
@@ -189,7 +207,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
           </div>
         </div>
       </div>
-    `
+    `;
 
     // 5. CSS Styles
     const printStyles = `
@@ -324,20 +342,23 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .trial-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #333; margin-bottom: 10px; }
       .blind-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #eee; }
       .blind-numbers { font-family: monospace; font-size: 16px; font-weight: bold; letter-spacing: 2px; }
-    `
+    `;
 
     // [NEW] Logic to hide hides via CSS
-    const hideCss = !config.withHides ? `
+    const hideCss = !config.withHides
+      ? `
       .hide-rat, .hide-litter, .hide-empty, .hide-rat-under { display: none !important; }
-    ` : ''
+    `
+      : "";
 
     // 6. Handling Agility Mode (Simple Pass-through)
-    if (store.sport === 'agility') {
-      const dataUrl = stageRef.value.getStage().toDataURL({ pixelRatio: 3 })
-      scale.value = originalScale
+    if (store.sport === "agility") {
+      const dataUrl = stageRef.value.getStage().toDataURL({ pixelRatio: 3 });
+      scale.value = originalScale;
 
-      const win = window.open('', '_blank')
-      win.document.write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>
+      const win = window.open("", "_blank");
+      win.document
+        .write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>
             @media print {
               @page { size: ${orientation}; margin: 0; }
             }
@@ -350,41 +371,47 @@ export function usePrinter(store, userStore, stageRef, scale) {
             <div class="map-container"><img src="${dataUrl}" class="map-img"/></div>
           </div>
         </div>
-      </body></html>`)
-      win.document.close()
-      setTimeout(() => { win.focus(); win.print(); }, 500);
-      return
+      </body></html>`);
+      win.document.close();
+      setTimeout(() => {
+        win.focus();
+        win.print();
+      }, 500);
+      return;
     }
 
     // 7. Capture Selected Layers
-    const originalLayer = store.currentLayer
-    const pages = []
+    const originalLayer = store.currentLayer;
+    const pages = [];
 
     const captureLayer = async (layerNum) => {
-      store.currentLayer = layerNum
-      await wait(150)
-      return stageRef.value.getStage().toDataURL({ pixelRatio: 3 })
-    }
+      store.currentLayer = layerNum;
+      await wait(150);
+      return stageRef.value.getStage().toDataURL({ pixelRatio: 3 });
+    };
 
     for (const layerNum of config.layers) {
-       // Only print layers that exist or are forced
-       const hasItems = layerNum === 1 || store.bales.some(b => b.layer === layerNum)
-       if (hasItems) {
-         const imgData = await captureLayer(layerNum)
-         pages.push({ title: `• Layer ${layerNum}`, img: imgData })
-       }
+      // Only print layers that exist or are forced
+      const hasItems =
+        layerNum === 1 || store.bales.some((b) => b.layer === layerNum);
+      if (hasItems) {
+        const imgData = await captureLayer(layerNum);
+        pages.push({ title: `• Layer ${layerNum}`, img: imgData });
+      }
     }
 
     // Restore State
-    store.currentLayer = originalLayer
-    scale.value = originalScale
-    store.gridStep = originalStep
+    store.currentLayer = originalLayer;
+    scale.value = originalScale;
+    store.gridStep = originalStep;
 
     // 8. Generate HTML based on Layout
-    let pagesHtml = ''
+    let pagesHtml = "";
 
-    if (config.layout === 'full') {
-      pagesHtml = pages.map(p => `
+    if (config.layout === "full") {
+      pagesHtml = pages
+        .map(
+          (p) => `
         <div class="print-page">
           ${watermarkHtml}
           ${getHeader(p.title)}
@@ -395,43 +422,56 @@ export function usePrinter(store, userStore, stageRef, scale) {
             ${getLegendHtml()}
           </div>
         </div>
-      `).join('')
-    } else if (config.layout === 'quarter') {
+      `,
+        )
+        .join("");
+    } else if (config.layout === "quarter") {
       // 4 Copies per page layout
-      pagesHtml = pages.map(p => `
+      pagesHtml = pages
+        .map(
+          (p) => `
         <div class="print-page">
           ${watermarkHtml}
           <div class="quarter-grid">
-            ${Array(4).fill(0).map(() => `
+            ${Array(4)
+              .fill(0)
+              .map(
+                () => `
               <div class="quarter-item">
                 ${getHeader(p.title, true)}
                 <div class="map-img-wrapper">
                   <img src="${p.img}" />
                 </div>
               </div>
-            `).join('')}
+            `,
+              )
+              .join("")}
           </div>
         </div>
-      `).join('')
+      `,
+        )
+        .join("");
     }
 
     // 9. Generate Randoms Page (Extras)
     if (config.randoms) {
-      const { trials, blinds } = config.randoms
-      let randomsHtml = ''
-      
+      const { trials, blinds } = config.randoms;
+      let randomsHtml = "";
+
       for (let t = 1; t <= trials; t++) {
-        randomsHtml += `<div class="trial-block"><div class="trial-title">Trial ${t}</div>`
+        randomsHtml += `<div class="trial-block"><div class="trial-title">Trial ${t}</div>`;
         for (let b = 1; b <= blinds; b++) {
           // Generate 5 random numbers between 1 and 5 (Simulate blind draw)
-          const nums = Array(5).fill(0).map(() => Math.floor(Math.random() * 5) + 1)
+          const nums = Array(5)
+            .fill(0)
+            .map(() => Math.floor(Math.random() * 5) + 1);
           randomsHtml += `
             <div class="blind-row">
               <span class="blind-label">Blind ${b}</span>
-              <span class="blind-numbers">${nums.join(' - ')}</span>
-            </div>`
+              <span class="blind-numbers">${nums.join(" - ")}</span>
+            </div>`;
         }
-        randomsHtml += `</div>`
+        randomsHtml += `</div>`;
       }
 
       pagesHtml += `
@@ -439,15 +479,15 @@ export function usePrinter(store, userStore, stageRef, scale) {
           ${watermarkHtml}
           <div class="header">
              <div class="title-block"><h1>Master Blind Randoms</h1></div>
-             <div class="header-right"><div class="meta"><strong>Judge:</strong> ${userStore.judgeName || '___'}</div></div>
+             <div class="header-right"><div class="meta"><strong>Judge:</strong> ${userStore.judgeName || "___"}</div></div>
           </div>
           <div class="randoms-body">${randomsHtml}</div>
         </div>
-      `
+      `;
     }
 
     // 10. Open Print Window
-    const win = window.open('', '_blank')
+    const win = window.open("", "_blank");
     win.document.write(`
       <!DOCTYPE html>
       <html>
@@ -463,10 +503,13 @@ export function usePrinter(store, userStore, stageRef, scale) {
         </head>
         <body>${pagesHtml}</body>
       </html>
-    `)
-    win.document.close()
-    setTimeout(() => { win.focus(); win.print(); }, 500)
+    `);
+    win.document.close();
+    setTimeout(() => {
+      win.focus();
+      win.print();
+    }, 500);
   }
 
-  return { handlePrint }
+  return { handlePrint };
 }

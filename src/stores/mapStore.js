@@ -432,6 +432,8 @@ function openNoteEditor(id) {
     await persistence.saveToCloud(isAutoSave, thumbnail)
   }
 
+  const multiLayerView = ref(false)
+const layerOpacity = ref(0.4)
 
   // ==========================================
   // 4. EXPORTS
@@ -472,6 +474,8 @@ function openNoteEditor(id) {
     // Actions
     setTool, reset, showNotification, resizeRing, toggleAnchor, setComparisonBales,
     copySelection, pasteSelection, cutSelection, realignGrid,
+
+    multiLayerView, layerOpacity,
     
     currentGuidelines: computed(() => sport.value === 'agility' ? (AGILITY_RULES[classLevel.value] || AGILITY_RULES['Other']) : (BH_RULES[classLevel.value] || BH_RULES['Other'])),
 

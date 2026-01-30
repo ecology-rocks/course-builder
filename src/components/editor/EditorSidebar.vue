@@ -96,13 +96,9 @@ function handleSave() {
         <button v-if="!userStore.isPro" @click="showUpgradeModal = true" class="btn-upgrade-icon"
           title="Upgrade to Pro">👑</button>
         <div class="map-title-wrapper">
-          <input 
-            v-model="store.mapName" 
-            class="map-title-input" 
-            :placeholder="isPro ? 'Untitled Map' : 'Untitled Map (Read Only)'"
-            :disabled="!isPro"
-            :title="!isPro ? 'Upgrade to rename map' : ''"
-          />
+          <input v-model="store.mapName" class="map-title-input"
+            :placeholder="isPro ? 'Untitled Map' : 'Untitled Map (Read Only)'" :disabled="!isPro"
+            :title="!isPro ? 'Upgrade to rename map' : ''" />
         </div>
         <button @click="handleSave" class="btn-icon" title="Quick Save">💾<span
             v-if="!userStore.isPro">🔒</span></button>
@@ -123,6 +119,20 @@ function handleSave() {
       </div>
     </div>
 
+<div class="sidebar-section">
+  <label class="checkbox-row">
+    <input type="checkbox" v-model="store.multiLayerView" />
+    <span>Overlay All Layers</span>
+  </label>
+
+  <div v-if="store.multiLayerView" class="opacity-control">
+    <div class="opacity-header">
+      <span>Layer Opacity</span>
+      <span>{{ Math.round(store.layerOpacity * 100) }}%</span>
+    </div>
+    <input type="range" v-model.number="store.layerOpacity" min="0.1" max="1" step="0.1" />
+  </div>
+</div>
     <div class="zone-middle">
       <component :is="toolboxComponent" />
     </div>
@@ -381,5 +391,52 @@ function handleSave() {
   100% {
     box-shadow: 0 0 0 0 rgba(251, 192, 45, 0);
   }
+}
+
+.sidebar-section {
+  padding: 15px;
+  border-bottom: 1px solid #eee;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #444;
+  user-select: none;
+}
+
+.checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.opacity-control {
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 6px;
+  margin-top: 5px;
+}
+
+.opacity-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.opacity-control input[type="range"] {
+  width: 100%;
+  cursor: pointer;
+  accent-color: #2196f3;
+  /* Matches your active blue theme */
 }
 </style>

@@ -2,7 +2,15 @@
 import { ref, computed } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
-const props = defineProps(['bale', 'scale'])
+const props = defineProps({
+  bale: Object,
+  scale: Number,
+  // [FIX] Accept the opacity prop
+  opacity: {
+    type: Number,
+    default: 1
+  }
+})
 const emit = defineEmits(['dragstart', 'dragmove', 'dragend', 'contextmenu', 'click'])
 const store = useMapStore()
 const groupRef = ref(null)
@@ -37,9 +45,6 @@ const fillColor = computed(() => {
   }
 })
 
-const opacity = computed(() => {
-  return props.bale.layer === store.currentLayer ? 1 : 0.5
-})
 
 const strokeColor = computed(() => {
   if (store.selection.includes(props.bale.id)) return '#00a1ff'
@@ -135,7 +140,7 @@ function baleDragBoundFunc(pos) {
       x: (bale.x * scale) + (halfW * scale),
       y: (bale.y * scale) + (halfH * scale),
       rotation: bale.rotation,
-      opacity: opacity,
+      opacity: props.opacity,
       offsetX: halfW * scale,
       offsetY: halfH * scale
     }"

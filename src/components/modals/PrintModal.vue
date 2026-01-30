@@ -24,6 +24,7 @@ const layout = ref('full')
 const includeRandoms = ref(false)
 const numTrials = ref(2)
 const numBlinds = ref(5)
+const overlayAll = ref(false)
 
 function handlePrint() {
   const layersToPrint = Object.entries(selectedLayers.value)
@@ -34,6 +35,7 @@ function handlePrint() {
     layers: layersToPrint,
     withHides: includeHides.value,
     layout: layout.value,
+    overlayAll: overlayAll.value,
     orientation: orientation.value, // [NEW] Pass orientation choice
     randoms: includeRandoms.value ? { trials: numTrials.value, blinds: numBlinds.value } : null
   })
@@ -65,6 +67,10 @@ function handlePrint() {
             Layer 3 <span v-if="!hasLayer3" class="pill">Empty</span>
           </label>
         </div>
+        <label class="checkbox-row">
+  <input type="checkbox" v-model="overlayAll" />
+  <span>Overlay All Layers (Transparent)</span>
+</label>
 
         <div class="section">
           <h4>Page Orientation</h4>
@@ -152,6 +158,36 @@ function handlePrint() {
   width: 90%;
   max-width: 500px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* src/components/modals/PrintModal.vue */
+
+.print-modal .checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #f8f9fa;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  margin-top: 15px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.print-modal .checkbox-row:hover {
+  background: #f1f3f5;
+}
+
+.print-modal .checkbox-row span {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.print-modal .checkbox-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
 }
 
 .modal-header {

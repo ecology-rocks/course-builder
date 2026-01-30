@@ -3,9 +3,9 @@ This is my one-true-copy of the project roadmap.
 
 ## Requested Edits
  - Bales are still having weird spacing issues. Maybe thicker lines to hide them? "Below is a screenshot of the bales flush. I hit the button you said and it seemed to align the two sides but not the top which I have circled and also the other circled one if I try to move the bale it overlaps."
- - Give option to print landscape OR portrait (this went away with the last print modal update)
+ - (DONE) Give option to print landscape OR portrait (this went away with the last print modal update)
  - Give option to print transparent multiple layers, "Is there a way to print with all the levels Opaque for the judges maps with the hides?"
- - Adjustable step size instead of the standard hardcoded version
+ - (DONE) Adjustable step size instead of the standard hardcoded version
  - More bale placement issues, "some instances where I can't make the bale flush against a wall without it seem like it's overlapping"
  - Show grayed out upper levels when working on lower levels in map editor (show/hide checkbox maybe?)
 
