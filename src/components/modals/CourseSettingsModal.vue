@@ -25,24 +25,25 @@
         </div>
 
         <div class="settings-section">
-          <h4>Bale Dimensions (inches)</h4>
+          <h4>Bale Dimensions (inches)<span class="info-icon" title="To ensure perfect alignment on the 2nd-inch grid and prevent gaps, dimensions must be even numbers.">?</span></h4>
+          
           <div class="form-group-row">
             <div class="form-group">
               <label>Length</label>
-              <input type="number" v-model.number="baleLength" step="1" />
+              <input type="number" v-model.lazy="baleLength" step="2" />
             </div>
             <div class="form-group">
               <label>Width (Flat)</label>
-              <input type="number" v-model.number="baleWidth" step="1" />
+              <input type="number" v-model.lazy="baleWidth" step="2" />
             </div>
             <div class="form-group">
               <label>Height (Tall)</label>
-              <input type="number" v-model.number="baleHeight" step="1" />
+              <input type="number" v-model.lazy="baleHeight"  step="2" />
             </div>
           </div>
           <p class="hint">
             Standard 2-String: ~36" x 18" x 14" <br/> 
-            Standard 3-String: ~44" x 22" x 15"
+            Standard 3-String: ~44" x 22" x 16"
           </p>
         </div>
 
@@ -227,17 +228,27 @@ const localHeight = ref(store.ringDimensions.height)
 // We use a small rounding check to keep the UI clean (e.g. 1.5ft -> 18in, not 17.999in)
 const baleLength = computed({
   get: () => parseFloat((store.baleConfig.length * 12).toFixed(2)),
-  set: (val) => store.baleConfig.length = val / 12
+  set: (val) => {
+    // Ensure input is an even number before converting to feet for the store
+    const evenVal = Math.round(val / 2) * 2;
+    store.baleConfig.length = evenVal / 12;
+  }
 })
 
 const baleWidth = computed({
   get: () => parseFloat((store.baleConfig.width * 12).toFixed(2)),
-  set: (val) => store.baleConfig.width = val / 12
+  set: (val) => {
+    const evenVal = Math.round(val / 2) * 2;
+    store.baleConfig.width = evenVal / 12;
+  }
 })
 
 const baleHeight = computed({
   get: () => parseFloat((store.baleConfig.height * 12).toFixed(2)),
-  set: (val) => store.baleConfig.height = val / 12
+  set: (val) => {
+    const evenVal = Math.round(val / 2) * 2;
+    store.baleConfig.height = evenVal / 12;
+  }
 })
 
 const filteredMaps = computed(() => {
@@ -583,4 +594,26 @@ function formatCorner(c) {
 .picker-list li .map-name { font-weight: bold; color: #333; }
 .picker-list li .map-date { color: #888; font-size: 0.8rem; }
 .empty-msg { padding: 20px; text-align: center; color: #999; font-style: italic; }
+
+/* src/components/modals/CourseSettingsModal.vue */
+
+.info-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background: #eee;
+  color: #666;
+  border-radius: 50%;
+  text-align: center;
+  font-size: 11px;
+  line-height: 16px;
+  cursor: help;
+  margin-left: 4px;
+  font-weight: bold;
+}
+
+.info-icon:hover {
+  background: #2196f3;
+  color: white;
+}
 </style>
