@@ -55,7 +55,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
       : "";
 
       
-    store.multiLayerView = originalMultiView;
+    
 
     // Header Generator (Supports Full & Compact)
     const getHeader = (subtitleSuffix = "", isCompact = false) => {
@@ -404,6 +404,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
     store.currentLayer = originalLayer;
     scale.value = originalScale;
     store.gridStep = originalStep;
+    store.multiLayerView = originalMultiView;
 
     // 8. Generate HTML based on Layout
     let pagesHtml = "";
