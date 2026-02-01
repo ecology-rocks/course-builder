@@ -74,8 +74,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
       // Fallback for other sports
       if (!store.trialNumber && !store.trialDay) {
         let sportLabel = "Barn Hunt";
-        if (store.sport === "agility") sportLabel = "Agility";
-        if (store.sport === "scentwork") sportLabel = "Scent Work";
         subtitle = `${store.classLevel} ${sportLabel} ${subtitleSuffix}`;
       }
 
@@ -344,34 +342,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .hide-rat, .hide-litter, .hide-empty, .hide-rat-under { display: none !important; }
     `
       : "";
-
-    // 6. Handling Agility Mode (Simple Pass-through)
-   if (store.sport === "agility") {
-      if (config.overlayAll) store.multiLayerView = true; //
-      const dataUrl = stageRef.value.getStage().toDataURL({ pixelRatio: 3 });
-      
-      // Restore state
-      scale.value = originalScale;
-      store.gridStep = originalStep;
-      store.multiLayerView = originalMultiView;
-
-      const win = window.open("", "_blank");
-      win.document.write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>
-            @media print { @page { size: ${orientation}; margin: 0; } }
-            ${printStyles}
-          </style></head><body>
-        ${watermarkHtml}
-        <div class="print-page">
-          ${getHeader()}
-          <div class="page-body">
-            <div class="map-container"><img src="${dataUrl}" class="map-img"/></div>
-          </div>
-        </div>
-      </body></html>`);
-      win.document.close();
-      setTimeout(() => { win.focus(); win.print(); }, 500);
-      return;
-    }
 
     // 7. Capture Selected Layers
     const originalLayer = store.currentLayer;

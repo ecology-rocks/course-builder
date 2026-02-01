@@ -13,8 +13,6 @@ import { libraryService } from '../../services/libraryService'
  */
 export function useMapPersistence(state, userStore, notifications) {
 
-  // --- HELPER: CONSTRUCT DATA OBJECT ---
-  // --- HELPER: CONSTRUCT DATA OBJECT ---
   function getMapData() {
     const coreData = JSON.parse(JSON.stringify(state.mapData.value))
 
@@ -229,11 +227,6 @@ export function useMapPersistence(state, userStore, notifications) {
       const def = { length: 3, width: 1.5, height: 1 }
       state.baleConfig.value = source.baleConfig || def
     }
-
-    //state.previousBales.value = JSON.parse(JSON.stringify(source.bales || []))
-    //state.comparisonMapName.value = "Original File"
-
-    if (state.validateAllBales) state.validateAllBales()
   }
 
   // --- LOAD FROM CLOUD DATA ---
@@ -269,7 +262,6 @@ export function useMapPersistence(state, userStore, notifications) {
       })
 
       state.selection.value = newItems
-      if (state.validateAllBales) state.validateAllBales()
       notifications.show("Library item loaded successfully!", 'success')
 
     } catch (e) {

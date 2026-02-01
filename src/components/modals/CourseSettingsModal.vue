@@ -82,7 +82,7 @@
         <hr />    
         
         <h3>Statistics</h3>
-        <div class="settings-section" v-if="store.sport === 'barnhunt'">
+        <div class="settings-section">
           <h4>Map View Options</h4>
           <div style="display: flex; gap: 10px; align-items: center;">
             <input type="checkbox" id="chkStats" v-model="store.showMapStats" style="width: auto;" />
@@ -90,7 +90,7 @@
           </div>
         </div>
 
-        <div class="settings-section" v-if="store.sport === 'barnhunt'">
+        <div class="settings-section">
           <h4>Comparison Baseline</h4>
           <div class="form-group">
             <label>Compare Against A Saved Map:</label>
@@ -111,7 +111,7 @@
           </div>
         </div>
 
-        <hr v-if="store.sport === 'barnhunt'" />
+        <hr />
 
         <div class="settings-section">
           <h3>Perimeter Settings</h3>
@@ -258,14 +258,12 @@ const filteredMaps = computed(() => {
 })
 
 onMounted(async () => {
-  if (store.sport === 'barnhunt') {
     loadingMaps.value = true
     try {
       userMaps.value = await store.loadUserMaps()
     } finally {
       loadingMaps.value = false
     }
-  }
 })
 
 function openMapPicker() {

@@ -138,7 +138,7 @@ async function updateClubName(newName) {
         // 2. Update Local State
         tier.value = 'pro' 
         sponsoringClubName.value = sponsorDoc.judgeName || "A Club"
-        allowedSports.value = ['barnhunt', 'agility', 'scentwork']
+        allowedSports.value = ['barnhunt']
 
         // 3. Persist 'Pro' status to Database (if requested)
         // We add 'proSource: sponsorship' so we know to check again later.
@@ -301,12 +301,6 @@ async function updateClubName(newName) {
     }
   }
 
-  // 5. PERMISSIONS
-function canAccessSport(sport) {
-    if (isPro.value) return true // Founder/Club gets everything
-    return allowedSports.value.includes(sport)
-  }
-
 function can(action) {
     // Basic actions allowed for everyone
     if (action === 'create_map') return true
@@ -348,7 +342,6 @@ function can(action) {
     logout, 
     resetPassword,
     can,
-    canAccessSport,
     addSponsoredJudge,
     removeSponsoredJudge,
     clubName,

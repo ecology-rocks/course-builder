@@ -1,14 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useUserStore } from './userStore'
-import { BH_RULES, AGILITY_RULES } from '../utils/validation'
-
 // IMPORT MODULES
 import { useMapPersistence } from './mapActions/persistence'
 import { useSelectionLogic } from './mapActions/selection'
 import { useBarnHuntLogic } from './mapActions/barnHuntLogic'
-import { useAgilityLogic } from './mapActions/agilityLogic'
-import { useScentWorkLogic } from './mapActions/scentWorkLogic'
 import { useHistory } from './mapActions/history'
 import { useMeasurements } from './mapActions/useMeasurements'
 import { useNotes } from './mapActions/useNotes'
@@ -25,8 +21,6 @@ const DEFAULT_MAP_DATA = {
   boardEdges: [], 
   hides: [],
   dcMats: [],
-  agilityObstacles: [],
-  scentWorkObjects: [],
   steps: [],
   zones: [],
   tunnelBoards: [],
@@ -47,12 +41,6 @@ const RESIZE_STRATEGIES = {
   boardEdges: (b, w, h) => {
     if (b.x1 > w) b.x1 = w; if (b.x2 > w) b.x2 = w;
     if (b.y1 > h) b.y1 = h; if (b.y2 > h) b.y2 = h;
-  },
-  agilityObstacles: (o, w, h) => {
-    if (o.x >= w) o.x = w - 5; if (o.y >= h) o.y = h - 5
-  },
-  scentWorkObjects: (o, w, h) => {
-    if (o.x >= w) o.x = w - 3; if (o.y >= h) o.y = h - 3
   },
   default: (o, w, h) => {
     if (o.x && o.x >= w) o.x = w - 1;
@@ -185,7 +173,6 @@ function openNoteEditor(id) {
       }
     })
     
-    if (stateRefs.validateAllBales) stateRefs.validateAllBales()
   }
 
   function realignGrid() {
@@ -310,8 +297,6 @@ function openNoteEditor(id) {
     boardEdges: createMapRef('boardEdges'),
     hides: createMapRef('hides'),
     dcMats: createMapRef('dcMats'),
-    agilityObstacles: createMapRef('agilityObstacles'),
-    scentWorkObjects: createMapRef('scentWorkObjects'),
     steps: createMapRef('steps'),
     zones: createMapRef('zones'),
     markers: createMapRef('markers'),
@@ -335,25 +320,16 @@ function openNoteEditor(id) {
     reset
   }
   
-  const historyModule = useHistory(stateRefs, () => {
-    if (stateRefs.validateAllBales) stateRefs.validateAllBales()
-  })
+  const historyModule = useHistory(stateRefs, () => {  })
   
   stateRefs.snapshot = historyModule.snapshot
 
   const bhLogic = useBarnHuntLogic(stateRefs, historyModule.snapshot, { show: showNotification })
-  const agLogic = useAgilityLogic(stateRefs, historyModule.snapshot)
-  const swLogic = useScentWorkLogic(stateRefs, historyModule.snapshot)
   const measureLogic = useMeasurements(stateRefs, historyModule.snapshot)
   const notesLogic = useNotes(stateRefs, historyModule.snapshot)
   const tunnelBoardsLogic = useTunnelBoards(stateRefs, historyModule.snapshot)
   const stepsLogic = useSteps(stateRefs, historyModule.snapshot)
   const boardEdgesLogic = useBoardEdges(stateRefs, historyModule.snapshot)
-  // =========================================================
-  // DISABLED VALIDATION (User Request)
-  // We point validation to an empty function so it never runs.
-  // =========================================================
-  stateRefs.validateAllBales = () => {} 
 
   const persistence = useMapPersistence(stateRefs, userStore, { show: showNotification })
   
@@ -449,8 +425,6 @@ const layerOpacity = ref(0.4)
     notes: stateRefs.notes,
     steps: stateRefs.steps,
     zones: stateRefs.zones,
-    agilityObstacles: stateRefs.agilityObstacles,
-    scentWorkObjects: stateRefs.scentWorkObjects,
     markers: stateRefs.markers,
     masterBlinds: stateRefs.masterBlinds,
     tunnelBoards: stateRefs.tunnelBoards,
@@ -474,13 +448,9 @@ const layerOpacity = ref(0.4)
     copySelection, pasteSelection, cutSelection, realignGrid,
 
     multiLayerView, layerOpacity,
-    
-    currentGuidelines: computed(() => sport.value === 'agility' ? (AGILITY_RULES[classLevel.value] || AGILITY_RULES['Other']) : (BH_RULES[classLevel.value] || BH_RULES['Other'])),
 
     ...historyModule,
     ...bhLogic,
-    ...agLogic,
-    ...swLogic,
     ...stepsLogic,
     ...boardEdgesLogic,
     ...persistence,
@@ -489,8 +459,5 @@ const layerOpacity = ref(0.4)
     ...measureLogic,
     ...notesLogic,
     ...tunnelBoardsLogic,
-    
-    // OVERRIDE: Explicitly disable validation here too
-    validateAllBales: () => {} 
   }
 })

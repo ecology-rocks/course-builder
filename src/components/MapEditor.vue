@@ -18,9 +18,8 @@ import { useContextMenu } from '@/composables/editor/useContextMenu'
 // Sub-Layers & Components
 import EditorSidebar from './editor/EditorSidebar.vue'
 import SelectionBar from './editor/SelectionBar.vue'
-import AgilityLayer from './layers/AgilityLayer.vue'
+
 import BarnHuntLayer from './layers/BarnHuntLayer.vue'
-import ScentWorkLayer from './layers/ScentWorkLayer.vue'
 import MapLegend from './layers/MapLegend.vue'
 import EditNoteModal from './modals/EditNoteModal.vue'
 import HelpModal from './modals/HelpModal.vue'
@@ -116,26 +115,18 @@ async function handlePrint(options) {
         <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
 
           <template v-for="n in store.ringDimensions.width + 1" :key="'v'+n">
-            <v-line v-if="store.sport === 'agility' && (n - 1) % 10 === 0"
-              :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#ccc', strokeWidth: 1 }" />
-            <v-line v-if="store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0"
+            <v-line v-if="(n - 1) % store.gridStep === 0"
               :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#999', strokeWidth: 1 }" />
-            <v-line v-if="store.sport === 'scentwork' && (n - 1) % 5 === 0"
-              :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#ccc', strokeWidth: 1 }" />
           </template>
 
           <template v-for="n in store.ringDimensions.height + 1" :key="'h'+n">
-            <v-line v-if="store.sport === 'agility' && (n - 1) % 10 === 0"
-              :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#ccc', strokeWidth: 1 }" />
-            <v-line v-if="store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0"
+            <v-line v-if="(n - 1) % store.gridStep === 0"
               :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#999', strokeWidth: 1 }" />
-            <v-line v-if="store.sport === 'scentwork' && (n - 1) % 5 === 0"
-              :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#ccc', strokeWidth: 1 }" />
           </template>
 
           <template v-for="n in store.ringDimensions.width + 1" :key="'lx'+n">
             <v-text
-              v-if="(store.sport === 'agility' && (n - 1) % 10 === 0) || (store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0) || (store.sport === 'scentwork' && (n - 1) % 5 === 0)"
+              v-if="(n - 1) % store.gridStep === 0"
               :config="{
                 x: (n - 1) * scale, y: getXAxisY(),
                 text: getGridLabelX(n - 1),
@@ -145,7 +136,7 @@ async function handlePrint(options) {
 
           <template v-for="n in store.ringDimensions.height + 1" :key="'ly'+n">
             <v-text
-              v-if="(store.sport === 'agility' && (n - 1) % 10 === 0) || (store.sport === 'barnhunt' && (n - 1) % store.gridStep === 0) || (store.sport === 'scentwork' && (n - 1) % 5 === 0)"
+              v-if="(n - 1) % store.gridStep === 0"
               :config="{
                 x: getYAxisX(), y: (n - 1) * scale - 6,
                 text: getGridLabelY(n - 1),
@@ -153,7 +144,7 @@ async function handlePrint(options) {
               }" />
           </template>
 
-          <v-group v-if="store.sport === 'barnhunt'">
+          <v-group>
             <v-line
               :config="{ points: [0, 0, store.ringDimensions.width * scale, 0], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.top), y: -getWallStroke(store.wallTypes.top) / 2, listening: false }" />
             <v-line
@@ -164,17 +155,13 @@ async function handlePrint(options) {
               :config="{ points: [store.ringDimensions.width * scale, 0, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right), x: -getWallStroke(store.wallTypes.right) / 2, listening: false }" />
           </v-group>
 
-          <AgilityLayer v-if="store.sport === 'agility'" :scale="scale"
-            :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale / 2)) * (scale / 2), y: Math.round(pos.y / (scale / 2)) * (scale / 2) })" />
-          <BarnHuntLayer v-if="store.sport === 'barnhunt'" :scale="scale" :showHides="showHides"
+          <BarnHuntLayer :scale="scale" :showHides="showHides"
             :GRID_OFFSET="GRID_OFFSET" />
-          <ScentWorkLayer v-if="store.sport === 'scentwork'" :scale="scale" :showHides="showHides"
-            :dragBoundFunc="(pos) => ({ x: Math.round(pos.x / (scale / 2)) * (scale / 2), y: Math.round(pos.y / (scale / 2)) * (scale / 2) })" />
 
           <v-rect v-if="selectionRect"
             :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
 
-          <MapLegend v-if="store.sport === 'barnhunt' && store.showMapStats && !isPrinting" :scale="scale"
+          <MapLegend v-if="store.showMapStats && !isPrinting" :scale="scale"
             :GRID_OFFSET="GRID_OFFSET" />
 
         </v-layer>

@@ -23,8 +23,6 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
   const stepsLogic = useSteps(state, snapshot)
   const zonesLogic = useZones(state, snapshot)
   const gatesLogic = useGates(state, snapshot)
-  
-  // Note: useBales requires notifications for error handling
   const balesLogic = useBales(state, snapshot, notifications)
 
   // --- STATISTICS ---

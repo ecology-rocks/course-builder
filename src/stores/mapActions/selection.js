@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-export function useSelectionLogic(state, snapshot, validateFn) {
+export function useSelectionLogic(state, snapshot) {
   
   // Helper: Find an object by ID across ALL data types
   function findObjectById(id) {
@@ -109,7 +109,6 @@ function removeObject(id) {
       state.selection.value = state.selection.value.filter(sid => sid !== id)
     }
 
-    if (found && validateFn) validateFn()
   }
 
 
@@ -141,7 +140,6 @@ function removeObject(id) {
     })
 
     clearSelection()
-    if (validateFn) validateFn()
   }
 
 function rotateSelection(angle = 90) {
@@ -238,7 +236,7 @@ function rotateSelection(angle = 90) {
       }
     })
 
-    if (validateFn) validateFn()
+
   }
 
   // Generic Move Function

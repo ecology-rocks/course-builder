@@ -6,8 +6,6 @@ import { useRouter } from 'vue-router'
 
 // Toolboxes
 import BarnHuntToolbox from './toolboxes/BarnHuntToolbox.vue'
-//import AgilityToolbox from './toolboxes/AgilityToolbox.vue'
-//import ScentWorkToolbox from './toolboxes/ScentWorkToolbox.vue'
 
 // Modals
 import ShareMapModal from '../modals/ShareMapModal.vue'
@@ -64,12 +62,6 @@ const handleFileUpload = (event) => {
 
 const toolboxComponent = computed(() => {
   return BarnHuntToolbox
-  /* switch (store.sport) {
-  case 'agility': return AgilityToolbox
-  case 'scentwork': return ScentWorkToolbox
-  default: return BarnHuntToolbox
-}
-*/
 })
 
 function goHome() {

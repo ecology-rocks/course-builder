@@ -23,7 +23,7 @@ Stores user profiles, subscription tiers, and judge/club relationships.
 * `judgeName` (string): Display name for the user.
 * `clubName` (string): Optional, if the user is a club.
 * `tier` (string): `'free'`, `'pro'`, `'club'`, or `'solo'`.
-* `allowedSports` (array): e.g., `['barnhunt', 'agility']`.
+* `allowedSports` (array): e.g., `['barnhunt']`.
 * `clubLogoUrl` (string): URL to the image in Firebase Storage.
 * `sponsoredEmails` (array): If tier is 'club', contains emails of judges they sponsor.
 * `createdAt` (timestamp).
@@ -40,12 +40,12 @@ Stores the actual course designs.
 * `name` (string): Map title.
 * `folderId` (string | null): Reference to a folder document.
 * `isShared` (boolean): Visibility toggle.
-* `sport` (string): `'barnhunt'`, `'agility'`, `'scentwork'`.
+* `sport` (string): `'barnhunt'`.
 * `level` (string): Competition level (e.g., 'Novice').
 * `thumbnail` (string | null): Base64 or URL string of the map preview.
 * `data` (map): **The Payload**. Contains:
 * `dimensions` (object): `{ width, height }`.
-* `bales`, `agilityObstacles`, `scentWorkObjects`, `dcMats`, `boardEdges`, `hides` (arrays): Coordinate data for objects.
+* `bales`, `dcMats`, `boardEdges`, `hides` (arrays): Coordinate data for objects.
 
 
 * `createdAt`, `updatedAt` (timestamps).
@@ -88,7 +88,7 @@ This is the central controller. It defines the reactive state but delegates logi
 * **State:** Holds `bales`, `ringDimensions`, `activeTool`, `currentMapId`, `history` stacks.
 * **`reset()`**: Wipes all arrays and resets the map to a default "Novice Barn Hunt" state.
 * **`resizeRing(width, height)`**: Updates dimensions and clamps all objects (bales, obstacles) so they don't fall off the new grid size.
-* **Initialization:** It bundles all state refs into a `stateRefs` object and passes them to logic modules (`useBarnHuntLogic`, `useAgilityLogic`, etc.).
+* **Initialization:** It bundles all state refs into a `stateRefs` object and passes them to logic modules (`useBarnHuntLogic`, etc.).
 
 #### `src/stores/mapActions/persistence.js`
 
@@ -121,7 +121,6 @@ Handles Identity and Access Management.
 * **`loadUserProfile(uid)`**: Fetches the user doc. If the user is 'free', it triggers `checkSponsorship`.
 * **`checkSponsorship(email)`**: Queries if any user with `tier: 'club'` has this email in their `sponsoredEmails` array. If found, temporarily elevates local permissions to 'pro'.
 * **`uploadLogo(file)`**: Uploads an image to Firebase Storage at `logos/{uid}` and updates the Firestore profile with the URL.
-* **`can(action)` / `canAccessSport(sport)**`: Gatekeepers used by the UI to show/hide features based on the `tier` or `allowedSports`.
 
 #### `src/router/index.js`
 

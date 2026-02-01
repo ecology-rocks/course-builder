@@ -69,14 +69,6 @@ function formatDate(timestamp) {
 }
 
 function createNewMap(sportType) {
-  // 1. Permission Check
-  if (!userStore.canAccessSport(sportType)) {
-    if (confirm("This sport requires a Pro subscription. Go to Settings?")) {
-      router.push('/settings')
-    }
-    return
-  }
-
   // 2. Reset & Configure
   mapStore.reset()
   mapStore.sport = 'barnhunt' 
@@ -247,11 +239,9 @@ watch(() => userStore.user, async (newUser) => {
             <button 
               @click="createNewMap('barnhunt')" 
               class="sport-card" 
-              :class="{ disabled: !userStore.canAccessSport('barnhunt') }"
             >
               <span class="emoji">📦</span>
               <span class="label">New Barn Hunt Map</span>
-              <span v-if="!userStore.canAccessSport('barnhunt')" class="lock-icon">🔒</span>
             </button>
 
             </div>
@@ -276,7 +266,7 @@ watch(() => userStore.user, async (newUser) => {
             >
               <div class="map-preview" @click="openMap(map)">
                 <div class="preview-placeholder">
-                  {{ map.sport === 'agility' ? '🐕' : (map.sport === 'scentwork' ? '👃' : '📦') }}
+                  📦
                 </div>
               </div>
               <div class="map-info">

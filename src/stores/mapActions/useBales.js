@@ -28,25 +28,6 @@ export function useBales(state, snapshot, notifications) {
     }
   }
 
-  // Validation Check 1: Disabled
-  function hasSupport(newBale) {
-    return true
-  }
-
-  // Validation Check 2: Disabled
-  function isValidPlacement(newBale) {
-    return true
-  }
-
-  // Validation Check 3: Force "Supported" (Green)
-  function validateAllBales() {
-    // Instead of calculating bounds/support, we simply 
-    // force every bale to be valid so they never turn red.
-    state.bales.value.forEach(bale => {
-      bale.supported = true
-    })
-  }
-
   // --- ACTIONS (No Snapshots!) ---
 
   function addBale(x, y) {
@@ -61,15 +42,12 @@ export function useBales(state, snapshot, notifications) {
       supported: true
     }
 
-    // Removed the "isValidPlacement" check here
     state.bales.value.push(newBale)
-    validateAllBales()
   }
 
   function removeBale(id) {
     state.bales.value = state.bales.value.filter(b => b.id !== id)
     if (state.selectedBaleId.value === id) state.selectedBaleId.value = null
-    validateAllBales()
   }
 
   function updateBalePosition(id, newX, newY) {
@@ -78,14 +56,12 @@ export function useBales(state, snapshot, notifications) {
       bale.x = snapToGrid(newX)
       bale.y = snapToGrid(newY)
     }
-    validateAllBales()
   }
 
 function rotateBale(id, amount = 15) {
     const bale = state.bales.value.find(b => b.id === id)
     if (bale) {
       bale.rotation = (bale.rotation + amount) % 360
-      validateAllBales()
     }
   }
 
@@ -95,7 +71,6 @@ function rotateBale(id, amount = 15) {
       if (bale.orientation === 'flat') { bale.orientation = 'tall'; bale.lean = null }
       else if (bale.orientation === 'tall') { bale.orientation = 'pillar'; bale.lean = null }
       else { bale.orientation = 'flat' }
-      validateAllBales()
     }
   }
 
@@ -114,9 +89,6 @@ function rotateBale(id, amount = 15) {
 
   return {
     getBaleRect,
-    hasSupport,
-    isValidPlacement,
-    validateAllBales,
     addBale,
     removeBale,
     updateBalePosition,

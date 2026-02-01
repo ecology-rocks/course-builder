@@ -79,24 +79,6 @@ function handleSaveMap() {
       }
     })
 
-    if (store.agilityObstacles) {
-      store.agilityObstacles.forEach(a => {
-        if (store.selection.includes(a.id)) {
-           // Approximate size for thumbnail cropping (5x5)
-           updateBounds(a.x, a.y, 5, 5)
-        }
-      })
-    }
-
-    // 5. Scent Work Objects
-    if (store.scentWorkObjects) {
-      store.scentWorkObjects.forEach(s => {
-        if (store.selection.includes(s.id)) {
-           updateBounds(s.x, s.y, 2, 2)
-        }
-      })
-    }
-
     // 6. Steps
     if (store.steps) {
       store.steps.forEach(s => {
