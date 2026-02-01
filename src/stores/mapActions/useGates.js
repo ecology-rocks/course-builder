@@ -1,4 +1,4 @@
-export function useGates(state) {
+export function useGates(state, snapshot) {
   function setGate(gateData) {
     // [FIX] Ensure object has an ID so selection/move logic works
     state.gate.value = { 

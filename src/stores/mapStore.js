@@ -6,11 +6,7 @@ import { useMapPersistence } from './mapActions/persistence'
 import { useSelectionLogic } from './mapActions/selection'
 import { useBarnHuntLogic } from './mapActions/barnHuntLogic'
 import { useHistory } from './mapActions/history'
-import { useMeasurements } from './mapActions/useMeasurements'
-import { useNotes } from './mapActions/useNotes'
-import { useTunnelBoards } from './mapActions/useTunnelBoards'
-import { useSteps } from './mapActions/useSteps'
-import { useBoardEdges } from './mapActions/useBoardEdges'
+
 // ==========================================
 // 0. CONSTANTS & STRATEGIES
 // ==========================================
@@ -24,7 +20,7 @@ const DEFAULT_MAP_DATA = {
   steps: [],
   zones: [],
   tunnelBoards: [],
-  markers: [],
+
   notes: [],
   masterBlinds: [],
   startBox: null, 
@@ -295,27 +291,31 @@ function openNoteEditor(id) {
     mapData,
     bales: createMapRef('bales'),
     boardEdges: createMapRef('boardEdges'),
-    hides: createMapRef('hides'),
     dcMats: createMapRef('dcMats'),
-    steps: createMapRef('steps'),
-    zones: createMapRef('zones'),
-    markers: createMapRef('markers'),
-    masterBlinds: createMapRef('masterBlinds'),
-    startBox: createMapRef('startBox'),
-    notes: createMapRef('notes'),
-    tunnelBoards: createMapRef('tunnelBoards'),
     gate: createMapRef('gate'),
+    hides: createMapRef('hides'),
     measurements: createMapRef('measurements'), 
-    gridStep,
-    activeMeasurement, 
-
-    gridSize, activeTool, previousClassCount,
-    ringDimensions, mapName, currentMapId, currentFolderId, 
-    isShared, classLevel, sport, savedMaps, folders,
-    isDrawingBoard, currentLayer, selectedBaleId,
-    wallTypes, gridStartCorner, clipboard, previousBales, markers: createMapRef('markers'),
-    comparisonMapName, showMapStats, selection, nextNumber,
-    trialLocation, trialDay, trialNumber, baleConfig, dcMatConfig,
+    notes: createMapRef('notes'),
+    startBox: createMapRef('startBox'),
+    steps: createMapRef('steps'),
+    tunnelBoards: createMapRef('tunnelBoards'),
+    zones: createMapRef('zones'),
+    masterBlinds: createMapRef('masterBlinds'),
+    
+    activeMeasurement, activeTool,
+    baleConfig, 
+    classLevel, clipboard, comparisonMapName, currentFolderId, currentLayer, currentMapId,
+    dcMatConfig,
+    folders,
+    gridSize, gridStartCorner, gridStep,
+    isDrawingBoard, isShared,
+    mapName,
+    nextNumber,
+    previousBales, previousClassCount,
+    ringDimensions,
+    savedMaps, selectedBaleId, selection, showMapStats, sport,
+    trialDay, trialLocation, trialNumber,
+    wallTypes,
 
     reset
   }
@@ -325,15 +325,7 @@ function openNoteEditor(id) {
   stateRefs.snapshot = historyModule.snapshot
 
   const bhLogic = useBarnHuntLogic(stateRefs, historyModule.snapshot, { show: showNotification })
-  const measureLogic = useMeasurements(stateRefs, historyModule.snapshot)
-  const notesLogic = useNotes(stateRefs, historyModule.snapshot)
-  const tunnelBoardsLogic = useTunnelBoards(stateRefs, historyModule.snapshot)
-  const stepsLogic = useSteps(stateRefs, historyModule.snapshot)
-  const boardEdgesLogic = useBoardEdges(stateRefs, historyModule.snapshot)
-
   const persistence = useMapPersistence(stateRefs, userStore, { show: showNotification })
-  
-  // Passed empty function to selection logic too, just in case
   const selectionLogic = useSelectionLogic(stateRefs, historyModule.snapshot, () => {})
 
 
@@ -418,46 +410,39 @@ const layerOpacity = ref(0.4)
     // Legacy State (Computed Wrappers)
     bales: stateRefs.bales,
     boardEdges: stateRefs.boardEdges,
-    hides: stateRefs.hides,
     dcMats: stateRefs.dcMats,
-    startBox: stateRefs.startBox,
     gate: stateRefs.gate,
-    notes: stateRefs.notes,
-    steps: stateRefs.steps,
-    zones: stateRefs.zones,
-    markers: stateRefs.markers,
-    masterBlinds: stateRefs.masterBlinds,
-    tunnelBoards: stateRefs.tunnelBoards,
-
-    // Settings & Meta
-    ringDimensions, gridSize, currentLayer, selectedBaleId, activeTool,
-    nextNumber, notification, currentMapId, mapName, isShared,
-    classLevel, sport, folders, currentFolderId,
-    selection, isDraggingSelection, clipboard, previousBales, 
-    wallTypes, gridStartCorner, trialLocation, trialDay, 
-    trialNumber, baleConfig, comparisonMapName, dcMatConfig, showMapStats,
-    isDrawingBoard, savedMaps,previousClassCount, gridStep,
-
-    editingNoteId, openNoteEditor, closeNoteEditor,
-
+    hides: stateRefs.hides,
     measurements: stateRefs.measurements,
-    activeMeasurement,
-
-    // Actions
-    setTool, reset, showNotification, resizeRing, toggleAnchor, setComparisonBales,
-    copySelection, pasteSelection, cutSelection, realignGrid,
-
-    multiLayerView, layerOpacity,
+    notes: stateRefs.notes,
+    startBox: stateRefs.startBox,
+    steps: stateRefs.steps,  
+    tunnelBoards: stateRefs.tunnelBoards,
+    zones: stateRefs.zones,
+    masterBlinds: stateRefs.masterBlinds,
+    
+    activeMeasurement, activeTool,
+    baleConfig,
+    classLevel, clipboard, closeNoteEditor, comparisonMapName, copySelection, currentFolderId, currentLayer, currentMapId, cutSelection,
+    dcMatConfig,
+    editingNoteId,
+    folders,
+    gridSize, gridStartCorner, gridStep, 
+    isDraggingSelection, isDrawingBoard, isShared,
+    layerOpacity,
+    mapName, multiLayerView, 
+    nextNumber, notification,
+    openNoteEditor,
+    pasteSelection, previousBales, previousClassCount,
+    realignGrid, reset, resizeRing, ringDimensions,
+    savedMaps, selectedBaleId, selection, setComparisonBales, setTool, showMapStats, showNotification, sport,
+    toggleAnchor, trialDay, trialLocation, trialNumber,
+    wallTypes,
 
     ...historyModule,
     ...bhLogic,
-    ...stepsLogic,
-    ...boardEdgesLogic,
     ...persistence,
     saveToCloud, 
     ...selectionLogic,
-    ...measureLogic,
-    ...notesLogic,
-    ...tunnelBoardsLogic,
   }
 })

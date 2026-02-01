@@ -21,7 +21,8 @@ const props = defineProps({
   opacity: {
     type: Number,
     default: 1
-  }
+  },
+  showHides: true,
 })
 const store = useMapStore()
 
@@ -118,6 +119,21 @@ function handleLeftClick(e, id) {
     store.addMeasurementPoint(snapX, snapY)
     return
   }
+
+if (store.activeTool === 'hide') {
+  const stage = e.target.getStage()
+  const p = stage.getPointerPosition()
+  // Calculate grid coordinates based on scale and offset
+  const rawX = (p.x - props.GRID_OFFSET) / props.scale
+  const rawY = (p.y - props.GRID_OFFSET) / props.scale
+  
+  // Snap to grid if desired (e.g., 0.5 units)
+  const snapX = Math.round(rawX * 2) / 2
+  const snapY = Math.round(rawY * 2) / 2
+
+  store.addHide(snapX, snapY)
+  return
+}
 
   // 4. [UPDATED] Selection Logic: Toggle behavior
   if (store.activeTool === 'select' || store.activeTool === 'bale') {

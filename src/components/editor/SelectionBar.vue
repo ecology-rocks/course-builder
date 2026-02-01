@@ -15,29 +15,27 @@ const isSingleBaleSelected = computed(() => {
   <Transition name="slide-up">
     <div v-if="store.selection.length > 0" class="selection-bar">
       <span class="sel-count">{{ store.selection.length }} Selected</span>
-      
+
       <button v-if="store.selection.length > 1" @click="store.rotateSelection()">🔄 Rotate Group</button>
 
       <div v-if="isSingleBaleSelected" class="context-group">
         <div class="divider"></div>
         <button @click="store.cycleOrientation(isSingleBaleSelected.id)" title="Toggle Orientation">
-              🔀 Orientation
-            </button>
+          🔀 Orientation
+        </button>
         <button @click="store.cycleLean(isSingleBaleSelected.id)" title="Toggle Lean">
-              ↗️ Lean
-            </button>
+          ↗️ Lean
+        </button>
         <div class="divider"></div>
       </div>
 
-      <button v-if="store.sport === 'barnhunt' && store.currentLayer === 1 && isSingleBaleSelected"
-        @click="store.toggleAnchor()" title="Mark Anchor Bale">
+      <button v-if="store.currentLayer === 1 && isSingleBaleSelected" @click="store.toggleAnchor()"
+        title="Mark Anchor Bale">
         ⚓ Anchor
       </button>
-<button v-if="store.sport === 'barnhunt' && isSingleBaleSelected"
-            @click="store.rotateBale(isSingleBaleSelected.id)"
-            title="Rotate Item">
-            🔄Rotate
-          </button>
+      <button v-if="isSingleBaleSelected" @click="store.rotateBale(isSingleBaleSelected.id)" title="Rotate Item">
+        🔄Rotate
+      </button>
       <div class="divider"></div>
 
       <button @click="store.clearSelection()" title="Clear Selection">Deselect</button>
@@ -101,16 +99,20 @@ const isSingleBaleSelected = computed(() => {
 /* Removed .btn-close style as it's no longer used */
 
 .context-group {
-  display: flex;       /* Forces children into a row */
-  align-items: center; /* Vertically centers them */
-  gap: 8px;            /* Adds space between buttons */
+  display: flex;
+  /* Forces children into a row */
+  align-items: center;
+  /* Vertically centers them */
+  gap: 8px;
+  /* Adds space between buttons */
 }
 
-.divider { 
-  width: 1px; 
-  height: 20px; 
-  background: #ddd; 
-  margin: 0 4px;       /* Optional: Adds a little breathing room around the line */
+.divider {
+  width: 1px;
+  height: 20px;
+  background: #ddd;
+  margin: 0 4px;
+  /* Optional: Adds a little breathing room around the line */
 }
 
 .slide-up-enter-active,
@@ -123,5 +125,4 @@ const isSingleBaleSelected = computed(() => {
   transform: translate(-50%, 20px);
   opacity: 0;
 }
-
 </style>

@@ -7,6 +7,7 @@ export function useHides(state, snapshot) {
       x, 
       y, 
       type: 'rat', // rat, litter, empty
+      layer: state.currentLayer.value || 1,
       elevation: 'floor' // [NEW] floor, under, over
     })
   }

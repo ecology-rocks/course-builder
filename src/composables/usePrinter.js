@@ -345,11 +345,13 @@ export function usePrinter(store, userStore, stageRef, scale) {
 
     // 7. Capture Selected Layers
     const originalLayer = store.currentLayer;
+    const originalShowHides = store.showHides;
     const pages = [];
 
     const captureLayer = async (layerNum) => {
       store.currentLayer = layerNum;
       // If overlay is enabled, show underlying layers transparently for Layers 2 and 3
+      store.showHides = config.withHides;
       store.multiLayerView = config.overlayAll && layerNum > 1; //
       await nextTick();
       await wait(150);
@@ -366,6 +368,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
 
     // Restore State
     store.currentLayer = originalLayer;
+    store.showHides = originalShowHides;
     scale.value = originalScale;
     store.gridStep = originalStep;
     store.multiLayerView = originalMultiView;

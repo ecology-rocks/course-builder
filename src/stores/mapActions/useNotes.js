@@ -1,5 +1,5 @@
 // src/stores/mapActions/useNotes.js
-export function useNotes(state) {
+export function useNotes(state, snapshot) {
   function addNote(x, y) {
     state.notes.value.push({
       id: crypto.randomUUID(),
