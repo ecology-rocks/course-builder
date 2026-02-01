@@ -88,8 +88,8 @@ function dragBoundFunc(pos) {
     ref="groupRef"
     :config="{
       id: zone.id,
-      x: zone.x * scale,
-      y: zone.y * scale,
+      x: zone.x * (scale || 1),
+      y: zone.y * (scale || 1),
       rotation: zone.rotation,
       draggable: true,
       dragBoundFunc: dragBoundFunc
@@ -102,8 +102,8 @@ function dragBoundFunc(pos) {
   >
     <v-rect
       :config="{
-        width: zone.width * scale,
-        height: zone.height * scale,
+        width: (zone.width || 0) * (scale || 1),
+    height: (zone.height || 0) * (scale || 1),
         fill: zone.type === 'dead' ? 'rgba(255, 0, 0, 0.3)' : 'rgba(100, 100, 100, 0.5)',
         stroke: isSelected ? '#00a1ff' : (zone.type === 'dead' ? 'red' : 'black'),
         strokeWidth: isSelected ? 3 : 2,

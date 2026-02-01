@@ -21,18 +21,21 @@ defineExpose({
 
 // --- 1. Dynamic Dimensions (Based on Settings) ---
 const dims = computed(() => {
-  const L = store.baleConfig.length
-  const W = store.baleConfig.width
-  const H = store.baleConfig.height
+  // Ensure config exists and default to standard values if missing
+  const L = store.baleConfig?.length || 3
+  const W = store.baleConfig?.width || 1.5
+  const H = store.baleConfig?.height || 1
 
-  if (props.bale.orientation === 'pillar') return { width: W, height: H }
-  if (props.bale.orientation === 'tall') return { width: L, height: H }
-  return { width: L, height: W } // Flat
+  const orientation = props.bale?.orientation || 'flat'
+  if (orientation === 'pillar') return { width: W, height: H }
+  if (orientation === 'tall') return { width: L, height: H }
+  return { width: L, height: W } 
 })
 
 // --- 2. Dynamic Pivot (Center of the object) ---
-const halfW = computed(() => dims.value.width / 2)
-const halfH = computed(() => dims.value.height / 2)
+const s = computed(() => props.scale || 1)
+const halfW = computed(() => (dims.value.width || 0) / 2)
+const halfH = computed(() => (dims.value.height || 0) / 2)
 
 // --- 3. Appearance Logic ---
 const fillColor = computed(() => {
@@ -137,12 +140,12 @@ function baleDragBoundFunc(pos) {
       dragBoundFunc: baleDragBoundFunc,
       listening: bale.layer === store.currentLayer || store.selection.includes(bale.id),
       // [FIX] Dynamic Pivot Positioning
-      x: (bale.x * scale) + (halfW * scale),
-      y: (bale.y * scale) + (halfH * scale),
+      x: ((bale.x || 0) * s) + (halfW * s),
+      y: ((bale.y || 0) * s) + (halfH * s),
       rotation: bale.rotation,
       opacity: props.opacity,
-      offsetX: halfW * scale,
-      offsetY: halfH * scale
+      offsetX: halfW * s,
+      offsetY: halfH * s
     }"
     @contextmenu="emit('contextmenu', $event)"
     @click="emit('click', $event)"
@@ -151,8 +154,8 @@ function baleDragBoundFunc(pos) {
     @dragend="emit('dragend', $event)"
   >
     <v-rect :config="{
-      width: dims.width * scale,
-      height: dims.height * scale,
+      width: dims.width * s,
+      height: dims.height * s,
       fill: fillColor,
       stroke: strokeColor,
       strokeWidth: strokeWidth,
