@@ -26,18 +26,18 @@ const router = useRouter()
         <div class="text-side">
           <h2>Rooted in the Sport</h2>
           <p>
-            K9CourseBuilder started in the straw. As both a competitor and trial chair, I've seen all kinds of maps from our judges. I always wondered how their maps were built, and when I started asking questions, I was horrified. Microsoft Publisher? Adobe Illustrator? Why wasn't there a dedicated map tool for Barn Hunt judges?
+            K9CourseBuilder started in the straw. As both a competitor and trial chair, I've seen all kinds of maps from our judges. When I started asking questions about how thet make maps, I was horrified. Microsoft Publisher? Adobe Illustrator? Why wasn't there a dedicated map tool for Barn Hunt judges?
           </p>
           
           <p>
-            We're all in dog sports for the same reason: to have fun with our dogs. I built this tool to address the biggest frustration of my judge-friends: course design. Don't waste days building maps. You can build a fully legal map in less than a half hour using this tool. You can build an entire trial's worth of maps in a few hours, not a few days. Your time is valuable, so take it back. 
+            We're all in dog sports to have fun with our dogs, not to spend hours at the computer. I built this tool to address the biggest frustration of my judge-friends: course design. Don't waste days building maps. You can build a fully legal map in less than a half hour using this tool. You can build an entire trial's worth of maps in a few hours, not a few days. Your time is valuable, so take it back. 
           </p>
 
           <p>
-            I'm an environmental scientist by training, with decades of web and programming experience. I don't have a team, or a fancy chatbot to wow you. I don't outsource to other programmers. This project is entirely a labor of love. I hope you'll trust me with your time and a little bit of your money, and in exchange, I will make this the best possible program for building dog sport maps. 
+            I'm an environmental scientist by training, with decades of web and programming experience. I don't outsource to other programmers. I'm not quitting my day job, either. This project is entirely a labor of love. I hope you'll trust me with your time and a little bit of your money, and in exchange, I will make this the best possible program for building barn hunt maps. 
           </p>
           <p>
-            I've had the chance to work with a great team of judges and members of the Barn Hunt administration community. Special thanks especially to Rachel Corbett, Katelyn Spooner, Joyce Shively, Sarah Bostock, Mark Shaw, Pam Opanowitz, and others who provided feedback at various points in this process. 
+            I've had the chance to work with a great team of judges and members of the Barn Hunt administration community. Special thanks especially to Rachel Corbett, Katelyn Spooner, Joyce Shively, Sarah Bostock, Mark Shaw, Pam Opanowitz, Brydon Christensen, Kris Woodke, and others who provided feedback at various points in this process. 
           </p>
         </div>
 

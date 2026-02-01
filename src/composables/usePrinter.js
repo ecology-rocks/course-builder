@@ -30,18 +30,12 @@ export function usePrinter(store, userStore, stageRef, scale) {
     // 3. Prepare Stage (Zoom in for high-res capture)
     store.clearSelection();
     const originalScale = scale.value;
-    scale.value = 40; // Force standard print resolution (high quality)
+    scale.value = 40; 
     const originalStep = store.gridStep;
-    store.gridStep = 1; // Hide grid dots usually, or make them fine
-
-    const originalMultiView = store.multiLayerView;
-    if (config.overlayAll) {
-      store.multiLayerView = true;
-    }
+    store.gridStep = 1;
+    const originalMultiView = store.multiLayerView; //
 
     await nextTick();
-
-    // Slight delay to ensure canvas renders at new scale
     const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     await wait(100);
 
@@ -352,16 +346,18 @@ export function usePrinter(store, userStore, stageRef, scale) {
       : "";
 
     // 6. Handling Agility Mode (Simple Pass-through)
-    if (store.sport === "agility") {
+   if (store.sport === "agility") {
+      if (config.overlayAll) store.multiLayerView = true; //
       const dataUrl = stageRef.value.getStage().toDataURL({ pixelRatio: 3 });
+      
+      // Restore state
       scale.value = originalScale;
+      store.gridStep = originalStep;
+      store.multiLayerView = originalMultiView;
 
       const win = window.open("", "_blank");
-      win.document
-        .write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>
-            @media print {
-              @page { size: ${orientation}; margin: 0; }
-            }
+      win.document.write(`<!DOCTYPE html><html><head><title>${store.mapName}</title><style>
+            @media print { @page { size: ${orientation}; margin: 0; } }
             ${printStyles}
           </style></head><body>
         ${watermarkHtml}
@@ -373,10 +369,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
         </div>
       </body></html>`);
       win.document.close();
-      setTimeout(() => {
-        win.focus();
-        win.print();
-      }, 500);
+      setTimeout(() => { win.focus(); win.print(); }, 500);
       return;
     }
 
@@ -386,14 +379,15 @@ export function usePrinter(store, userStore, stageRef, scale) {
 
     const captureLayer = async (layerNum) => {
       store.currentLayer = layerNum;
+      // If overlay is enabled, show underlying layers transparently for Layers 2 and 3
+      store.multiLayerView = config.overlayAll && layerNum > 1; //
+      await nextTick();
       await wait(150);
       return stageRef.value.getStage().toDataURL({ pixelRatio: 3 });
     };
 
     for (const layerNum of config.layers) {
-      // Only print layers that exist or are forced
-      const hasItems =
-        layerNum === 1 || store.bales.some((b) => b.layer === layerNum);
+      const hasItems = layerNum === 1 || store.bales.some((b) => b.layer === layerNum);
       if (hasItems) {
         const imgData = await captureLayer(layerNum);
         pages.push({ title: `• Layer ${layerNum}`, img: imgData });
@@ -406,6 +400,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
     store.gridStep = originalStep;
     store.multiLayerView = originalMultiView;
 
+    
     // 8. Generate HTML based on Layout
     let pagesHtml = "";
 
