@@ -6,6 +6,7 @@ import MapView from '../views/MapView.vue'
 import Settings from '../views/Settings.vue'
 import Terms from '../views/Terms.vue'     // <--- NEW
 import Privacy from '../views/Privacy.vue' // <--- NEW
+import About from '../views/About.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -20,7 +21,8 @@ const router = createRouter({
     { path: '/view/:id', name: 'map-view', component: MapView },
     { path: '/settings', name: 'settings', component: Settings },
     { path: '/terms', name: 'terms', component: Terms },     // <--- NEW
-    { path: '/privacy', name: 'privacy', component: Privacy } // <--- NEW
+    { path: '/privacy', name: 'privacy', component: Privacy }, // <--- NEW
+    { path: '/about', name: 'about', component: About },
   ]
 })
 

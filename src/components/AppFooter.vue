@@ -18,6 +18,8 @@ const showBugModal = ref(false)
         <a href="mailto:support@k9coursebuilder.com">Contact Support</a>
         <span class="divider">•</span>
         <a href="#" @click.prevent="showBugModal = true">🐛 Report a Bug</a>
+        <span class="divider">•</span>
+        <a href="/about">About Me</a>
       </div>
     </div>
     <BugReportModal v-if="showBugModal" @close="showBugModal = false" />
