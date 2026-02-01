@@ -3,17 +3,17 @@ import { computed, ref } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
 // Components
-import BaleObject from './BarnHunt/BaleObject.vue'
-import BoardObject from './BarnHunt/BoardObject.vue' // Renamed
-import HideMarker from './BarnHunt/HideMarker.vue'
-import StepMarker from './BarnHunt/StepMarker.vue'
-import ZoneRect from './BarnHunt/ZoneRect.vue'
-import StartBoxObject from './BarnHunt/StartBoxObject.vue'
-import DCMatObject from './BarnHunt/DCMatObject.vue'
-import MeasurementObject from './BarnHunt/MeasurementObject.vue'
-import NoteObject from './BarnHunt/NoteObject.vue'
-import TunnelBoxObject from './BarnHunt/TunnelBoxObject.vue'
-import GateObject from './BarnHunt/GateObject.vue'
+import BaleObject from './bales/BaleObject.vue'
+import BoardObject from './boards/BoardObject.vue' // Renamed
+import HideMarker from './hides/HideMarker.vue'
+import StepMarker from './steps/StepMarker.vue'
+import ZoneRect from './zones/ZoneRect.vue'
+import StartBoxObject from './mats/StartBoxObject.vue'
+import DCMatObject from './mats/DCMatObject.vue'
+import MeasurementObject from './annotations/MeasurementObject.vue'
+import NoteObject from './annotations/NoteObject.vue'
+import TunnelBoxObject from './boards/TunnelBoxObject.vue'
+import GateObject from './walls/GateObject.vue'
 
 const props = defineProps({
   bale: Object,

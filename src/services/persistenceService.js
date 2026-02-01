@@ -2,9 +2,9 @@ import {
   collection, addDoc, getDocs, getDoc, query, where,
   doc, updateDoc, deleteDoc, writeBatch, serverTimestamp
 } from 'firebase/firestore'
-import { db } from '../../firebase'
-import { mapService } from '../../services/mapService'
-import { libraryService } from '../../services/libraryService'
+import { db } from '@/firebase'
+import { mapService } from 'services/mapService'
+import { libraryService } from 'services/libraryService'
 
 /**
  * Persistence Logic

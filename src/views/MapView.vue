@@ -2,7 +2,7 @@
 import { onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { doc, getDoc } from 'firebase/firestore'
-import { db, auth } from '../firebase'
+import { db, auth } from '@/firebase'
 
 const route = useRoute()
 const loading = ref(true)

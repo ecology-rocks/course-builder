@@ -5,17 +5,17 @@ import { useUserStore } from '@/stores/userStore'
 import { useRouter } from 'vue-router'
 
 // Toolboxes
-import BarnHuntToolbox from './toolboxes/BarnHuntToolbox.vue'
+import BarnHuntToolbox from './BarnHuntToolbox.vue'
 
 // Modals
-import ShareMapModal from '../modals/ShareMapModal.vue'
-import LoadMapModal from '../modals/LoadMapModal.vue'
-import CourseSettingsModal from '../modals/CourseSettingsModal.vue'
-import BugReportModal from '../modals/BugReportModal.vue'
-import DeleteMapModal from '../modals/DeleteMapModal.vue'
-import LibraryModal from '../modals/LibraryModal.vue'
-import UpgradeModal from '../modals/UpgradeModal.vue' // [NEW]
-import PrintModal from '../modals/PrintModal.vue' // [NEW]
+import ShareMapModal from 'modals/ShareMapModal.vue'
+import LoadMapModal from 'modals/LoadMapModal.vue'
+import CourseSettingsModal from 'modals/CourseSettingsModal.vue'
+import BugReportModal from 'modals/BugReportModal.vue'
+import DeleteMapModal from 'modals/DeleteMapModal.vue'
+import LibraryModal from 'modals/LibraryModal.vue'
+import UpgradeModal from 'modals/UpgradeModal.vue' // [NEW]
+import PrintModal from 'modals/PrintModal.vue' // [NEW]
 
 const store = useMapStore()
 const userStore = useUserStore()

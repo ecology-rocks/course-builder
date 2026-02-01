@@ -1,5 +1,5 @@
 <script setup>
-import { functions, auth } from '../../firebase'
+import { functions, auth } from '@/firebase'
 import { httpsCallable } from 'firebase/functions'
 
 const emit = defineEmits(['close'])

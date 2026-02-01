@@ -1,7 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
-import AppFooter from '../components/AppFooter.vue'
-import samAndLuther from '../assets/sam_and_luther.jpg'
+import AppFooter from 'components/AppFooter.vue'
+import samAndLuther from 'assets/sam_and_luther.jpg'
 const router = useRouter()
 </script>
 

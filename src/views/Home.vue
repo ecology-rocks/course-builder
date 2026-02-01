@@ -1,7 +1,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
-import { useUserStore } from '../stores/userStore'
-import AppFooter from '../components/AppFooter.vue'
+import { useUserStore } from 'stores/userStore'
+import AppFooter from 'components/AppFooter.vue'
 
 const router = useRouter()
 const userStore = useUserStore()

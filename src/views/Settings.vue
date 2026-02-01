@@ -1,8 +1,8 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useUserStore } from '../stores/userStore'
+import { useUserStore } from 'stores/userStore'
 import { useRouter } from 'vue-router'
-import { functions, auth } from '../firebase'
+import { functions, auth } from '@/firebase'
 import { httpsCallable } from 'firebase/functions'
 
 const userStore = useUserStore()

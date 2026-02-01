@@ -1,12 +1,12 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Home from '../views/Home.vue'
-import Dashboard from '../views/Dashboard.vue'
-import MapEditor from '../components/MapEditor.vue'
-import MapView from '../views/MapView.vue'
-import Settings from '../views/Settings.vue'
-import Terms from '../views/Terms.vue'     // <--- NEW
-import Privacy from '../views/Privacy.vue' // <--- NEW
-import About from '../views/About.vue'
+import Home from 'views/Home.vue'
+import Dashboard from 'views/Dashboard.vue'
+import MapEditor from 'components/MapEditor.vue'
+import MapView from 'views/MapView.vue'
+import Settings from 'views/Settings.vue'
+import Terms from 'views/Terms.vue'
+import Privacy from 'views/Privacy.vue'
+import About from 'views/About.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

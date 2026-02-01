@@ -1,5 +1,5 @@
 // src/services/libraryService.js
-import { db } from '../firebase'
+import { db } from '@/firebase'
 import { collection, addDoc, getDocs, query, orderBy, where, deleteDoc, doc } from 'firebase/firestore'
 
 const ADMIN_EMAIL = 'reallyjustsam@gmail.com'

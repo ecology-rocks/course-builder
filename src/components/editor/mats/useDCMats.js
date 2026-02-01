@@ -1,4 +1,4 @@
-import { useMapStore } from '../mapStore'
+import { useMapStore } from 'stores/mapStore'
 
 export function useDCMats(state, snapshot) {
   

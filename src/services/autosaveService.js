@@ -1,4 +1,3 @@
-import { watch } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 import { useUserStore } from '@/stores/userStore' // [NEW] Import
 

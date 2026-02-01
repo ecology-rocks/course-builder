@@ -1,17 +1,17 @@
 import { computed } from "vue";
 
 // ALL use logic in here
-import { useBales } from "./useBales";
-import { useBoardEdges } from "./useBoardEdges";
-import { useDCMats } from "./useDCMats";
-import { useGates } from "./useGates";
-import { useHides } from "./useHides";
-import { useMeasurements } from "./useMeasurements.js";
-import { useNotes } from "./useNotes.js";
-import { useStartBox } from "./useStartBox";
-import { useSteps } from "./useSteps";
-import { useTunnelBoards } from "./useTunnelBoards";
-import { useZones } from "./useZones";
+import { useBales } from "editor/bales/useBales";
+import { useBoardEdges } from "editor/boards/useBoardEdges";
+import { useDCMats } from "editor/mats/useDCMats";
+import { useGates } from "editor/walls/useGates";
+import { useHides } from "editor/hides/useHides";
+import { useMeasurements } from "editor/annotations/useMeasurements.js";
+import { useNotes } from "editor/annotations/useNotes.js";
+import { useStartBox } from "editor/mats/useStartBox";
+import { useSteps } from "editor/steps/useSteps";
+import { useTunnelBoards } from "editor/boards/useTunnelBoards";
+import { useZones } from "editor/zones/useZones";
 
 /**
  * src/stores/mapActions/barnHuntLogic.js

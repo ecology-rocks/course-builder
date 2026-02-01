@@ -1,10 +1,10 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { useUserStore } from '../stores/userStore'
-import { useMapStore } from '../stores/mapStore'
+import { useUserStore } from 'stores/userStore'
+import { useMapStore } from 'stores/mapStore'
 import { useRouter } from 'vue-router'
-import AuthForm from '../components/auth/AuthForm.vue'
-import DeleteMapModal from '../components/modals/DeleteMapModal.vue'
+import AuthForm from 'components/AuthForm.vue'
+import DeleteMapModal from 'modals/DeleteMapModal.vue'
 
 const userStore = useUserStore()
 const mapStore = useMapStore()

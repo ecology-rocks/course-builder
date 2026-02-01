@@ -2,10 +2,10 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useUserStore } from './userStore'
 // IMPORT MODULES
-import { useMapPersistence } from './mapActions/persistence'
-import { useSelectionLogic } from './mapActions/selection'
-import { useBarnHuntLogic } from './mapActions/barnHuntLogic'
-import { useHistory } from './mapActions/history'
+import { useMapPersistence } from 'services/persistenceService'
+import { useSelectionLogic } from 'services/selectionService'
+import { useBarnHuntLogic } from 'services/barnHuntLogic'
+import { useHistory } from 'services/historyService'
 
 // ==========================================
 // 0. CONSTANTS & STRATEGIES

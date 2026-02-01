@@ -1,17 +1,17 @@
 <script setup>
 import { ref, watch, nextTick, computed } from 'vue'
-import { useMapStore } from '@/stores/mapStore'
+import { useMapStore } from 'stores/mapStore'
 import { useUserStore } from '@/stores/userStore'
-import { useAutosave } from '@/composables/useAutosave'
-import { usePrinter } from '@/composables/usePrinter'
+import { useAutosave } from 'services/autosaveService'
+import { usePrinter } from 'services/printerService'
 
 // --- COMPOSABLES ---
-import { useKeyboardShortcuts } from '@/composables/editor/useKeyboardShortcuts'
-import { useCanvasControls } from '@/composables/editor/useCanvasControls'
-import { useGridSystem } from '@/composables/editor/useGridSystem'
-import { useExportTools } from '@/composables/editor/useExportTools'
-import { useStageInteraction } from '@/composables/editor/useStageInteraction'
-import { useContextMenu } from '@/composables/editor/useContextMenu'
+import { useKeyboardShortcuts } from '@/components/editor/logic/useKeyboardShortcuts'
+import { useCanvasControls } from '@/components/editor/logic/useCanvasControls'
+import { useGridSystem } from '@/components/editor/logic/useGridSystem'
+import { useExportTools } from '@/components/editor/logic/useExportTools'
+import { useStageInteraction } from '@/components/editor/logic/useStageInteraction'
+import { useContextMenu } from '@/components/editor/logic/useContextMenu'
 
 
 
@@ -19,10 +19,10 @@ import { useContextMenu } from '@/composables/editor/useContextMenu'
 import EditorSidebar from './editor/EditorSidebar.vue'
 import SelectionBar from './editor/SelectionBar.vue'
 
-import BarnHuntLayer from './layers/BarnHuntLayer.vue'
-import MapLegend from './layers/MapLegend.vue'
-import EditNoteModal from './modals/EditNoteModal.vue'
-import HelpModal from './modals/HelpModal.vue'
+import BarnHuntLayer from './editor/BarnHuntLayer.vue'
+import MapLegend from './editor/MapLegend.vue'
+import EditNoteModal from 'modals/EditNoteModal.vue'
+import HelpModal from 'modals/HelpModal.vue'
 
 
 // Setup

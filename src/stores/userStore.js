@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { auth, db, storage } from '../firebase' // <--- Added storage here
+import { auth, db, storage } from '@/firebase' // <--- Added storage here
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
