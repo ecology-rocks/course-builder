@@ -12,8 +12,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
       randoms: null,
     };
 
-    const prevMultiView = store.multiLayerView;
-
     if (typeof configOrBool === "boolean") {
       config.withHides = configOrBool;
     } else {
@@ -350,9 +348,12 @@ export function usePrinter(store, userStore, stageRef, scale) {
 
     const captureLayer = async (layerNum) => {
       store.currentLayer = layerNum;
-      // If overlay is enabled, show underlying layers transparently for Layers 2 and 3
       store.showHides = config.withHides;
-      store.multiLayerView = config.overlayAll && layerNum > 1; //
+      
+      // We set multiLayerView to the current layer number.
+      // This allows the component to filter out any bales that belong to higher layers.
+      store.multiLayerView = config.overlayAll ? layerNum : false;
+
       await nextTick();
       await wait(150);
       return stageRef.value.getStage().toDataURL({ pixelRatio: 3 });

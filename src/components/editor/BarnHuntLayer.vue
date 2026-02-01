@@ -36,10 +36,21 @@ const dragStartPos = ref({})
 // --- COMPUTED ---
 const visibleBales = computed(() => {
   // [FIX] If overlay is OFF, only show bales that match the current layer exactly
-  const filtered = store.multiLayerView 
-    ? store.bales 
-    : store.bales.filter(b => b.layer === store.currentLayer)
-    
+  let filtered;
+
+  if (store.multiLayerView) {
+    // If multiLayerView is a number (the current print layer), 
+    // show everything up to and including that layer.
+    if (typeof store.multiLayerView === 'number') {
+      filtered = store.bales.filter(b => b.layer <= store.multiLayerView);
+    } else {
+      // Fallback for boolean true (UI editor mode)
+      filtered = store.bales;
+    }
+  } else {
+    // Standard view: only show the active layer
+    filtered = store.bales.filter(b => b.layer === store.currentLayer);
+  }
   return filtered.sort((a, b) => {
     if (a.layer !== b.layer) return a.layer - b.layer
     const aIsLeaner = a.lean !== null
