@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
-const props = defineProps(['mat', 'scale'])
+const props = defineProps(['mat', 'scale', 'opacity'])
 const emit = defineEmits(['dragstart', 'dragmove', 'dragend', 'update'])
 const store = useMapStore()
 const groupRef = ref(null)
@@ -182,6 +182,7 @@ function dcMatDragBoundFunc(pos) {
       x: (mat.x * scale) + (((mat.width || store.dcMatConfig.width) / 2) * scale),
       y: (mat.y * scale) + (((mat.height || store.dcMatConfig.height) / 2) * scale),
       offsetX: ((mat.width || store.dcMatConfig.width) / 2) * scale,
+      opacity: opacity || 1,
       offsetY: ((mat.height || store.dcMatConfig.height) / 2) * scale,
       rotation: mat.rotation
     }"

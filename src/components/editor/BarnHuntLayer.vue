@@ -26,8 +26,8 @@ const props = defineProps({
 })
 const store = useMapStore()
 
-defineExpose({ 
-  getNode: () => groupRef.value?.getNode() 
+defineExpose({
+  getNode: () => groupRef.value?.getNode()
 })
 // UNIFIED REF REGISTRY: Stores { [id]: ComponentInstance }
 const objectRefs = ref({})
@@ -131,20 +131,20 @@ function handleLeftClick(e, id) {
     return
   }
 
-if (store.activeTool === 'hide') {
-  const stage = e.target.getStage()
-  const p = stage.getPointerPosition()
-  // Calculate grid coordinates based on scale and offset
-  const rawX = (p.x - props.GRID_OFFSET) / props.scale
-  const rawY = (p.y - props.GRID_OFFSET) / props.scale
-  
-  // Snap to grid if desired (e.g., 0.5 units)
-  const snapX = Math.round(rawX * 2) / 2
-  const snapY = Math.round(rawY * 2) / 2
+  if (store.activeTool === 'hide') {
+    const stage = e.target.getStage()
+    const p = stage.getPointerPosition()
+    // Calculate grid coordinates based on scale and offset
+    const rawX = (p.x - props.GRID_OFFSET) / props.scale
+    const rawY = (p.y - props.GRID_OFFSET) / props.scale
 
-  store.addHide(snapX, snapY)
-  return
-}
+    // Snap to grid if desired (e.g., 0.5 units)
+    const snapX = Math.round(rawX * 2) / 2
+    const snapY = Math.round(rawY * 2) / 2
+
+    store.addHide(snapX, snapY)
+    return
+  }
 
   // 4. [UPDATED] Selection Logic: Toggle behavior
   if (store.activeTool === 'select' || store.activeTool === 'bale') {
@@ -327,7 +327,7 @@ function getAnchorLines(bale) {
     <StartBoxObject v-if="store.startBox" :scale="scale" :isSelected="store.selection.includes(store.startBox?.id)"
       :ref="(el) => setRef(el, store.startBox?.id || 'startbox')" @select="handleSelect($event)"
       @dragstart="handleDragStart($event, store.startBox?.id)" @dragmove="handleDragMove($event, store.startBox?.id)"
-      @dragend="handleDragEnd($event, store.startBox?.id)" />
+      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragend="handleDragEnd($event, store.startBox?.id)" />
 
     <GateObject v-if="store.gate" :gate="store.gate" :scale="scale" :ringDimensions="store.ringDimensions"
       :ref="(el) => setRef(el, store.gate?.id)" @dragstart="handleDragStart($event, store.gate?.id)"
@@ -335,23 +335,14 @@ function getAnchorLines(bale) {
 
     <DCMatObject v-for="mat in store.dcMats" :key="mat.id" :mat="mat" :scale="scale" :ref="(el) => setRef(el, mat.id)"
       @dragstart="handleDragStart($event, mat.id)" @dragmove="handleDragMove($event, mat.id)"
-      @dragend="handleDragEnd($event, mat.id)" @update="(attrs) => store.updateDCMat(mat.id, attrs)" />
+      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragend="handleDragEnd($event, mat.id)"
+      @update="(attrs) => store.updateDCMat(mat.id, attrs)" />
 
-
-
-    <BaleObject 
-  v-for="bale in visibleBales" 
-  :key="bale.id" 
-  :bale="bale" 
-  :scale="scale"
-  :opacity="store.multiLayerView && bale.layer !== store.currentLayer ? store.layerOpacity : 1"
-  :ref="(el) => setRef(el, bale.id)"
-  @contextmenu="handleRightClick($event, bale.id)"
-  @click="handleLeftClick($event, bale.id)"
-  @dragstart="handleDragStart($event, bale.id)"
-  @dragmove="handleDragMove($event, bale.id)"
-  @dragend="handleDragEnd($event, bale.id)"
-/>
+    <BaleObject v-for="bale in visibleBales" :key="bale.id" :bale="bale" :scale="scale"
+      :opacity="store.multiLayerView && bale.layer !== store.currentLayer ? store.layerOpacity : 1"
+      :ref="(el) => setRef(el, bale.id)" @contextmenu="handleRightClick($event, bale.id)"
+      @click="handleLeftClick($event, bale.id)" @dragstart="handleDragStart($event, bale.id)"
+      @dragmove="handleDragMove($event, bale.id)" @dragend="handleDragEnd($event, bale.id)" />
 
     <template v-if="props.showHides">
       <HideMarker v-for="hide in store.hides" :key="hide.id" :hide="hide" :scale="scale"
@@ -363,7 +354,7 @@ function getAnchorLines(bale) {
       :isSelected="store.selection.includes(step.id)" :ref="(el) => setRef(el, step.id)" @select="handleSelect"
       @update="(id, attrs) => store.updateStep(id, attrs)" @dragstart="handleDragStart($event, step.id)"
       @dragmove="handleDragMove($event, step.id)" @dragend="handleDragEnd($event, step.id)"
-      @rotate="store.rotateStep" />
+      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @rotate="store.rotateStep" />
 
     <ZoneRect v-for="zone in store.zones" :key="zone.id" :zone="zone" :scale="scale"
       :isSelected="store.selection.includes(zone.id)" :ref="(el) => setRef(el, zone.id)" @select="handleSelect"
@@ -383,6 +374,7 @@ function getAnchorLines(bale) {
 
     <BoardObject v-for="board in store.boardEdges" :key="board.id" :board="board" :scale="scale"
       :ref="(el) => setRef(el, board.id)" @dragstart="handleDragStart($event, board.id)"
+      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" 
       @dragmove="handleDragMove($event, board.id)" @dragend="handleDragEnd($event, board.id)" />
 
     <v-group>

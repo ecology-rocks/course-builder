@@ -24,7 +24,7 @@ const layout = ref('full')
 const includeRandoms = ref(false)
 const numTrials = ref(2)
 const numBlinds = ref(5)
-const overlayAll = ref(false)
+const overlayAll = ref(true)
 
 function handlePrint() {
   const layersToPrint = Object.entries(selectedLayers.value)

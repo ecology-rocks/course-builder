@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
-const props = defineProps(['scale', 'isSelected'])
+const props = defineProps(['scale', 'isSelected', 'opacity'])
 const emit = defineEmits(['dragstart', 'dragmove', 'dragend', 'select'])
 const store = useMapStore()
 const groupRef = ref(null)
@@ -52,7 +52,8 @@ function dragBoundFunc(pos) {
       draggable: true,
       dragBoundFunc: dragBoundFunc,
       x: store.startBox.x * scale,
-      y: store.startBox.y * scale
+      y: store.startBox.y * scale,
+      opacity: opacity || 1,
     }"
     @click="handleClick"
     @dragstart="emit('dragstart', $event)"
