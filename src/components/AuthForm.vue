@@ -7,13 +7,14 @@ const email = ref('')
 const password = ref('')
 const registerSport = ref('barnhunt')
 const isRegistering = ref(false)
+const showPassword = ref(false)
 
 // Optional: emit success if the parent needs to react (like closing a modal)
 const emit = defineEmits(['success'])
 
 async function handleSubmit() {
   if (!email.value || !password.value) return alert("Please enter email and password")
-  
+
   let success = false
   if (isRegistering.value) {
     success = await userStore.register(email.value, password.value, registerSport.value)
@@ -23,27 +24,32 @@ async function handleSubmit() {
 
   if (success) emit('success')
 }
+
+async function handlePasswordReset() {
+  if (!email.value) {
+    userStore.authError = "Please enter your email address to reset your password."
+    return
+  }
+  await userStore.resetPassword(email.value)
+}
 </script>
 
 <template>
   <div class="auth-card">
     <h3>{{ isRegistering ? 'Register' : 'Log In' }}</h3>
-    
+
     <form @submit.prevent="handleSubmit" class="form-group">
-      <input 
-        v-model="email" 
-        type="email" 
-        placeholder="Email" 
-        required
-        autocomplete="username"
-      />
-      <input 
-        v-model="password" 
-        type="password" 
-        placeholder="Password" 
-        required
-        autocomplete="current-password"
-      />
+      <input v-model="email" type="email" placeholder="Email" required autocomplete="username" />
+      <div class="password-wrapper">
+        <input v-model="password" :type="showPassword ? 'text' : 'password'" placeholder="Password" required
+          autocomplete="current-password" />
+        <button type="button" class="toggle-password" @click="showPassword = !showPassword" tabindex="-1">
+          {{ showPassword ? 'Hide' : 'Show' }}
+        </button>
+        <div v-if="!isRegistering" class="forgot-password">
+      <a @click="handlePasswordReset" tabindex="-1">Forgot Password?</a>
+    </div>
+      </div>
 
       <div class="auth-actions">
         <button type="submit" class="btn-primary" :disabled="userStore.loading">
@@ -61,41 +67,163 @@ async function handleSubmit() {
       </p>
     </div>
 
-    <p v-if="userStore.error" class="error">{{ userStore.error }}</p>
+    <p v-if="userStore.authError" class="error">{{ userStore.authError }}</p>
   </div>
 </template>
 
 <style scoped>
-.auth-card { 
-  background: white; 
-  padding: 40px; 
-  border-radius: 8px; 
-  box-shadow: 0 4px 20px rgba(0,0,0,0.05); 
-  width: 100%; 
-  max-width: 400px; 
-  text-align: center; 
+.auth-card {
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
   margin: 0 auto;
 }
 
-.form-group { display: flex; flex-direction: column; gap: 10px; margin: 20px 0; }
-.form-group input { padding: 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 1rem; }
+.forgot-password {
+  text-align: right;
+  margin-top: -10px;
+  margin-left: 10px;
+  font-size: 0.85rem;
+}
+.forgot-password a {
+  color: #666;
+  cursor: pointer;
+  text-decoration: none;
+}
+.forgot-password a:hover {
+  text-decoration: underline;
+  color: #2c3e50;
+}
 
-.auth-actions { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-.btn-primary { background: #2c3e50; color: white; padding: 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 1rem; }
-.btn-primary:hover { background: #34495e; }
-.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+/* Password Toggle Styles */
+.password-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
 
-.error { color: #d32f2f; margin-top: 15px; font-size: 0.9em; font-weight: 500; }
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 5px;
+}
 
-.auth-toggle { margin-top: 15px; font-size: 0.9em; color: #666; }
-.auth-toggle a { color: #2196f3; cursor: pointer; font-weight: bold; }
-.auth-toggle a:hover { text-decoration: underline; }
+.toggle-password:hover {
+  color: #2c3e50;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.form-group input {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.auth-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-primary {
+  background: #2c3e50;
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.btn-primary:hover {
+  background: #34495e;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #d32f2f;
+  margin-top: 15px;
+  font-size: 0.9em;
+  font-weight: 500;
+}
+
+.auth-toggle {
+  margin-top: 15px;
+  font-size: 0.9em;
+  color: #666;
+}
+
+.auth-toggle a {
+  color: #2196f3;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.auth-toggle a:hover {
+  text-decoration: underline;
+}
 
 /* SPORT SELECTOR STYLES */
-.sport-select-label { font-size: 0.85em; color: #666; margin-top: 10px; margin-bottom: 8px; text-align: left; }
-.sport-selector { display: flex; gap: 10px; margin-bottom: 10px; }
-.sport-selector label { flex: 1; border: 1px solid #ddd; border-radius: 4px; padding: 10px; font-size: 0.9em; cursor: pointer; background: #fafafa; transition: all 0.2s; }
-.sport-selector label:hover { background: #f0f0f0; }
-.sport-selector label.active { background: #e3f2fd; border-color: #2196f3; color: #1565c0; font-weight: bold; }
-.sport-selector input { display: none; }
+.sport-select-label {
+  font-size: 0.85em;
+  color: #666;
+  margin-top: 10px;
+  margin-bottom: 8px;
+  text-align: left;
+}
+
+.sport-selector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.sport-selector label {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  font-size: 0.9em;
+  cursor: pointer;
+  background: #fafafa;
+  transition: all 0.2s;
+}
+
+.sport-selector label:hover {
+  background: #f0f0f0;
+}
+
+.sport-selector label.active {
+  background: #e3f2fd;
+  border-color: #2196f3;
+  color: #1565c0;
+  font-weight: bold;
+}
+
+.sport-selector input {
+  display: none;
+}
 </style>

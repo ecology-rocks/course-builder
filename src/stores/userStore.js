@@ -269,9 +269,11 @@ async function updateClubName(newName) {
         allowedSports: ['barnhunt'],
         createdAt: new Date()
       })
+      return true
     } catch (e) {
       console.error(e)
       authError.value = formatError(e.code)
+      return false
     }
   }
 
@@ -279,9 +281,11 @@ async function updateClubName(newName) {
     authError.value = null
     try {
       await signInWithEmailAndPassword(auth, email, password)
+      return true
     } catch (e) {
       console.error(e)
       authError.value = formatError(e.code)
+      return false
     }
   }
 
@@ -319,6 +323,7 @@ function can(action) {
       case 'auth/weak-password': return 'Password should be at least 6 characters.'
       case 'auth/user-not-found': return 'User not found.'
       case 'auth/wrong-password': return 'Incorrect password.'
+      case 'auth/invalid-credential': return 'Incorrect email or password.'
       default: return 'Login failed. Please try again.'
     }
   }

@@ -97,6 +97,23 @@ exports.stripeWebhook = onRequest(async (req, res) => {
     }
   }
 
+  else if (event.type === "customer.subscription.deleted") {
+  const subscription = event.data.object;
+  const uid = subscription.metadata.uid; // Metadata carries over to subscription!
+
+  console.log(`❌ Subscription canceled for user ${uid}. Downgrading to free.`);
+
+  try {
+    // Downgrade the user in Firestore
+    await db.collection("users").doc(uid).set(
+      { tier: 'free' },
+      { merge: true }
+    );
+  } catch (e) {
+    console.error("Firestore downgrade failed", e);
+  }
+}
+
   res.json({ received: true });
 });
 
