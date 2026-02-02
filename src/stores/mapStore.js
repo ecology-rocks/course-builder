@@ -393,7 +393,7 @@ function openNoteEditor(id) {
     // Only force-finish on MANUAL save. 
     // We don't want autosave to interrupt a user mid-drawing.
     if (!isAutoSave && stateRefs.activeMeasurement.value) {
-      measureLogic.finishMeasurement()
+      bhLogic.finishMeasurement()
     }
     await persistence.saveToCloud(isAutoSave, thumbnail)
   }

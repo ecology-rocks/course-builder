@@ -53,12 +53,12 @@ const visibleBales = computed(() => {
   }
   return filtered.sort((a, b) => {
     if (a.layer !== b.layer) return a.layer - b.layer
-    
+
     // [FIX] Use truthy check (!!a.lean) to handle 'undefined' from legacy saves.
     // 'right'/'left' is true. null/undefined is false.
     const aIsLeaner = !!a.lean
     const bIsLeaner = !!b.lean
-    
+
     // Sort leaners to the end of the array (drawn on top)
     if (aIsLeaner && !bIsLeaner) return 1
     if (!aIsLeaner && bIsLeaner) return -1
@@ -69,8 +69,19 @@ const visibleBales = computed(() => {
 const visibleMeasurements = computed(() => {
   if (!store.measurements) return []
   return store.measurements.filter(m => {
-    // Show if on current layer, OR if no layer is assigned (legacy support)
-    return m.layer === undefined || m.layer === store.currentLayer
+    // Legacy support: show if no layer
+    if (m.layer === undefined) return true
+
+    // Respect Multi-Layer View (Overlay)
+    if (store.multiLayerView) {
+      if (typeof store.multiLayerView === 'number') {
+        return m.layer <= store.multiLayerView
+      }
+      return true // Show all in UI editor mode
+    }
+
+    // Standard view: only active layer
+    return m.layer === store.currentLayer
   })
 })
 
@@ -379,11 +390,12 @@ function getAnchorLines(bale) {
 
     <BoardObject v-for="board in store.boardEdges" :key="board.id" :board="board" :scale="scale"
       :ref="(el) => setRef(el, board.id)" @dragstart="handleDragStart($event, board.id)"
-      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" 
-      @dragmove="handleDragMove($event, board.id)" @dragend="handleDragEnd($event, board.id)" />
+      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragmove="handleDragMove($event, board.id)"
+      @dragend="handleDragEnd($event, board.id)" />
 
     <v-group>
-      <MeasurementObject v-for="m in visibleMeasurements" :key="m.id" :measurement="m" :scale="scale" />
+      <MeasurementObject v-for="m in visibleMeasurements" :key="m.id" :measurement="m" :scale="scale"
+        :opacity="store.multiLayerView && m.layer !== store.currentLayer ? store.layerOpacity : 1" />
 
       <MeasurementObject v-if="store.activeMeasurement" :measurement="store.activeMeasurement" :scale="scale" />
     </v-group>

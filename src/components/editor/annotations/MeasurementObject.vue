@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
-const props = defineProps(['measurement', 'scale'])
+const props = defineProps(['measurement', 'scale', 'opacity'])
 const store = useMapStore()
 
 // --- LOCAL STATE ---
@@ -121,7 +121,7 @@ function dragBoundFunc(pos) {
 </script>
 
 <template>
-  <v-group @click="handleClick">
+  <v-group @click="handleClick" :config="{ opacity: props.opacity || 1 }">
     
     <template v-for="(seg, i) in segments" :key="'seg-'+i">
       <v-line :config="{
