@@ -68,12 +68,27 @@ if (text) {
 function handleTransformEnd() {
   const node = groupRef.value.getNode();
 
-  // Sync the final calculated width/height back to the store
+  // 1. Get the final visual dimensions (already updated in handleTransform)
+  const currentWidth = node.width();
+  const currentHeight = node.height();
+  
+  // 2. Calculate the "True Center" in Parent (Layer) Coordinates.
+  //    We use the node's current transform matrix (which uses the old anchor)
+  //    to find where the point (newWidth/2, newHeight/2) is currently located on screen.
+  const transform = node.getTransform();
+  const newCenter = transform.point({ 
+    x: currentWidth / 2, 
+    y: currentHeight / 2 
+  });
+
+  // 3. Save these new coordinates.
+  //    Since 'newCenter' is in pixels relative to the Layer, 
+  //    we just divide by scale to get back to Map Units.
   emit('update', props.step.id, {
-    width: node.width() / props.scale,
-    height: node.height() / props.scale,
-    x: node.x() / props.scale,
-    y: node.y() / props.scale,
+    width: currentWidth / props.scale,
+    height: currentHeight / props.scale,
+    x: newCenter.x / props.scale,
+    y: newCenter.y / props.scale,
     rotation: node.rotation()
   });
   
@@ -141,6 +156,8 @@ defineExpose({ getNode: () => groupRef.value?.getNode() })
         offsetY: (step.height * scale) / 2
       }"
       @click="emit('select', step.id, $event.evt.shiftKey)"
+      @dragstart="emit('dragstart', $event)"
+      @dragmove="emit('dragmove', $event)"
       @dragend="emit('dragend', $event)"
       @transform="handleTransform"
       @transformend="handleTransformEnd"

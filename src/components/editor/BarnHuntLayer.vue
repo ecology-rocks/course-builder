@@ -53,8 +53,13 @@ const visibleBales = computed(() => {
   }
   return filtered.sort((a, b) => {
     if (a.layer !== b.layer) return a.layer - b.layer
-    const aIsLeaner = a.lean !== null
-    const bIsLeaner = b.lean !== null
+    
+    // [FIX] Use truthy check (!!a.lean) to handle 'undefined' from legacy saves.
+    // 'right'/'left' is true. null/undefined is false.
+    const aIsLeaner = !!a.lean
+    const bIsLeaner = !!b.lean
+    
+    // Sort leaners to the end of the array (drawn on top)
     if (aIsLeaner && !bIsLeaner) return 1
     if (!aIsLeaner && bIsLeaner) return -1
     return 0
