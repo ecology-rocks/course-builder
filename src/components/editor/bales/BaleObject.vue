@@ -136,9 +136,9 @@ function baleDragBoundFunc(pos) {
     ref="groupRef"
     :config="{
       id: bale.id,
-      draggable: true, // Simple draggable (logic handled by Layer if multi-selected)
+      draggable: store.activeTool !== 'board' && store.activeTool !== 'hide', // Simple draggable (logic handled by Layer if multi-selected)
       dragBoundFunc: baleDragBoundFunc,
-      listening: bale.layer === store.currentLayer || store.selection.includes(bale.id),
+      listening: (bale.layer === store.currentLayer || store.selection.includes(bale.id)) && store.activeTool !== 'board' && store.activeTool !== 'hide',
       // [FIX] Dynamic Pivot Positioning
       x: ((bale.x || 0) * s) + (halfW * s),
       y: ((bale.y || 0) * s) + (halfH * s),

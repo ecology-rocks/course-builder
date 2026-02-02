@@ -5,6 +5,39 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
   const dragStart = ref(null);
   const maybePlacing = ref(false);
 
+
+function getToolSize(tool) {
+    // Returns { w, h } for the active tool's default placement object.
+    // If the object is a point (step, hide, note), return 0,0.
+    switch (tool) {
+      case 'bale':
+        // Default placement is 'flat' orientation (Length x Width)
+        return { 
+          w: store.baleConfig?.length || 3, 
+          h: store.baleConfig?.width || 1.5 
+        }
+      case 'startbox':
+        return { w: 4, h: 4 }
+      case 'tunnelboard':
+        return { w: 4, h: 2 }
+      case 'dcmat':
+        return { 
+          w: store.dcMatConfig?.width || 2, 
+          h: store.dcMatConfig?.height || 3 
+        }
+      case 'step':
+        return { w: 2, h: 1.5 }
+      case 'dead':
+        return { w: 5, h: 5 }
+      case 'obstruction':
+        // Zones default to 5x5 in useZones.js
+        return { w: 5, h: 5 }
+      default:
+        // Point objects (Hide, Note, etc.) have no "width" to clamp against
+        return { w: 0, h: 0 }
+    }
+  }
+
   // --- GATE LOGIC ---
   function placeGate(rawX, rawY) {
     const W = store.ringDimensions.width;
@@ -43,7 +76,7 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
   // --- MOUSE DOWN ---
   function handleStageMouseDown(e) {
     // Only handle Left Click on the Stage (Background)
-    if (e.evt.button !== 0 || e.target !== e.target.getStage()) return;
+    if ((store.activeTool !== 'board' || store.activeTool !== 'hide') && e.target !== e.target.getStage()) return;
 
     const pointer = e.target.getStage().getPointerPosition();
     const x = (pointer.x - GRID_OFFSET) / scale.value;
@@ -54,6 +87,7 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
       placeGate(x, y);
       return;
     }
+    
 
     if (x < 0 || y < 0) return;
 
@@ -131,18 +165,27 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
       return;
     }
 
-    if (maybePlacing.value) {
+if (maybePlacing.value) {
       const { x, y } = dragStart.value;
-
       const t = store.activeTool;
-      if (t === "bale") store.addBale(x, y);
-      else if (t === "startbox") store.addStartBox(x, y);
-      else if (t === "dcmat") store.addDCMat(x, y);
-      else if (t === "hide") store.addHide(x, y);
-      else if (t === "step") store.addStep(x, y);
-      else if (t === "note") store.addNote(x, y);
-      else if (t === "tunnelboard") store.addTunnelBoard(x, y);
-      else if (t === "dead" || t === "obstruction") store.addZone(x, y, t);
+
+      // 1. Get size of the object we are about to place
+      const { w, h } = getToolSize(t)
+
+      // 2. Clamp coordinates so the object stays fully inside the ring
+      //    (Min: 0, Max: RingDimension - ObjectSize)
+      const finalX = Math.max(0, Math.min(x, store.ringDimensions.width - w))
+      const finalY = Math.max(0, Math.min(y, store.ringDimensions.height - h))
+
+      // 3. Place the object using clamped coordinates
+      if (t === "bale") store.addBale(finalX, finalY);
+      else if (t === "startbox") store.addStartBox(finalX, finalY);
+      else if (t === "dcmat") store.addDCMat(finalX, finalY);
+      else if (t === "hide") store.addHide(finalX, finalY);
+      else if (t === "step") store.addStep(finalX, finalY);
+      else if (t === "note") store.addNote(finalX, finalY);
+      else if (t === "tunnelboard") store.addTunnelBoard(finalX, finalY);
+      else if (t === "dead" || t === "obstruction") store.addZone(finalX, finalY, t);
 
       maybePlacing.value = false;
       dragStart.value = null;
