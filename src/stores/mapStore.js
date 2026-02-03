@@ -93,11 +93,17 @@ export const useMapStore = defineStore('map', () => {
   const nextNumber = ref(1) 
   const isDrawingBoard = ref(false) 
   const gridStep = ref(2)
-
+const activeHideMenu = ref(null) // Stores { id, x, y } or null
   // ==========================================
   // 2. ACTIONS (Internal & External)
   // ==========================================
+function openHideMenu(id, x, y) {
+  activeHideMenu.value = { id, x, y }
+}
 
+function closeHideMenu() {
+  activeHideMenu.value = null
+}
   function showNotification(message, type = 'info') {
     notification.value = { message, type }
     setTimeout(() => { notification.value = null }, 3000)
@@ -386,6 +392,11 @@ function openNoteEditor(id) {
     selectionLogic.deleteSelection()
   }
 
+function selectHide(id) {
+  // Pass 'false' for isMulti to make it a single selection by default
+  selectionLogic.selectObject(id, false)
+}
+
 // [FIX] Wrapper: Finish measurements before manual saves
   // This ensures that if a user draws a line and immediately clicks "Save",
   // we commit that line instead of losing it.
@@ -438,6 +449,7 @@ const layerOpacity = ref(0.4)
     savedMaps, selectedBaleId, selection, setComparisonBales, setTool, showMapStats, showNotification, sport,
     toggleAnchor, trialDay, trialLocation, trialNumber,
     wallTypes,
+    openHideMenu, closeHideMenu, selectHide, activeHideMenu,
 
     ...historyModule,
     ...bhLogic,

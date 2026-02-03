@@ -7,9 +7,18 @@ export function useHides(state, snapshot) {
       x, 
       y, 
       type: 'rat', // rat, litter, empty
+      number: null,
       layer: state.currentLayer.value || 1,
       elevation: 'regular_over' // [NEW] floor, under, over
     })
+  }
+
+  function updateHide(id, updates) {
+    const hide = state.hides.value.find(h => h.id === id)
+    if (hide) {
+      Object.assign(hide, updates)
+      if (snapshot) snapshot() // Ensure history is captured
+    }
   }
 
   function removeHide(id) {
@@ -38,5 +47,5 @@ function cycleHideElevation(id) {
   }
 }
 
-  return { addHide, removeHide, cycleHideType, cycleHideElevation }
+  return { addHide, removeHide, cycleHideType, cycleHideElevation, updateHide }
 }

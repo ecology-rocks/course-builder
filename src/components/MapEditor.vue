@@ -23,7 +23,7 @@ import BarnHuntLayer from './editor/BarnHuntLayer.vue'
 import MapLegend from './editor/MapLegend.vue'
 import EditNoteModal from 'modals/EditNoteModal.vue'
 import HelpModal from 'modals/HelpModal.vue'
-
+import HideContextMenu from './editor/hides/HideContextMenu.vue'
 
 // Setup
 const store = useMapStore()
@@ -49,7 +49,11 @@ const { handlePrint: printLogic } = usePrinter(store, userStore, stageRef, scale
 useKeyboardShortcuts(store, handleSaveMap)
 
 watch(() => [store.sport, store.ringDimensions.width], () => { nextTick(fitToScreen) }, { immediate: true })
-
+watch(() => store.activeHideMenu, (isOpen) => {
+  if (isOpen) {
+    closeContextMenu()
+  }
+})
 
 function handleGlobalClick() {
   closeContextMenu()
@@ -167,6 +171,13 @@ async function handlePrint(options) {
         </v-layer>
       </v-stage>
     </div>
+    <HideContextMenu 
+      v-if="store.activeHideMenu"
+      :hideId="store.activeHideMenu.id"
+      :x="store.activeHideMenu.x"
+      :y="store.activeHideMenu.y"
+      @close="store.closeHideMenu"
+    />
   </div>
 </template>
 

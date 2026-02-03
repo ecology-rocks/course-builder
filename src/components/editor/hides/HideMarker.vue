@@ -19,9 +19,10 @@ const fillColor = computed(() => {
 })
 
 const label = computed(() => {
-  switch (props.hide.type) {
-    case 'rat': return 'R'; case 'litter': return 'L'; case 'empty': return 'E'; default: return '?'
-  }
+  const typeMap = { rat: 'R', litter: 'L', empty: 'E' }
+  const typeChar = typeMap[props.hide.type] || '?'
+  // [NEW] Append number if it exists
+  return props.hide.number ? `${typeChar}${props.hide.number}` : typeChar
 })
 
 // [NEW] Visual styles for elevation
@@ -56,8 +57,10 @@ function onLeftClick(e) {
 
 // [NEW] Right Click: Cycles Type (R/L/E)
 function onRightClick(e) {
-  e.evt.preventDefault() // Prevents browser context menu
-  store.cycleHideType(props.hide.id)
+  e.evt.preventDefault()
+  e.cancelBubble = true // Stop stage menu from showing
+  // Emit custom event to let the parent handle the menu placement
+  store.openHideMenu(props.hide.id, e.evt.clientX, e.evt.clientY)
 }
 
 function dragBoundFunc(pos) {
@@ -95,27 +98,30 @@ function dragBoundFunc(pos) {
     @dragmove="emit('dragmove', $event)"
     @dragend="emit('dragend', $event)"
   >
-    <v-circle 
+    <v-rect 
       :config="{ 
-        radius: 12, 
+        width: props.hide.number ? 32 : 24, // Wider if numbered
+        height: 24,
+        x: props.hide.number ? -16 : -12,
+        y: -12,
+        cornerRadius: 12,
         fill: fillColor, 
         stroke: 'black', 
         strokeWidth: borderConfig.strokeWidth,
         dash: borderConfig.dash,
-        shadowColor: 'black', 
-        shadowBlur: 2, 
-        shadowOpacity: 0.3 
+        shadowBlur: 2
       }" 
     />
-    
     <v-text 
       :config="{ 
         text: label, 
-        fontSize: 14, 
+        fontSize: 13, 
         fontStyle: 'bold', 
         fill: 'black', 
-        x: -5, 
+        width: props.hide.number ? 32 : 24,
+        x: props.hide.number ? -16 : -12,
         y: -6,
+        align: 'center',
         listening: false
       }" 
     />
