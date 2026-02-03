@@ -5,8 +5,8 @@ export function useNotes(state, snapshot) {
       id: crypto.randomUUID(),
       x, 
       y, 
-      width: 6, // Default width (6ft)
-      height: 3, // Default height (3ft)
+      width: 4, // Default width (6ft)
+      height: 2, // Default height (3ft)
       text: "Double-click to edit",
       rotation: 0,
       fontSize: 14

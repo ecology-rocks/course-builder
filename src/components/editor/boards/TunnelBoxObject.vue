@@ -13,8 +13,15 @@ const isCtrlPressed = ref(false)
 
 // 1. Computed Snaps: If Ctrl is held, snap to every 15 degrees
 const rotationSnaps = computed(() => {
-  if (!isCtrlPressed.value) return [] 
-  return Array.from({ length: 24 }, (_, i) => i * 15) // [0, 15, 30... 345]
+  if (!isCtrlPressed.value) return []
+  
+  // Generate angles from -360 to 360 in 15-degree steps
+  // This ensures it snaps correctly whether you rotate left or right
+  const snaps = []
+  for (let i = -24; i <= 24; i++) {
+    snaps.push(i * 15)
+  }
+  return snaps
 })
 
 // 2. Window Listeners
@@ -70,9 +77,14 @@ function handleTransformEnd() {
   const finalW = rect.width() * group.scaleX()
   const finalH = rect.height() * group.scaleY()
 
+  const rawRotation = group.rotation()
+  const normalizedRotation = (rawRotation % 360 + 360) % 360
+
   // 2. RESET Group Scale to 1
   group.scaleX(1)
   group.scaleY(1)
+
+  group.rotation(normalizedRotation)
   
   // 3. Reset Children
   if (text) { 
@@ -94,7 +106,7 @@ function handleTransformEnd() {
     id: props.board.id,
     x: group.x() / props.scale,
     y: group.y() / props.scale,
-    rotation: group.rotation(),
+    rotation: normalizedRotation,
     width: finalW / props.scale,
     height: finalH / props.scale
   })
