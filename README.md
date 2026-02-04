@@ -1,6 +1,12 @@
 # 🗺️ Project Roadmap: K9 Course Builder
 This is my one-true-copy of the project roadmap.
 
+## Edits Starting 2/2
+ - Bales placed close an edge will bleed over until they're moved and snapped back to the course
+ - (DONE) If you try to place a board edge on a bale, it selects the bale instead / doesn't do the board edge
+ - (DONE) If you try to place a rat marker on top of a bale, it defaults to the top left corner
+
+
 ## Requested Edits
  - (DONE) Bales are still having weird spacing issues. Maybe thicker lines to hide them? "Below is a screenshot of the bales flush. I hit the button you said and it seemed to align the two sides but not the top which I have circled and also the other circled one if I try to move the bale it overlaps."
  - (DONE) Give option to print landscape OR portrait (this went away with the last print modal update)
