@@ -11,15 +11,17 @@ const showBugModal = ref(false)
         &copy; {{ new Date().getFullYear() }} K9CourseBuilder.com
       </div>
       <div class="links">
+        <a href="/about">About</a>
+        <span class="divider">•</span>
         <router-link to="/terms">Terms of Service</router-link>
         <span class="divider">•</span>
         <router-link to="/privacy">Privacy Policy</router-link>
         <span class="divider">•</span>
         <a href="mailto:support@k9coursebuilder.com">Contact Support</a>
         <span class="divider">•</span>
-        <a href="#" @click.prevent="showBugModal = true">🐛 Report a Bug</a>
+        <a href="#" @click.prevent="showBugModal = true">🐛 Bugs & Feature Requests</a>
         <span class="divider">•</span>
-        <a href="/about">About Me</a>
+        <router-link to="/roadmap">Roadmap</router-link>
       </div>
     </div>
     <BugReportModal v-if="showBugModal" @close="showBugModal = false" />

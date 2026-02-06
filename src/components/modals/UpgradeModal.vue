@@ -42,11 +42,11 @@ async function handleUpgrade() {
           <li>✅ <strong>Clean PDF Exports</strong> (No Watermark)</li>
           <li>✅ <strong>Cloud Save & Sync</strong></li>
           <li>✅ <strong>Future Offline App</strong> (Coming 2026)</li>
-          <li>✅ <strong>Lock in $59/yr Price</strong> (Forever)</li>
+          <li>✅ <strong>Lock in $75/yr Price</strong> (Forever)</li>
         </ul>
 
         <div class="price-tag">
-          <span class="currency">$</span>59<span class="period">/year</span>
+          <span class="currency">$</span>75<span class="period">/year</span>
         </div>
 
         <button @click="handleUpgrade" class="btn-upgrade">

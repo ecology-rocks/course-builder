@@ -156,7 +156,7 @@ function handleSave() {
 
         <button @click="store.realignGrid()">📏 Realign All to Grid</button>
 
-        <button @click="showBugReportModal = true">🐞 Report Bug</button>
+        <button @click="showBugReportModal = true">🐞 Feedback & Bugs</button>
         <button v-if="store.currentMapId" @click="showDeleteModal = true" class="text-danger">
           🗑️ Delete Map
         </button>

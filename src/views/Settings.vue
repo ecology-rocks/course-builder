@@ -12,9 +12,6 @@ const newName = ref('')
 const newJudgeEmail = ref('') // Input for the email to add
 const localClubName = ref('')
 // --- STRIPE CONFIGURATION ---
-const PRICE_ID_SOLO = import.meta.env.VITE_STRIPE_PRICE_SOLO
-const PRICE_ID_PRO = import.meta.env.VITE_STRIPE_PRICE_PRO
-const PRICE_ID_CLUB = import.meta.env.VITE_STRIPE_PRICE_CLUB
 const PRICE_ID_FOUNDER = import.meta.env.VITE_STRIPE_PRICE_FOUNDER
 
 // In <script setup>
@@ -144,8 +141,8 @@ async function handleRemoveJudge(email) {
             </ul>
 
             <div class="founder-offer">
-              <div class="offer-header">EARLY ADOPTER SPECIAL</div>
-              <div class="price">$59<span>/year</span></div>
+              <div class="offer-header">FOUNDER'S TIER SPECIAL</div>
+              <div class="price">$75<span>/year</span></div>
               <p class="lock-in">Lock in this price forever.</p>
               <button class="btn-primary full-width" @click="handleUpgrade">
                 Upgrade to Founder's Tier

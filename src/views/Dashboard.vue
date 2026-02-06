@@ -5,6 +5,7 @@ import { useMapStore } from 'stores/mapStore'
 import { useRouter } from 'vue-router'
 import AuthForm from 'components/AuthForm.vue'
 import DeleteMapModal from 'modals/DeleteMapModal.vue'
+import UpgradeModal from '@/components/modals/UpgradeModal.vue'
 
 const userStore = useUserStore()
 const mapStore = useMapStore()
@@ -14,6 +15,7 @@ const router = useRouter()
 const isLoading = ref(false)
 const isDragOver = ref(false)
 const localMaps = ref([])
+const showUpgradeModal = ref(false)
 
 //Delete States
 const showDeleteModal = ref(false)
@@ -170,6 +172,14 @@ watch(() => userStore.user, async (newUser) => {
     localMaps.value = []
   }
 })
+
+// Add this NEW watcher
+watch(() => userStore.justRegistered, (isNew) => {
+  if (isNew) {
+    showUpgradeModal.value = true
+    userStore.justRegistered = false // Reset immediately so it doesn't persist
+  }
+})
 </script>
 
 <template>
@@ -180,7 +190,7 @@ watch(() => userStore.user, async (newUser) => {
       </div>
     </Transition>
     <nav class="navbar">
-      <div class="logo">🐾 K9CourseBuilder</div>
+      <div class="logo"><router-link to="/" class="logo">🐾 K9CourseBuilder</router-link></div>
       <div class="nav-links">
         <button v-if="userStore.user" @click="router.push('/settings')" class="btn-outline">⚙️ Settings</button>
         <button v-if="userStore.user" @click="handleLogout" class="btn-outline">Logout</button>
@@ -252,8 +262,21 @@ watch(() => userStore.user, async (newUser) => {
         <section class="maps-list">
           <h2>Your Maps</h2>
           <div v-if="isLoading">Loading...</div>
-          <div v-else-if="filteredMaps.length === 0" class="empty-state">
-            No maps found in this folder.
+          
+          <div v-else-if="filteredMaps.length === 0">
+            
+            <div v-if="userStore.tier === 'free'" class="upgrade-empty-state">
+              <h3>Ready to get serious? 🚀</h3>
+              <p>Unlock unlimited maps, folders, and premium features.</p>
+              <button @click="showUpgradeModal = true" class="btn-upgrade">
+                View Pro Options
+              </button>
+            </div>
+
+            <div v-else class="empty-state">
+              No maps found in this folder.
+            </div>
+
           </div>
           
           <div v-else class="grid">
@@ -294,6 +317,11 @@ watch(() => userStore.user, async (newUser) => {
       @confirm="confirmDelete" 
     />
 
+    <UpgradeModal 
+      v-if="showUpgradeModal" 
+      @close="showUpgradeModal = false" 
+    />
+
   </div>
 </template>
 
@@ -301,7 +329,18 @@ watch(() => userStore.user, async (newUser) => {
 /* (Styles same as previous) */
 .dashboard { font-family: 'Inter', sans-serif; min-height: 100vh; background: #f4f6f8; }
 .navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
-.logo { font-weight: 800; font-size: 1.2rem; color: #2c3e50; }
+.logo {
+  text-decoration: none; /* Removes the underline */
+  color: #2c3e50;        /* Forces your dark grey color instead of link blue */
+  font-weight: 800;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+/* Optional: Slight fade on hover so they know it's clickable */
+.logo:hover {
+  opacity: 0.8;
+}
 .btn-outline { background: none; border: 1px solid #ccc; padding: 5px 15px; border-radius: 4px; cursor: pointer; margin-left: 10px; }
 
 /* AUTH LAYOUT ONLY */
@@ -373,5 +412,36 @@ watch(() => userStore.user, async (newUser) => {
 }
 .sidebar li:hover .folder-actions {
   opacity: 1;
+}
+
+.upgrade-empty-state {
+  background: linear-gradient(135deg, #e3f2fd 0%, #ffffff 100%);
+  border: 2px dashed #2196f3;
+  border-radius: 12px;
+  padding: 40px;
+  text-align: center;
+  margin-top: 20px;
+  color: #2c3e50;
+}
+
+.upgrade-empty-state h3 {
+  margin-top: 0;
+  color: #1565c0;
+}
+
+.btn-upgrade {
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: background 0.2s;
+}
+
+.btn-upgrade:hover {
+  background: #1976d2;
 }
 </style>

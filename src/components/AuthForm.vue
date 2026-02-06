@@ -1,28 +1,37 @@
 <script setup>
-import { ref } from 'vue'
-import { useUserStore } from 'stores/userStore'
+import { ref, onMounted } from 'vue'
+import { useUserStore } from '@/stores/userStore'
+import { useRoute } from 'vue-router'
 
 const userStore = useUserStore()
+const route = useRoute()
+
 const email = ref('')
 const password = ref('')
+const judgeName = ref('')
 const registerSport = ref('barnhunt')
 const isRegistering = ref(false)
 const showPassword = ref(false)
 
-// Optional: emit success if the parent needs to react (like closing a modal)
-const emit = defineEmits(['success'])
+const emit = defineEmits(['login-success', 'register-success'])
+
+onMounted(() => {
+  if (route.query.mode === 'signup') {
+    isRegistering.value = true
+  }
+})
 
 async function handleSubmit() {
   if (!email.value || !password.value) return alert("Please enter email and password")
 
   let success = false
   if (isRegistering.value) {
-    success = await userStore.register(email.value, password.value, registerSport.value)
+    success = await userStore.register(email.value, password.value, registerSport.value, judgeName.value)
+    if (success) emit('register-success')
   } else {
     success = await userStore.login(email.value, password.value)
+    if (success) emit('login-success')
   }
-
-  if (success) emit('success')
 }
 
 async function handlePasswordReset() {
@@ -39,6 +48,14 @@ async function handlePasswordReset() {
     <h3>{{ isRegistering ? 'Register' : 'Log In' }}</h3>
 
     <form @submit.prevent="handleSubmit" class="form-group">
+      <input 
+        v-if="isRegistering"
+        v-model="judgeName" 
+        type="text" 
+        placeholder="Your Name (displayed on maps)" 
+        required 
+        autocomplete="name" 
+      />
       <input v-model="email" type="email" placeholder="Email" required autocomplete="username" />
       <div class="password-wrapper">
         <input v-model="password" :type="showPassword ? 'text' : 'password'" placeholder="Password" required
@@ -47,9 +64,10 @@ async function handlePasswordReset() {
           {{ showPassword ? 'Hide' : 'Show' }}
         </button>
         <div v-if="!isRegistering" class="forgot-password">
-      <a @click="handlePasswordReset" tabindex="-1">Forgot Password?</a>
-    </div>
+          <a @click="handlePasswordReset" tabindex="-1">Forgot Password?</a>
+        </div>
       </div>
+      
 
       <div class="auth-actions">
         <button type="submit" class="btn-primary" :disabled="userStore.loading">
@@ -99,7 +117,6 @@ async function handlePasswordReset() {
   color: #2c3e50;
 }
 
-/* Password Toggle Styles */
 .password-wrapper {
   position: relative;
   display: flex;
@@ -184,46 +201,5 @@ async function handlePasswordReset() {
 
 .auth-toggle a:hover {
   text-decoration: underline;
-}
-
-/* SPORT SELECTOR STYLES */
-.sport-select-label {
-  font-size: 0.85em;
-  color: #666;
-  margin-top: 10px;
-  margin-bottom: 8px;
-  text-align: left;
-}
-
-.sport-selector {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
-.sport-selector label {
-  flex: 1;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 10px;
-  font-size: 0.9em;
-  cursor: pointer;
-  background: #fafafa;
-  transition: all 0.2s;
-}
-
-.sport-selector label:hover {
-  background: #f0f0f0;
-}
-
-.sport-selector label.active {
-  background: #e3f2fd;
-  border-color: #2196f3;
-  color: #1565c0;
-  font-weight: bold;
-}
-
-.sport-selector input {
-  display: none;
 }
 </style>
