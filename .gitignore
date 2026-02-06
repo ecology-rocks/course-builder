@@ -17,6 +17,8 @@ coverage
 *.env
 .env
 betatesters.md
+.firebase/*
+.vscode/*
 
 # Editor directories and files
 .vscode/*

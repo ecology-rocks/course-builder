@@ -12,24 +12,39 @@ const router = useRouter()
       <button @click="router.push('/')">Back to Home</button>
     </nav>
 
-    <div class="content">
+<div class="content">
       <h1>Terms of Service</h1>
-      <p>Last updated: {{ new Date().toLocaleDateString() }}</p>
+      <p>Last updated: February 6, 2026</p>
 
       <h3>1. Acceptance of Terms</h3>
-      <p>By accessing and using K9 Course Builder, you accept and agree to be bound by the terms and provision of this agreement.</p>
+      <p>By accessing and using K9 Course Builder ("the Service"), you accept and agree to be bound by the terms and provision of this agreement. If you do not agree, you must cease using the Service immediately.</p>
 
-      <h3>2. Subscription & Payments</h3>
-      <p>We offer paid subscriptions ("Solo", "Pro", "Club"). You agree to pay the fees associated with your chosen tier. Payments are processed securely via Stripe. You may cancel at any time via the Settings page.</p>
+      <h3>2. Accounts & Security</h3>
+      <p>You are responsible for maintaining the confidentiality of your account and password. You may not share your account credentials with others. We reserve the right to terminate accounts found to be shared or used in violation of these terms.</p>
 
-      <h3>3. User Generated Content</h3>
-      <p>You retain ownership of the maps you create. By saving maps to the cloud, you grant us permission to host and display them as requested by you (e.g. for sharing).</p>
+      <h3>3. Subscription, Payments & Refunds</h3>
+      <p>We offer paid subscriptions processed securely via Stripe. By subscribing, you authorize us to charge your payment method on a recurring basis (monthly or annually) until you cancel.</p>
+      <ul>
+        <li><strong>Cancellation:</strong> You may cancel your renewal at any time via the Settings page. You will retain access until the end of your current billing period.</li>
+        <li><strong>Refunds:</strong> Since this is a digital product with immediate access, all sales are final. We generally do not offer refunds for partial billing periods, but exceptions may be made for technical errors at our sole discretion.</li>
+        <li><strong>Price Changes:</strong> We reserve the right to adjust pricing for our service or any components thereof in any manner and at any time. Any price changes will take effect following email notice to you.</li>
+      </ul>
 
-      <h3>4. Disclaimer</h3>
-      <p>This tool is for educational and planning purposes. You are responsible for ensuring your physical course setups comply with official organization rules and safety standards.</p>
+      <h3>4. User Generated Content & Data</h3>
+      <p>You retain ownership of the maps you create. By saving maps to our cloud storage, you grant us a non-exclusive license to host, store, and display them as required to provide the Service. We are not responsible for any data loss; please keep local backups of critical course designs.</p>
 
-      <h3>5. Contact</h3>
-      <p>For questions, please contact us at support@k9coursebuilder.com.</p>
+      <h3>5. Use of Service & Disclaimer</h3>
+      <p>This tool is for planning and design purposes only. It does not validate your maps for safety or rule compliance.</p>
+      <p><strong>THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND.</strong> You are solely responsible for ensuring your physical course setups comply with official organization rules (e.g., Barn Hunt Association, AKC) and safety standards. We are not liable for any injuries, disqualifications, or damages resulting from the use of course designs created with this tool.</p>
+
+      <h3>6. Limitation of Liability</h3>
+      <p>To the maximum extent permitted by law, K9 Course Builder shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses.</p>
+
+      <h3>7. Termination</h3>
+      <p>We reserve the right to suspend or terminate your access to the Service at our sole discretion, without notice or liability, for any reason, including but not limited to a breach of these Terms.</p>
+
+      <h3>8. Contact</h3>
+      <p>For support or questions regarding these terms, please contact us at support@k9coursebuilder.com.</p>
     </div>
 
     <AppFooter />
