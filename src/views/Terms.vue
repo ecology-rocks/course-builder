@@ -31,11 +31,11 @@ const router = useRouter()
       </ul>
 
       <h3>4. User Generated Content & Data</h3>
-      <p>You retain ownership of the maps you create. By saving maps to our cloud storage, you grant us a non-exclusive license to host, store, and display them as required to provide the Service. We are not responsible for any data loss; please keep local backups of critical course designs.</p>
+      <p>You retain ownership of the maps you create. By saving maps to our cloud storage, you grant us a non-exclusive license to host, store, and display them as required to provide the Service. We are not responsible for any data loss; please keep local backups of critical course designs using the Export tool.</p>
 
       <h3>5. Use of Service & Disclaimer</h3>
       <p>This tool is for planning and design purposes only. It does not validate your maps for safety or rule compliance.</p>
-      <p><strong>THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND.</strong> You are solely responsible for ensuring your physical course setups comply with official organization rules (e.g., Barn Hunt Association, AKC) and safety standards. We are not liable for any injuries, disqualifications, or damages resulting from the use of course designs created with this tool.</p>
+      <p><strong>THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND.</strong> You are solely responsible for ensuring your physical course setups comply with official organization rules (e.g., Barn Hunt Association, etc.) and safety standards. We are not liable for any injuries, disqualifications, or damages resulting from the use of course designs created with this tool.</p>
 
       <h3>6. Limitation of Liability</h3>
       <p>To the maximum extent permitted by law, K9 Course Builder shall not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of profits or revenues, whether incurred directly or indirectly, or any loss of data, use, goodwill, or other intangible losses.</p>

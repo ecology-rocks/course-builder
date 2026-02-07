@@ -18,15 +18,24 @@ const fillColor = computed(() => {
   }
 })
 
+// [NEW] Stroke color reacts to selection
+const strokeColor = computed(() => {
+  if (store.selection.includes(props.hide.id)) return '#00a1ff' // Blue highlight
+  return 'black'
+})
+
+// [NEW] Stroke width increases slightly on selection for visibility
+const strokeWidth = computed(() => {
+  const base = borderConfig.value.strokeWidth
+  return store.selection.includes(props.hide.id) ? base + 1 : base
+})
+
 const label = computed(() => {
   const typeMap = { rat: 'R', litter: 'L', empty: 'E' }
   const typeChar = typeMap[props.hide.type] || '?'
-  // [NEW] Append number if it exists
   return props.hide.number ? `${typeChar}${props.hide.number}` : typeChar
 })
 
-// [NEW] Visual styles for elevation
-// [UPDATED] Default is now 'regular_over', 'floor' is removed
 const borderConfig = computed(() => {
   const elevation = props.hide.elevation || 'regular_over'
   
@@ -36,7 +45,7 @@ const borderConfig = computed(() => {
     return { strokeWidth: 2, dash: null }   // Solid = Regular/Over
   }
 })
-// [UPDATED] Left Click: Handle Delete OR Select
+
 function onLeftClick(e) {
   e.cancelBubble = true
   
@@ -45,21 +54,20 @@ function onLeftClick(e) {
     return
   }
 
-  // Allow Alt+Click to still cycle elevation if you want a mouse shortcut
+  // Allow Alt+Click to still cycle elevation
   if (e.evt.altKey) {
     store.cycleHideElevation(props.hide.id)
     return
   }
 
-  // MAIN FIX: Select the hide so keyboard shortcuts (like 'U') work
+  // Select logic (supports Shift+Click for multi-select via store logic if added, 
+  // but for now simple select)
   store.selectHide(props.hide.id) 
 }
 
-// [NEW] Right Click: Cycles Type (R/L/E)
 function onRightClick(e) {
   e.evt.preventDefault()
-  e.cancelBubble = true // Stop stage menu from showing
-  // Emit custom event to let the parent handle the menu placement
+  e.cancelBubble = true 
   store.openHideMenu(props.hide.id, e.evt.clientX, e.evt.clientY)
 }
 
@@ -100,16 +108,17 @@ function dragBoundFunc(pos) {
   >
     <v-rect 
       :config="{ 
-        width: props.hide.number ? 32 : 24, // Wider if numbered
+        width: props.hide.number ? 32 : 24, 
         height: 24,
         x: props.hide.number ? -16 : -12,
         y: -12,
         cornerRadius: 12,
         fill: fillColor, 
-        stroke: 'black', 
-        strokeWidth: borderConfig.strokeWidth,
+        stroke: strokeColor, 
+        strokeWidth: strokeWidth,
         dash: borderConfig.dash,
-        shadowBlur: 2
+        shadowBlur: store.selection.includes(hide.id) ? 10 : 2,
+        shadowColor: store.selection.includes(hide.id) ? '#00a1ff' : 'black'
       }" 
     />
     <v-text 

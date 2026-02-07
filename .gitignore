@@ -19,6 +19,7 @@ coverage
 betatesters.md
 .firebase/*
 .vscode/*
+.firebase/hosting.ZGlzdA.cache
 
 # Editor directories and files
 .vscode/*

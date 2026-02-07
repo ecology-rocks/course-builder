@@ -1,6 +1,45 @@
 # 🗺️ Project Roadmap: K9 Course Builder
 This is my one-true-copy of the project roadmap.
 
+## Controls Uniformity Punch List
+
+### KEYBOARD SHORTCUTS (General)
+- Implement R for Rotate in 15 degree intervals. Shift+R to rotate in 45 degree intervals.
+- Implement E for Transform
+- Implement V for Select
+- Implement U for Cycle Hides
+- Implement O for Cycle Orientation
+- Implement L for Cycle Lean
+- Implement 
+- Make sure we can Tab around objects. 
+- Confirm Bcksp/Del delete all objects
+- Confirm CTRL+A for select all.
+- Alt + Drag to duplicate object/selection
+- Arrows to nudge placement
+- Make sure all objects are transformable
+
+### TOOL SELECT SHORTCUTS
+- B for Bale
+- H for Hide
+- G for Gate
+- D for DC Mat
+- S for Start Box
+- T for Step
+- Q for Board Line
+- W for Board Box
+- Z for Dead Zone
+- X for Obstruction
+- M for Measure
+- N for Note
+
+Make sure that users can turn off keyboard tools, and that keyboard tools only fire when they're in the program actively. 
+
+### BALE RC MENU
+- Set Dimensions
+- Lean
+- Orientation
+- Anchor
+
 ## Edits Starting 2/2
  - Bales placed close an edge will bleed over until they're moved and snapped back to the course
  - (DONE) If you try to place a board edge on a bale, it selects the bale instead / doesn't do the board edge

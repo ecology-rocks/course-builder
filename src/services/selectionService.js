@@ -36,7 +36,28 @@ export function useSelectionLogic(state, snapshot) {
     }
   }
 
+// [NEW] Select All Logic
+  function selectAll() {
+    const allIds = []
+    
+    // Iterate over all collections and gather IDs
+    Object.keys(state.mapData.value).forEach(key => {
+      // Gate is fixed to the wall; exclude it from bulk selection
+      if (key === 'gate') return 
 
+      const collection = state.mapData.value[key]
+      if (Array.isArray(collection)) {
+        collection.forEach(item => {
+          if (item.id) allIds.push(item.id)
+        })
+      } else if (collection && collection.id) {
+        allIds.push(collection.id)
+      }
+    })
+
+    state.selection.value = allIds
+  }
+  
 function selectArea(x, y, w, h) {
     const rect = {
       x: w < 0 ? x + w : x,
@@ -49,11 +70,8 @@ function selectArea(x, y, w, h) {
     const isInside = (ox, oy) => ox >= rect.x && ox <= rect.x + rect.w && oy >= rect.y && oy <= rect.y + rect.h
     const overlaps = (r1, r2) => !(r2.x > r1.x + r1.w || r2.x + r2.w < r1.x || r2.y > r1.y + r1.h || r2.y + r2.h < r1.y)
 
-    Object.keys(state.mapData.value).forEach(key => {
-      const collection = state.mapData.value[key]
-      if (!Array.isArray(collection)) return
-
-      collection.forEach(item => {
+    // Helper to check a specific item
+    const checkItem = (item, key) => {
         if (item.x1 !== undefined && item.y1 !== undefined) {
            // Boards (Line Bounding Box)
            const minX = Math.min(item.x1, item.x2); const maxX = Math.max(item.x1, item.x2)
@@ -61,7 +79,7 @@ function selectArea(x, y, w, h) {
            if (overlaps(rect, { x: minX, y: minY, w: maxX - minX, h: maxY - minY })) newSelection.push(item.id)
         } 
         else if (item.points && Array.isArray(item.points)) {
-           // [FIX] Measurements (Multi-point Bounding Box)
+           // Measurements (Multi-point Bounding Box)
            const xs = item.points.map(p => p.x)
            const ys = item.points.map(p => p.y)
            const minX = Math.min(...xs); const maxX = Math.max(...xs)
@@ -71,10 +89,26 @@ function selectArea(x, y, w, h) {
         else {
            // Standard Objects (Center point)
            let cx = item.x; let cy = item.y
+           
+           // Offsets for better center-detection
            if (key === 'bales') { cx += 1.5; cy += 0.75 }
+           if (key === 'startBox') { cx += 2.5; cy += 2 } // Approx center of 5x4 box
+           
            if (isInside(cx, cy)) newSelection.push(item.id)
         }
-      })
+    }
+
+    Object.keys(state.mapData.value).forEach(key => {
+      const collection = state.mapData.value[key]
+      
+      // Case 1: Array Collections (Bales, Hides, etc.)
+      if (Array.isArray(collection)) {
+        collection.forEach(item => checkItem(item, key))
+      } 
+      // Case 2: Singleton Objects (StartBox, Gate)
+      else if (collection && collection.id) {
+        checkItem(collection, key)
+      }
     })
 
     state.selection.value = newSelection
@@ -246,29 +280,26 @@ function rotateSelection(angle = 90) {
     if (ids.length === 0) return
 
     Object.keys(state.mapData.value).forEach(key => {
+      // [UPDATED] Block Gate from being moved by arrow keys or group drag
+      if (key === 'gate') return
+
       const collection = state.mapData.value[key]
-      
-      // Helper to move a single item
       const moveItem = (item) => {
         if (!ids.includes(item.id)) return
 
         if (item.x1 !== undefined && item.y1 !== undefined) {
-          // [FIX] Handle Boards (Line Segments)
           item.x1 += dx; item.y1 += dy
           item.x2 += dx; item.y2 += dy
         } 
         else if (item.points && Array.isArray(item.points)) {
-          // [FIX] Handle Measurements (Array of points)
           item.points.forEach(p => { p.x += dx; p.y += dy })
         } 
         else {
-          // Standard Objects
           item.x += dx
           item.y += dy
         }
       }
 
-      // Handle Arrays vs Singletons
       if (Array.isArray(collection)) {
          collection.forEach(moveItem)
       } else if (collection && ids.includes(collection.id)) {
@@ -276,13 +307,13 @@ function rotateSelection(angle = 90) {
       }
     })
 
-    // [IMPORTANT] Save to History
     if (snapshot) snapshot()
   }
 
   return {
     selectObject,
     selectArea,
+    selectAll,
     clearSelection,
     deleteSelection,
     rotateSelection,
