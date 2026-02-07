@@ -1,7 +1,10 @@
 import { ref } from 'vue'
 
-export function useSelectionLogic(state, snapshot) {
+export function useSelectionLogic(state, snapshot, notifications) {
   
+  const clipboard = ref([]);
+
+
   // Helper: Find an object by ID across ALL data types
   function findObjectById(id) {
     // We iterate over the keys in mapData (bales, hides, zones, etc.)
@@ -310,6 +313,70 @@ function rotateSelection(angle = 90) {
     if (snapshot) snapshot()
   }
 
+  function copySelection() {
+    const ids = state.selection.value;
+    if (ids.length === 0) return;
+
+    const itemsToCopy = [];
+    Object.keys(state.mapData.value).forEach((key) => {
+      const collection = state.mapData.value[key];
+      if (Array.isArray(collection)) {
+        collection.forEach((item) => {
+          if (ids.includes(item.id)) {
+            itemsToCopy.push({ ...item, _type: key });
+          }
+        });
+      }
+    });
+
+    clipboard.value = itemsToCopy;
+    if (notifications && notifications.show) {
+      notifications.show(`Copied ${itemsToCopy.length} items`)
+    }
+
+    return itemsToCopy.length; 
+  }
+
+  function pasteSelection() {
+    if (clipboard.value.length === 0) return;
+
+    state.selection.value = []; // Clear selection
+
+    clipboard.value.forEach((clipItem) => {
+      const type = clipItem._type;
+      if (!state.mapData.value[type]) return;
+
+      // Clone and assign new ID
+      const newItem = JSON.parse(JSON.stringify(clipItem));
+      newItem.id = crypto.randomUUID();
+
+      // Offset slightly
+      if (newItem.x !== undefined) newItem.x += 1;
+      if (newItem.y !== undefined) newItem.y += 1;
+      if (newItem.x1 !== undefined) {
+        newItem.x1 += 1;
+        newItem.x2 += 1;
+        newItem.y1 += 1;
+        newItem.y2 += 1;
+      }
+
+      delete newItem._type;
+
+      if (Array.isArray(state.mapData.value[type])) {
+        state.mapData.value[type].push(newItem);
+        state.selection.value.push(newItem.id);
+      }
+    });
+
+    if (snapshot) snapshot();
+  }
+
+  function cutSelection() {
+    const count = copySelection();
+    deleteSelection(); // This function should already exist in this file
+    return count;
+  }
+
   return {
     selectObject,
     selectArea,
@@ -319,6 +386,10 @@ function rotateSelection(angle = 90) {
     rotateSelection,
     removeObject,
     moveSelection,
-    findObjectById
+    findObjectById,
+    clipboard,
+    copySelection,
+    pasteSelection,
+    cutSelection,
   }
 }

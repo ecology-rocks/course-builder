@@ -1,5 +1,9 @@
 // src/stores/mapActions/useNotes.js
+import { ref } from 'vue';
+
 export function useNotes(state, snapshot) {
+const editingNoteId = ref(null);
+
   function addNote(x, y) {
     state.notes.value.push({
       id: crypto.randomUUID(),
@@ -24,5 +28,13 @@ export function useNotes(state, snapshot) {
     state.notes.value = state.notes.value.filter(n => n.id !== id)
   }
 
-  return { addNote, updateNote, removeNote }
+  function openNoteEditor(id) {
+    editingNoteId.value = id;
+  }
+
+  function closeNoteEditor() {
+    editingNoteId.value = null;
+  }
+
+  return { addNote, updateNote, removeNote, editingNoteId, openNoteEditor, closeNoteEditor }
 }

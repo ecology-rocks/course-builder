@@ -83,7 +83,6 @@ export const useMapStore = defineStore("map", () => {
   const showMapStats = ref(true);
   const previousClassCount = ref(0);
   const activeMeasurement = ref(null);
-  const editingNoteId = ref(null);
 
   // Configs
   const wallTypes = ref({
@@ -103,7 +102,6 @@ export const useMapStore = defineStore("map", () => {
   const savedMaps = ref([]);
   const comparisonMapName = ref(null);
   const previousBales = ref([]);
-  const clipboard = ref([]);
   const currentLayer = ref(1);
   const selectedBaleId = ref(null);
   const selection = ref([]);
@@ -125,14 +123,6 @@ export const useMapStore = defineStore("map", () => {
     setTimeout(() => {
       notification.value = null;
     }, 3000);
-  }
-
-  function openNoteEditor(id) {
-    editingNoteId.value = id;
-  }
-
-  function closeNoteEditor() {
-    editingNoteId.value = null;
   }
 
   function reset() {
@@ -162,7 +152,9 @@ export const useMapStore = defineStore("map", () => {
     baleConfig.value = { length: 3, width: 1.5, height: 1 };
     dcMatConfig.value = { width: 2, height: 3 };
     activeMeasurement.value = null;
-    editingNoteId.value = null;
+    if (domainModules && domainModules.closeNoteEditor) {
+      domainModules.closeNoteEditor();
+    }
   }
 
   function resizeRing(width, height) {
@@ -236,8 +228,8 @@ export const useMapStore = defineStore("map", () => {
     // 2. Snap Bales (Delegated to Domain Module)
     // We access 'modules' here, which is defined below. This is safe in Vue/JS 
     // as long as realignGrid isn't called during the initial setup.
-    if (modules.realignBales) {
-      modules.realignBales(); 
+    if (domainModules && domainModules.realignBales) {
+      domainModules.realignBales(); 
     }
 
     // 3. Snap Singulars
@@ -288,7 +280,6 @@ export const useMapStore = defineStore("map", () => {
     activeTool,
     baleConfig,
     classLevel,
-    clipboard,
     comparisonMapName,
     currentFolderId,
     currentLayer,
@@ -315,6 +306,7 @@ export const useMapStore = defineStore("map", () => {
     trialNumber,
     wallTypes,
     activeHideMenu,
+    activeDCMatMenu,
     comparisonMapName,
 
     reset,
@@ -351,70 +343,14 @@ export const useMapStore = defineStore("map", () => {
   const persistence = useMapPersistence(stateRefs, userStore, {
     show: showNotification,
   });
-  const selectionLogic = useSelectionLogic(
-    stateRefs,
-    historyModule.snapshot,
-    () => {},
-  );
 
-  function copySelection() {
-    const ids = selection.value;
-    if (ids.length === 0) return;
+const selectionLogic = useSelectionLogic(
+  stateRefs,
+  historyModule.snapshot,
+  // Pass the existing deps object which contains 'show'
+  deps 
+);
 
-    const itemsToCopy = [];
-    Object.keys(mapData.value).forEach((key) => {
-      const collection = mapData.value[key];
-      if (Array.isArray(collection)) {
-        collection.forEach((item) => {
-          if (ids.includes(item.id)) {
-            itemsToCopy.push({ ...item, _type: key });
-          }
-        });
-      }
-    });
-
-    clipboard.value = itemsToCopy;
-    showNotification(`Copied ${itemsToCopy.length} items`);
-  }
-
-  function pasteSelection() {
-    if (clipboard.value.length === 0) return;
-
-    selection.value = []; // Clear selection to focus on new items
-
-    clipboard.value.forEach((clipItem) => {
-      const type = clipItem._type;
-      if (!mapData.value[type]) return;
-
-      // Clone and assign new ID
-      const newItem = JSON.parse(JSON.stringify(clipItem));
-      newItem.id = crypto.randomUUID();
-
-      // Offset slightly
-      if (newItem.x !== undefined) newItem.x += 1;
-      if (newItem.y !== undefined) newItem.y += 1;
-      if (newItem.x1 !== undefined) {
-        newItem.x1 += 1;
-        newItem.x2 += 1;
-        newItem.y1 += 1;
-        newItem.y2 += 1;
-      }
-
-      delete newItem._type;
-
-      if (Array.isArray(mapData.value[type])) {
-        mapData.value[type].push(newItem);
-        selection.value.push(newItem.id);
-      }
-    });
-
-    historyModule.snapshot();
-  }
-
-  function cutSelection() {
-    copySelection();
-    selectionLogic.deleteSelection();
-  }
 
   function selectHide(id) {
     // Pass 'false' for isMulti to make it a single selection by default
@@ -428,7 +364,7 @@ export const useMapStore = defineStore("map", () => {
     // Only force-finish on MANUAL save.
     // We don't want autosave to interrupt a user mid-drawing.
     if (!isAutoSave && stateRefs.activeMeasurement.value) {
-      bhLogic.finishMeasurement();
+      domainModules.finishMeasurement();
     }
     await persistence.saveToCloud(isAutoSave, thumbnail);
   };
@@ -460,16 +396,11 @@ export const useMapStore = defineStore("map", () => {
     activeTool,
     baleConfig,
     classLevel,
-    clipboard,
-    closeNoteEditor,
     comparisonMapName,
-    copySelection,
     currentFolderId,
     currentLayer,
     currentMapId,
-    cutSelection,
     dcMatConfig,
-    editingNoteId,
     folders,
     gridSize,
     gridStartCorner,
@@ -482,8 +413,6 @@ export const useMapStore = defineStore("map", () => {
     multiLayerView,
     nextNumber,
     notification,
-    openNoteEditor,
-    pasteSelection,
     previousBales,
     previousClassCount,
     realignGrid,
