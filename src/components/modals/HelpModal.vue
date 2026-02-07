@@ -14,7 +14,7 @@ defineEmits(['close'])
       <div class="modal-body">
 
         <div class="help-section">
-          <h3>⌨️ Keyboard Shortcuts For Most Objects</h3>
+          <h3>⌨️ General Keyboard Shortcuts</h3>
           <table class="shortcut-table">
             <tbody>
               <tr>
@@ -32,7 +32,7 @@ defineEmits(['close'])
               </tr>
               <tr>
                 <td><kbd>Ctrl</kbd> + <kbd>A</kbd> / <kbd>C</kbd> / <kbd>V</kbd> / <kbd>X</kbd></td>
-                <td>Select All / Copy / Paste / Cut selection</td>
+                <td>Select All / Copy / Paste / Cut</td>
               </tr>
               <tr>
                 <td><kbd>Arrow Keys</kbd></td>
@@ -44,11 +44,11 @@ defineEmits(['close'])
               </tr>
               <tr>
                 <td><kbd>R</kbd></td>
-                <td>Rotate selection 15 degrees.</td>
+                <td>Rotate selection <strong>15°</strong> </td>
               </tr>
               <tr>
                 <td><kbd>Shift</kbd> + <kbd>R</kbd></td>
-                <td>Rotate selection 45 degrees.</td>
+                <td>Rotate selection <strong>45°</strong></td>
               </tr>
               <tr>
                 <td><kbd>M</kbd></td>
@@ -59,24 +59,69 @@ defineEmits(['close'])
         </div>
 
         <div class="help-section">
-          <h3>⌨️ Keyboard Shortcuts For Tool Selection</h3>
+          <h3>🖱️ Context Menus & Selection Bar</h3>
+          <ul class="tool-list">
+            <li>
+              <strong>Bottom Selection Bar:</strong> When you select an object, a floating bar appears at the bottom of the screen. If the bottom bar is in your way, just scroll the map editor view so you can see it. 
+            </li>
+            <li>
+              <strong>Right-Click Menu:</strong> Right-click most objects to open a Context Menu. This provides access to advanced options like <strong>Customize Style</strong> (colors, borders) and specific object properties.
+            </li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h3>🛠 Object Specifics</h3>
+          <ul class="tool-list">
+            <li>
+              <strong>📦 Bales:</strong>
+              <ul class="sub-list">
+                 <li><strong>Orientation:</strong> Use the bottom bar to toggle Flat, Tall, or Pillar.</li>
+                 <li><strong>Lean:</strong> Use the arrow buttons in the bottom bar to lean bales Left or Right.</li>
+                 <li><strong>Anchors:</strong> You can "Anchor" a bale to lock it for grid building. <em>Requirement: Must be Layer 1, Flat, and aligned with the grid (0°/90°).</em></li>
+              </ul>
+            </li>
+            <li>
+              <strong>🐀 Hides:</strong>
+              <ul class="sub-list">
+                <li><strong>Type:</strong> Toggle between Rat (Red), Litter (Yellow), and Empty (White).</li>
+                <li><strong>Elevation:</strong> Toggle "Regular" vs "Under". <strong>"Under"</strong> hides appear with a <span style="border-bottom: 2px dashed #666;">dashed border</span>.</li>
+                <li><strong>Numbering:</strong> You can assign a specific hide number directly from the selection bar.</li>
+              </ul>
+            </li>
+            <li>
+              <strong>✏️ Boards & Tunnels:</strong>
+              <ul class="sub-list">
+                <li><strong>Edge Lines:</strong> Click and drag to place the two endpoints of a line.</li>
+                <li><strong>Tunnel Boards:</strong> Click once to place a tunnel board. Click it again to select and resize it. Use the Context Menu to customize styles.</li>
+              </ul>
+            </li>
+            <li>
+              <strong>📏 Steps, Mats & Zones:</strong>
+              These objects can be rotated and resized. Use the Right-Click menu to change their colors or styles.
+            </li>
+          </ul>
+        </div>
+
+        <div class="help-section">
+          <h3>⌨️ Tool Quick-Keys</h3>
           <table class="shortcut-table">
             <tbody>
               <tr>
                 <td><kbd>B</kbd></td>
-                <td>Bale Placement Tool</td>
+                <td>Bale Tool</td>
                 <td><kbd>O</kbd></td>
-                <td>Bale Orientation Tool</td>
+                <td>Orientation Tool</td>
                 <td><kbd>L</kbd></td>
                 <td>Bale Lean Tool</td>
               </tr>
               <tr>
                 <td><kbd>H</kbd></td>
-                <td>Hide Placement Tool</td>
-                <td><kbd>U</kbd></td>
-                <td>Hide Elevation Tool</td>
+                <td>Hide Tool</td>
                 <td><kbd>Y</kbd></td>
                 <td>Hide Type Tool</td>
+                <td><kbd>U</kbd></td>
+                <td>Hide Elevation Tool</td>
               </tr>
               <tr>
                 <td><kbd>G</kbd></td>
@@ -84,74 +129,26 @@ defineEmits(['close'])
                 <td><kbd>D</kbd></td>
                 <td>DC Mat Tool</td>
                 <td><kbd>S</kbd></td>
-                <td>Start Box Tool</td>
+                <td>Start Box</td>
               </tr>
               <tr>
                 <td><kbd>T</kbd></td>
                 <td>Step Tool</td>
                 <td><kbd>Q</kbd></td>
-                <td>Board Line Tool</td>
+                <td>Board Line</td>
                 <td><kbd>W</kbd></td>
-                <td>Board Box Tool</td>
+                <td>Tunnel Box</td>
               </tr>
               <tr>
                 <td><kbd>Z</kbd></td>
-                <td>Dead Zone Tool</td>
+                <td>Dead Zone</td>
                 <td><kbd>X</kbd></td>
-                <td>Obstruction Tool</td>
+                <td>Obstruction</td>
                 <td><kbd>N</kbd></td>
                 <td>Note Tool</td>
               </tr>
             </tbody>
           </table>
-        </div>
-
-        <div class="help-section">
-          <h3>🛠 Generic Function Guide</h3>
-          <ul class="tool-list">
-            <li>
-              <strong>🖱 Select Tool:</strong> Click to select. Shift+Click to select multiple. Drag on empty space to
-              select all objects in an area.
-            </li>
-            <li>
-              <strong>⚠️ Transformable and Rotateable Objects:</strong> After selecting the correct tool, click anywhere
-              on the map to place a starter DC Mat, Step, Board, Dead Zone, or Obstruction. Click on the object after
-              it's been placed to enter transformation mode. Click and drag any side of the box to resize. Use the point
-              offset from the object to rotate it. Steps are placeable and rotateable, but not resizeable.
-            </li>
-            <li>
-              <strong>🗑 Delete Tool:</strong> There are three ways to delete objects. You can select the object
-              (highlights in blue) and then hit <kbd>Backspace</kbd> or <kbd>Delete</kbd>, you can use the Delete button
-              that appears on the hover menu at the bottom, or, with the Delete Tool selected, you can click on an
-              object directly.
-            </li>
-          </ul>
-        </div>
-        <div class="help-section">
-          <h3>🛠 Specific Tool Guide</h3>
-          <ul class="tool-list">
-            <li>
-              <strong>📦 Bales:</strong> Change <b>Orientation</b> (tall, pillar, or normal) by using the Orientation
-              tool. Change <b>Lean</b> (arrows or blank) by
-              using the Lean Tool.
-            </li>
-            <li>
-              <strong>✏️ Full Boards and Edge Lines:</strong> For board edge lines, click and drag to place
-              the two points of a line. For full boards, click once to place a starter board, and then click to select
-              it and you can transform it to the correct size.
-            </li>
-            <li>
-              <strong>🐀 Hide Tools:</strong> Right click to access context menu to alter hide type, elevation, or add hide number.
-            </li>
-            <li>
-              <strong>🚧 Gate Tool:</strong> Click near a wall to place. Drag the gate to move it along the perimeter.
-            </li>
-            <li>
-              <strong>📏 Measure Tool:</strong> Click to add points. Click again on the last placed point to finish the
-              line. Measurements turn blue when selected, and from there, you can drag points to move where they're at,
-              or delete it.
-            </li>
-          </ul>
         </div>
 
       </div>
@@ -179,7 +176,7 @@ defineEmits(['close'])
 
 .modal-content {
   background: white;
-  width: 550px;
+  width: 600px;
   max-width: 90%;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -270,7 +267,18 @@ kbd {
   margin-bottom: 10px;
   font-size: 0.95rem;
   line-height: 1.4;
-  padding-bottom: 10px;
+}
+
+.sub-list {
+  margin-top: 5px;
+  padding-left: 20px;
+  list-style-type: circle;
+}
+
+.sub-list li {
+  margin-bottom: 5px;
+  font-size: 0.9rem;
+  color: #555;
 }
 
 .modal-footer {

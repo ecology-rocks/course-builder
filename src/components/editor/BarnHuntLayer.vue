@@ -120,6 +120,11 @@ function handleTunnelBoxContextMenu({ e, id }) {
   store.activeTunnelBoxMenu = { id, x: e.clientX, y: e.clientY }
 }
 
+function handleNoteContextMenu(e, id) {
+  e.evt.preventDefault()
+  e.cancelBubble = true
+  store.activeNoteMenu = { id, x: e.evt.clientX, y: e.evt.clientY }
+}
 
 
 function handleRightClick(e, id) {
@@ -405,7 +410,7 @@ function getAnchorLines(bale) {
     <NoteObject v-for="note in store.notes" :key="note.id" :note="note" :scale="scale"
       :isSelected="store.selection.includes(note.id)" :ref="(el) => setRef(el, note.id)" @select="handleSelect"
       @update="(attrs) => store.updateNote(attrs.id, attrs)" @dragstart="handleDragStart($event, note.id)"
-      @dragmove="handleDragMove($event, note.id)" @dragend="handleDragEnd($event, note.id)" />
+      @dragmove="handleDragMove($event, note.id)" @dragend="handleDragEnd($event, note.id)" @contextmenu="handleNoteContextMenu($event, note.id)" />
 
     <TunnelBoxObject v-for="board in store.tunnelBoards" :key="board.id" :board="board" :scale="scale"
       :isSelected="store.selection.includes(board.id)" :ref="(el) => setRef(el, board.id)" @select="handleSelect"

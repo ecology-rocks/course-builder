@@ -30,6 +30,7 @@ import StepContextMenu from './editor/steps/StepContextMenu.vue'
 import StartBoxContextMenu from './editor/mats/StartBoxContextMenu.vue'
 import TunnelBoxContextMenu from './editor/boards/TunnelBoxContextMenu.vue'
 import BaleContextMenu from './editor/bales/BaleContextMenu.vue'
+import NoteContextMenu from './editor/annotations/NoteContextMenu.vue'
 
 // Setup
 const store = useMapStore()
@@ -69,6 +70,7 @@ function closeAllMenus() {
   store.activeStepMenu = null
   store.activeTunnelBoxMenu = null
   store.activeZoneMenu = null
+  store.activeNoteMenu = null
 }
 
 // 2. Global Click Handler
@@ -85,7 +87,8 @@ watch(
     store.activeStartBoxMenu,
     store.activeStepMenu,
     store.activeTunnelBoxMenu,
-    store.activeZoneMenu
+    store.activeZoneMenu,
+    store.activeNoteMenu
   ],
   (menus) => {
     // If any menu in the array is truthy (open), close the generic context menu
@@ -237,6 +240,13 @@ async function handlePrint(options) {
       v-bind="store.activeBaleMenu" 
       :baleId="store.activeBaleMenu.id"
       @close="store.activeBaleMenu = null" 
+    />
+
+    <NoteContextMenu 
+      v-if="store.activeNoteMenu" 
+      v-bind="store.activeNoteMenu" 
+      :noteId="store.activeNoteMenu.id"
+      @close="store.activeNoteMenu = null" 
     />
 
     <CustomizationModal />
