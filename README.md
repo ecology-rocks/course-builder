@@ -4,26 +4,16 @@ This is my one-true-copy of the project roadmap.
 ## Controls Uniformity Punch List
 
 ### OBJECT EDITS
-- Selecting a hide should highlight it in blue.
-- Selecting a bale should show the rotate handle (easy) and the transform handles (harder, will have to update store to store individual dimensions)
-- Selecting the start box should highlight it in blue before you start to drag it. 
+- Selecting a bale should show the rotate handle (easy) and the transform handles (harder, will have to update store to store individual dimensions) 
 
 ### KEYBOARD SHORTCUTS (General)
 - Implement R for Rotate in 15 degree intervals. Shift+R to rotate in 45 degree intervals.
 - Implement E for Transform
-- Implement V for llSelect
+- Implement V for Select
 - Implement U for Cycle Hide Elevation
 - Implement Y for Cycle Hide Type
 - Implement O for Cycle Orientation
 - Implement L for Cycle Lean
-
-- Implement 
-- Make sure we can Tab around objects. 
-- Confirm Bcksp/Del delete all objects
-- Confirm CTRL+A for select all.
-- Alt + Drag to duplicate object/selection
-- Arrows to nudge placement
-- Make sure all objects are transformable
 
 ### TOOL SELECT SHORTCUTS
 - B for Bale
@@ -39,8 +29,6 @@ This is my one-true-copy of the project roadmap.
 - M for Measure
 - N for Note
 
-Make sure that users can turn off keyboard tools, and that keyboard tools only fire when they're in the program actively. 
-
 ## RC MENUS
 
 All Menus should have delete, rotate, customize... (modal to edit colors, dimensions, text)
@@ -51,13 +39,6 @@ All Menus should have delete, rotate, customize... (modal to edit colors, dimens
 - Anchor
 
 ### HIDES (already built, just need to add delete/rotate/customize)
-- Type:
-    Rat
-    Litter
-    Empty
-- Number:
-    1-8
-    Clear
 - Blind number picker (implement later)
 
 ### ZONES

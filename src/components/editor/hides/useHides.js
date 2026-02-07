@@ -9,7 +9,7 @@ export function useHides(state, snapshot) {
       type: 'rat', // rat, litter, empty
       number: null,
       layer: state.currentLayer.value || 1,
-      elevation: 'regular_over' // [NEW] floor, under, over
+      elevation: 'regular_over' //  regular_over, under
     })
   }
 

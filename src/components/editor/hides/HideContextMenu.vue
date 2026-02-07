@@ -16,11 +16,20 @@ const types = [
   { label: 'Empty', value: 'empty', color: '#fff' }
 ]
 
+const elevations = [
+  { label: 'Regular', value: 'regular_over', dash: [4, 3]  },
+  { label: 'Under', value: 'under', dash: [4, 3]  }
+]
+
 function setType(type) {
   store.updateHide(props.hideId, { type })
   emit('close')
 }
 
+function setElevation(elevation) {
+  store.updateHide(props.hideId, { elevation })
+  emit('close')
+}
 function setNumber(num) {
   store.updateHide(props.hideId, { number: num })
   emit('close')
@@ -40,7 +49,16 @@ function setNumber(num) {
       </button>
     </div>
 
-    <div class="section-label">Number</div>
+    <div class="section-label">Elevation</div>
+    <div class="type-row">
+      <button v-for="e in elevations" :key="e.value" 
+        @click="setElevation(e.value)"
+        :style="{ dash: `${e.dash}` }">
+        {{ e.label }}
+      </button>
+    </div>
+
+    <div class="section-label">Hide Number</div>
     <div class="number-grid">
       <button v-for="n in 8" :key="n" @click="setNumber(n)">{{ n }}</button>
       <button class="clear-btn" @click="setNumber(null)">Clear</button>
