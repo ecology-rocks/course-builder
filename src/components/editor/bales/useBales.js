@@ -1,4 +1,5 @@
 export function useBales(state, snapshot, notifications) {
+
   function snapToGrid(val) {
     return Math.round(val * 6) / 6
   }
@@ -87,6 +88,78 @@ function rotateBale(id, amount = 15) {
     }
   }
 
+// --- EXTENDED ACTIONS ---
+
+  function toggleAnchor() {
+    if (state.selection.value.length === 0) return;
+    
+    // Optional: Safety check for layer
+    if (state.currentLayer.value !== 1) {
+      if (notifications && notifications.show) {
+        notifications.show("Anchor bales must be on Layer 1.", "error");
+      }
+      return;
+    }
+
+    state.bales.value.forEach((b) => {
+      if (state.selection.value.includes(b.id)) {
+        b.isAnchor = !b.isAnchor;
+      }
+    });
+  }
+
+  function setComparisonBales(bales, name = "Custom Map") {
+    state.previousBales.value = JSON.parse(JSON.stringify(bales));
+    state.comparisonMapName.value = name;
+  }
+
+  function realignBales() {
+    const { length: L, width: W, height: H } = state.baleConfig.value;
+    const snap = (val) => Math.round(val * 6) / 6;
+
+    state.bales.value.forEach((b) => {
+      // Determine unrotated dimensions
+      let w = L, h = W;
+      if (b.orientation === "pillar") { w = W; h = H; } 
+      else if (b.orientation === "tall") { w = L; h = H; }
+
+      const rot = Math.abs(b.rotation || 0) % 180;
+      
+      // Check if rectilinear (0, 90, 180, 270)
+      const isRectilinear = Math.abs(rot) < 1 || Math.abs(rot - 90) < 1;
+
+      if (isRectilinear) {
+        // If rotated 90/270, dimensions swap visually
+        const isVertical = Math.abs(rot - 90) < 1;
+        const effectiveW = isVertical ? h : w;
+        const effectiveH = isVertical ? w : h;
+
+        // Calculate Visual Top-Left (The visible edge)
+        // Pivot (Center) = x + w/2
+        const pivotX = b.x + w / 2;
+        const pivotY = b.y + h / 2;
+
+        const currentMinX = pivotX - effectiveW / 2;
+        const currentMinY = pivotY - effectiveH / 2;
+
+        // Snap the VISUAL edge to the grid
+        const newMinX = snap(currentMinX);
+        const newMinY = snap(currentMinY);
+
+        // Back-calculate the real X/Y
+        b.x = newMinX + effectiveW / 2 - w / 2;
+        b.y = newMinY + effectiveH / 2 - h / 2;
+      } else {
+        // Fallback for weird angles: Just snap the top-left point
+        b.x = snap(b.x);
+        b.y = snap(b.y);
+      }
+    });
+  }
+
+
+
+
   return {
     getBaleRect,
     addBale,
@@ -94,6 +167,9 @@ function rotateBale(id, amount = 15) {
     updateBalePosition,
     rotateBale,
     cycleOrientation,
-    cycleLean
+    cycleLean,
+    toggleAnchor,
+    setComparisonBales,
+    realignBales
   }
 }

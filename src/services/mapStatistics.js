@@ -1,40 +1,12 @@
 import { computed } from "vue";
 
-// ALL use logic in here
-import { useBales } from "editor/bales/useBales";
-import { useBoardEdges } from "editor/boards/useBoardEdges";
-import { useDCMats } from "editor/mats/useDCMats";
-import { useGates } from "editor/walls/useGates";
-import { useHides } from "editor/hides/useHides";
-import { useMeasurements } from "editor/annotations/useMeasurements.js";
-import { useNotes } from "editor/annotations/useNotes.js";
-import { useStartBox } from "editor/mats/useStartBox";
-import { useSteps } from "editor/steps/useSteps";
-import { useTunnelBoards } from "editor/boards/useTunnelBoards";
-import { useZones } from "editor/zones/useZones";
-
 /**
- * src/stores/mapActions/barnHuntLogic.js
- * Main Coordinator.
- * Aggregates logic from sub-modules and handles global statistics.
+ * mapStatistics.js
+ * Extracted logic for inventory counts and layer differentials.
  */
-export function useBarnHuntLogic(state, snapshot, notifications) {
-  // --- INTEGRATE SUB-MODULES ---
-  const balesLogic = useBales(state, snapshot, notifications);
-  const boardEdgesLogic = useBoardEdges(state, snapshot);
-  const dcMatsLogic = useDCMats(state, snapshot);
-  const gatesLogic = useGates(state, snapshot);
-  const hidesLogic = useHides(state, snapshot);
-  const measurementsLogic = useMeasurements(state, snapshot);
-  const notesLogic = useNotes(state, snapshot);
-  const startBoxLogic = useStartBox(state, snapshot);
-  const stepsLogic = useSteps(state, snapshot);
-  const tunnelBoardsLogic = useTunnelBoards(state, snapshot);
-  const zonesLogic = useZones(state, snapshot);
-
-  // --- STATISTICS ---
-  // These remain here as they aggregate state data for the UI
-
+export function useMapStatistics(state) {
+  
+  // 1. Inventory & Layer Breakdown
   const balesByLayer = computed(() => ({
     1: state.bales.value.filter((b) => b.layer === 1),
     2: state.bales.value.filter((b) => b.layer === 2),
@@ -59,6 +31,7 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
     };
   });
 
+  // 2. Diff Logic (Comparison Mode)
   const differentials = computed(() => {
     if (!state.previousBales.value || state.previousBales.value.length === 0)
       return null;
@@ -67,7 +40,7 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
       1: { net: 0, moved: 0 },
       2: { net: 0, moved: 0 },
       3: { net: 0, moved: 0 },
-      totalNet: 0, // [NEW] Track total change
+      totalNet: 0,
     };
 
     const getLayers = (baleList) => ({
@@ -83,11 +56,9 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
       const curr = currentLayers[layer];
       const prev = prevLayers[layer];
 
-      // Calculate Net per layer
+      // Calculate Net
       const net = curr.length - prev.length;
       stats[layer].net = net;
-
-      // Add to Total Net
       stats.totalNet += net;
 
       // Calculate "Moved" (Reused) bales
@@ -95,12 +66,13 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
       const prevPool = [...prev];
 
       curr.forEach((bale) => {
+        // Fuzzy match for position, exact match for rotation
         const matchIndex = prevPool.findIndex(
           (p) =>
             Math.abs(p.x - bale.x) < 0.05 &&
             Math.abs(p.y - bale.y) < 0.05 &&
             p.rotation === bale.rotation &&
-            p.orientation === bale.orientation,
+            p.orientation === bale.orientation
         );
 
         if (matchIndex !== -1) {
@@ -115,10 +87,7 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
     return stats;
   });
 
-  // --- GLOBAL HELPERS ---
-
   function generateMasterBlinds(count) {
-    snapshot();
     const newBlinds = [];
     for (let i = 0; i < count; i++) {
       const set = [];
@@ -131,24 +100,10 @@ export function useBarnHuntLogic(state, snapshot, notifications) {
   }
 
   return {
-    // Aggregated Stats & Global Helpers
-    differentials,
     balesByLayer,
     baleCounts,
     inventory,
+    differentials,
     generateMasterBlinds,
-
-    // Integrated Modules
-    ...balesLogic,
-    ...boardEdgesLogic,
-    ...dcMatsLogic,
-    ...gatesLogic,
-    ...hidesLogic,
-    ...measurementsLogic,
-    ...notesLogic,
-    ...startBoxLogic,
-    ...stepsLogic,
-    ...tunnelBoardsLogic,
-    ...zonesLogic,
   };
 }

@@ -1,6 +1,15 @@
 // src/stores/mapActions/useHides.js
 
 export function useHides(state, snapshot) {
+
+function openHideMenu(id, x, y) {
+    state.activeHideMenu.value = { id, x, y };
+  }
+
+  function closeHideMenu() {
+    state.activeHideMenu.value = null;
+  }
+
   function addHide(x, y) {
     state.hides.value.push({
       id: crypto.randomUUID(),
@@ -31,6 +40,10 @@ export function useHides(state, snapshot) {
 
   function removeHide(id) {
     state.hides.value = state.hides.value.filter(h => h.id !== id)
+    // Close menu if the deleted hide was active
+    if (state.activeHideMenu.value?.id === id) {
+      state.activeHideMenu.value = null;
+    }
   }
 
   function cycleHideType(id) {
@@ -55,5 +68,5 @@ function cycleHideElevation(id) {
   }
 }
 
-  return { addHide, removeHide, cycleHideType, cycleHideElevation, updateHide }
+  return { addHide, removeHide, cycleHideType, cycleHideElevation, updateHide, openHideMenu, closeHideMenu }
 }

@@ -13,7 +13,7 @@ export function useContextMenu(store) {
     }
 
     store.closeHideMenu()
-    
+
     // Priority 2: Only show on background (Stage) clicks
     if (e.target !== e.target.getStage()) return
 

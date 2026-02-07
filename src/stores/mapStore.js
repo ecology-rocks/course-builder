@@ -4,8 +4,21 @@ import { useUserStore } from "./userStore";
 // IMPORT MODULES
 import { useMapPersistence } from "services/persistenceService";
 import { useSelectionLogic } from "services/selectionService";
-import { useBarnHuntLogic } from "services/barnHuntLogic";
 import { useHistory } from "services/historyService";
+import { useMapStatistics } from "services/mapStatistics";
+
+// Direct imports (previously hidden in barnHuntLogic)
+import { useBales } from "editor/bales/useBales";
+import { useBoardEdges } from "editor/boards/useBoardEdges";
+import { useDCMats } from "editor/mats/useDCMats";
+import { useGates } from "editor/walls/useGates";
+import { useHides } from "editor/hides/useHides";
+import { useMeasurements } from "editor/annotations/useMeasurements";
+import { useNotes } from "editor/annotations/useNotes";
+import { useStartBox } from "editor/mats/useStartBox";
+import { useSteps } from "editor/steps/useSteps";
+import { useTunnelBoards } from "editor/boards/useTunnelBoards";
+import { useZones } from "editor/zones/useZones";
 
 // ==========================================
 // 0. CONSTANTS & STRATEGIES
@@ -71,7 +84,6 @@ export const useMapStore = defineStore("map", () => {
   const previousClassCount = ref(0);
   const activeMeasurement = ref(null);
   const editingNoteId = ref(null);
-  
 
   // Configs
   const wallTypes = ref({
@@ -103,17 +115,11 @@ export const useMapStore = defineStore("map", () => {
   const activeHideMenu = ref(null); // Stores { id, x, y } or null
   const showCustomizationModal = ref(false);
   const editingCustomObject = ref(null);
-  const activeDCMatMenu = ref(null)
+  const activeDCMatMenu = ref(null);
   // ==========================================
   // 2. ACTIONS (Internal & External)
   // ==========================================
-  function openHideMenu(id, x, y) {
-    activeHideMenu.value = { id, x, y };
-  }
 
-  function closeHideMenu() {
-    activeHideMenu.value = null;
-  }
   function showNotification(message, type = "info") {
     notification.value = { message, type };
     setTimeout(() => {
@@ -207,134 +213,52 @@ export const useMapStore = defineStore("map", () => {
     });
   }
 
-  function realignGrid() {
+ function realignGrid() {
     // Snap to nearest 2 inches (1/6th of a foot)
     const snap = (v) => Math.round(v * 6) / 6;
-    const data = mapData.value;
-
-    // Get current bale dimensions
-    const { length: L, width: W, height: H } = baleConfig.value;
-
-    // Helper: Snap List
-    const snapList = (list) => {
-      if (!list) return;
-      list.forEach((item) => {
-        // Snap X/Y (Standard objects)
+    
+    // 1. Snap Standard Lists (Generic)
+    Object.keys(mapData.value).forEach((key) => {
+      if (key === "bales") return; // Skip bales! Handled by module.
+      if (!Array.isArray(mapData.value[key])) return;
+      
+      mapData.value[key].forEach(item => {
         if (typeof item.x === "number") item.x = snap(item.x);
         if (typeof item.y === "number") item.y = snap(item.y);
-
-        // Snap Line coords (Boards/Walls)
         if (typeof item.x1 === "number") {
-          item.x1 = snap(item.x1);
-          item.y1 = snap(item.y1);
-          item.x2 = snap(item.x2);
-          item.y2 = snap(item.y2);
+          item.x1 = snap(item.x1); item.y1 = snap(item.y1);
+          item.x2 = snap(item.x2); item.y2 = snap(item.y2);
         }
-
-        // Snap Measurement Points (Fixes manual tool)
-        if (item.points && Array.isArray(item.points)) {
-          item.points.forEach((p) => {
-            p.x = snap(p.x);
-            p.y = snap(p.y);
-          });
-        }
+        if (item.points) item.points.forEach(p => { p.x = snap(p.x); p.y = snap(p.y); });
       });
-    };
-
-    // 1. Snap Standard Objects (Exclude bales for special handling)
-    Object.keys(data).forEach((key) => {
-      if (key === "bales") return;
-      if (Array.isArray(data[key])) snapList(data[key]);
     });
 
-    // 2. Snap Bales (Smarter Visual Edge Snapping)
-    if (data.bales) {
-      data.bales.forEach((b) => {
-        // Determine unrotated dimensions based on orientation
-        let w = L,
-          h = W;
-        if (b.orientation === "pillar") {
-          w = W;
-          h = H;
-        } else if (b.orientation === "tall") {
-          w = L;
-          h = H;
-        } else {
-          w = L;
-          h = W;
-        } // Flat (Default)
-
-        const rot = Math.abs(b.rotation || 0) % 180;
-        const isRectilinear =
-          Math.abs(rot) < 1 ||
-          Math.abs(rot - 90) < 1 ||
-          Math.abs(rot - 180) < 1;
-
-        if (isRectilinear) {
-          // If rotated 90/270, dimensions swap
-          const isVertical = Math.abs(rot - 90) < 1;
-          const effectiveW = isVertical ? h : w;
-          const effectiveH = isVertical ? w : h;
-
-          // Calculate Visual Top-Left (The visible edge)
-          // Pivot (Center) = x + w/2
-          const pivotX = b.x + w / 2;
-          const pivotY = b.y + h / 2;
-
-          const currentMinX = pivotX - effectiveW / 2;
-          const currentMinY = pivotY - effectiveH / 2;
-
-          // Snap the VISUAL edge to the grid
-          const newMinX = snap(currentMinX);
-          const newMinY = snap(currentMinY);
-
-          /// [FIX] The back-calculation now correctly uses the dynamic w/h
-          b.x = newMinX + effectiveW / 2 - w / 2;
-          b.y = newMinY + effectiveH / 2 - h / 2;
-        } else {
-          // Fallback for weird angles (15, 30, 45): Just snap the point
-          b.x = snap(b.x);
-          b.y = snap(b.y);
-        }
-      });
+    // 2. Snap Bales (Delegated to Domain Module)
+    // We access 'modules' here, which is defined below. This is safe in Vue/JS 
+    // as long as realignGrid isn't called during the initial setup.
+    if (modules.realignBales) {
+      modules.realignBales(); 
     }
 
-    // 3. Singulars
-    if (data.startBox) {
-      data.startBox.x = snap(data.startBox.x);
-      data.startBox.y = snap(data.startBox.y);
+    // 3. Snap Singulars
+    if (mapData.value.startBox) { 
+        mapData.value.startBox.x = snap(mapData.value.startBox.x); 
+        mapData.value.startBox.y = snap(mapData.value.startBox.y); 
     }
-    if (data.gate) {
-      data.gate.x = snap(data.gate.x);
-      data.gate.y = snap(data.gate.y);
+    if (mapData.value.gate) { 
+        mapData.value.gate.x = snap(mapData.value.gate.x); 
+        mapData.value.gate.y = snap(mapData.value.gate.y); 
     }
-
-    if (stateRefs.snapshot) stateRefs.snapshot();
-    showNotification("All objects realigned to grid (2-inch snap)");
+    
+    if (historyModule.snapshot) historyModule.snapshot();
+    showNotification("Realigned to grid");
   }
 
   function setTool(tool) {
     activeTool.value = tool;
   }
 
-  function toggleAnchor() {
-    if (selection.value.length === 0) return;
-    if (currentLayer.value !== 1) {
-      showNotification("Anchor bales must be on Layer 1.", "error");
-      return;
-    }
-    mapData.value.bales.forEach((b) => {
-      if (selection.value.includes(b.id)) {
-        b.isAnchor = !b.isAnchor;
-      }
-    });
-  }
-
-  function setComparisonBales(bales, name = "Custom Map") {
-    previousBales.value = JSON.parse(JSON.stringify(bales));
-    comparisonMapName.value = name;
-  }
-
+  
   // ==========================================
   // 3. MODULE INITIALIZATION (The Adapter Layer)
   // ==========================================
@@ -390,6 +314,8 @@ export const useMapStore = defineStore("map", () => {
     trialLocation,
     trialNumber,
     wallTypes,
+    activeHideMenu,
+    comparisonMapName,
 
     reset,
   };
@@ -398,9 +324,30 @@ export const useMapStore = defineStore("map", () => {
 
   stateRefs.snapshot = historyModule.snapshot;
 
-  const bhLogic = useBarnHuntLogic(stateRefs, historyModule.snapshot, {
+  // NEW CODE TO ADD
+  const deps = {
+    snapshot: historyModule.snapshot,
     show: showNotification,
-  });
+  };
+
+  // 1. Initialize Domain Modules directly
+  const domainModules = {
+    ...useBales(stateRefs, deps.snapshot, deps),
+    ...useBoardEdges(stateRefs, deps.snapshot),
+    ...useDCMats(stateRefs, deps.snapshot),
+    ...useGates(stateRefs, deps.snapshot),
+    ...useHides(stateRefs, deps.snapshot),
+    ...useMeasurements(stateRefs, deps.snapshot),
+    ...useNotes(stateRefs, deps.snapshot),
+    ...useStartBox(stateRefs, deps.snapshot),
+    ...useSteps(stateRefs, deps.snapshot),
+    ...useTunnelBoards(stateRefs, deps.snapshot),
+    ...useZones(stateRefs, deps.snapshot),
+  };
+
+  // 2. Initialize Statistics (Logic moved from barnHuntLogic)
+  const stats = useMapStatistics(stateRefs);
+
   const persistence = useMapPersistence(stateRefs, userStore, {
     show: showNotification,
   });
@@ -546,26 +493,22 @@ export const useMapStore = defineStore("map", () => {
     savedMaps,
     selectedBaleId,
     selection,
-    setComparisonBales,
     setTool,
     showMapStats,
     showNotification,
     sport,
-    toggleAnchor,
     trialDay,
     trialLocation,
     trialNumber,
     wallTypes,
-    openHideMenu,
-    closeHideMenu,
     selectHide,
     activeHideMenu,
     showCustomizationModal,
     editingCustomObject,
     activeDCMatMenu,
-
+    ...domainModules,
+    ...stats,
     ...historyModule,
-    ...bhLogic,
     ...persistence,
     saveToCloud,
     ...selectionLogic,
