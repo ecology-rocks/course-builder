@@ -3,13 +3,20 @@ This is my one-true-copy of the project roadmap.
 
 ## Controls Uniformity Punch List
 
+### OBJECT EDITS
+- Selecting a hide should highlight it in blue.
+- Selecting a bale should show the rotate handle (easy) and the transform handles (harder, will have to update store to store individual dimensions)
+- Selecting the start box should highlight it in blue before you start to drag it. 
+
 ### KEYBOARD SHORTCUTS (General)
 - Implement R for Rotate in 15 degree intervals. Shift+R to rotate in 45 degree intervals.
 - Implement E for Transform
-- Implement V for Select
-- Implement U for Cycle Hides
+- Implement V for llSelect
+- Implement U for Cycle Hide Elevation
+- Implement Y for Cycle Hide Type
 - Implement O for Cycle Orientation
 - Implement L for Cycle Lean
+
 - Implement 
 - Make sure we can Tab around objects. 
 - Confirm Bcksp/Del delete all objects
@@ -34,14 +41,33 @@ This is my one-true-copy of the project roadmap.
 
 Make sure that users can turn off keyboard tools, and that keyboard tools only fire when they're in the program actively. 
 
-### BALE RC MENU
-- Set Dimensions
+## RC MENUS
+
+All Menus should have delete, rotate, customize... (modal to edit colors, dimensions, text)
+
+### BALES
 - Lean
 - Orientation
 - Anchor
 
+### HIDES (already built, just need to add delete/rotate/customize)
+- Type:
+    Rat
+    Litter
+    Empty
+- Number:
+    1-8
+    Clear
+- Blind number picker (implement later)
+
+### ZONES
+ - Type:
+    Dead Zone
+    Obstruction
+
+
 ## Edits Starting 2/2
- - Bales placed close an edge will bleed over until they're moved and snapped back to the course
+ - (DONE) Bales placed close an edge will bleed over until they're moved and snapped back to the course
  - (DONE) If you try to place a board edge on a bale, it selects the bale instead / doesn't do the board edge
  - (DONE) If you try to place a rat marker on top of a bale, it defaults to the top left corner
 
