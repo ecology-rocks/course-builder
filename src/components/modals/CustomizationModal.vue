@@ -1,11 +1,14 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
 const store = useMapStore()
 
 const isOpen = computed(() => store.showCustomizationModal)
 const selectedId = computed(() => store.editingCustomObject)
+
+// Local UI State
+const unit = ref('feet') // 'feet' | 'inches'
 
 const selectedObject = computed(() => {
   if (!selectedId.value) return null
@@ -29,8 +32,12 @@ function resetToDefault() {
   const current = selectedObject.value.custom
   const newCustom = {}
 
+  // Dimensions
   if ('width' in current) newCustom.width = null
   if ('height' in current) newCustom.height = null
+  if ('length' in current) newCustom.length = null
+
+  // Colors & Styles
   if ('fillColor' in current) newCustom.fillColor = null
   if ('strokeColor' in current) newCustom.strokeColor = null
   if ('textValue' in current) newCustom.textValue = 'New Note'
@@ -40,23 +47,80 @@ function resetToDefault() {
 
   selectedObject.value.custom = newCustom
 }
+
+// --- UNIT CONVERSION HELPERS ---
+
+// Helper to Create a Writable Computed for a Dimension
+function useDimension(key) {
+  return computed({
+    get: () => {
+      const val = selectedObject.value?.custom?.[key]
+      if (val == null || val === '') return null
+      
+      // If Inches: Convert Feet -> Inches
+      if (unit.value === 'inches') {
+        return parseFloat((val * 12).toFixed(2))
+      }
+      // If Feet: Return as is (rounded to 2 decimals for clean UI)
+      return parseFloat(val.toFixed(2))
+    },
+    set: (val) => {
+      if (!selectedObject.value?.custom) return
+      
+      if (val === null || val === '') {
+        selectedObject.value.custom[key] = null
+        return
+      }
+
+      // If Inches: Convert Input (Inches) -> Store (Feet)
+      if (unit.value === 'inches') {
+        selectedObject.value.custom[key] = val / 12
+      } else {
+        selectedObject.value.custom[key] = val
+      }
+    }
+  })
+}
+
+// Create Specific Computeds for Template
+const customLength = useDimension('length')
+const customWidth = useDimension('width')
+const customHeight = useDimension('height')
+
+// Dynamic Step for Inputs (0.1 for feet, 1 for inches)
+const inputStep = computed(() => unit.value === 'feet' ? 0.1 : 1)
+const unitLabel = computed(() => unit.value === 'feet' ? 'ft' : 'in')
+
 </script>
 
 <template>
   <div v-if="isOpen && selectedObject" class="modal-overlay" @click.self="close">
     <div class="modal-content">
-      <h3>Customize Object</h3>
+      <div class="modal-header">
+        <h3>Customize Object</h3>
+        
+        <div class="unit-toggle">
+           <button :class="{ active: unit === 'feet' }" @click="unit = 'feet'">ft</button>
+           <button :class="{ active: unit === 'inches' }" @click="unit = 'inches'">in</button>
+        </div>
+      </div>
       <hr />
 
       <div class="form-container">
+        
+        <div v-if="'length' in selectedObject.custom" class="form-group">
+          <label>Length ({{ unitLabel }})</label>
+          <input type="number" v-model.number="customLength" placeholder="Default" :step="inputStep" />
+        </div>
+
         <div v-if="'width' in selectedObject.custom" class="form-group">
-          <label>Width (feet)</label>
-          <input type="number" v-model.number="selectedObject.custom.width" />
+          <label>Width ({{ unitLabel }})</label>
+          <input type="number" v-model.number="customWidth" placeholder="Default" :step="inputStep" />
         </div>
 
         <div v-if="'height' in selectedObject.custom" class="form-group">
-          <label>Height (feet)</label>
-          <input type="number" v-model.number="selectedObject.custom.height" />
+          <label>Height ({{ unitLabel }})</label>
+          <input type="number" v-model.number="customHeight" placeholder="Default" :step="inputStep" />
         </div>
 
         <div class="type-specific-section">
@@ -104,9 +168,40 @@ function resetToDefault() {
 </template>
 
 <style scoped>
-/* Keeping existing styles */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 2000; }
-.modal-content { background: white; padding: 20px; border-radius: 12px; width: 300px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.modal-content { background: white; padding: 20px; border-radius: 12px; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.modal-header h3 { margin: 0; font-size: 1.1rem; }
+
+/* Unit Toggle Styles */
+.unit-toggle {
+  display: flex;
+  background: #f0f0f0;
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid #ddd;
+}
+.unit-toggle button {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border-radius: 4px;
+  color: #666;
+  font-weight: 500;
+}
+.unit-toggle button.active {
+  background: white;
+  color: #2196f3;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
 .form-container { margin: 15px 0; max-height: 400px; overflow-y: auto; }
 .form-group { margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
 .form-group label { font-size: 14px; color: #444; }

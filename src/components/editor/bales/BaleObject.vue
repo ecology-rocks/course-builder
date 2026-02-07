@@ -21,10 +21,10 @@ defineExpose({
 
 // --- 1. Dynamic Dimensions (Based on Settings) ---
 const dims = computed(() => {
-  // Ensure config exists and default to standard values if missing
-  const L = store.baleConfig?.length || 3
-  const W = store.baleConfig?.width || 1.5
-  const H = store.baleConfig?.height || 1
+  // Priority: Custom -> Global Config -> Hard Default
+  const L = props.bale.custom?.length ?? store.baleConfig?.length ?? 3
+  const W = props.bale.custom?.width ?? store.baleConfig?.width ?? 1.5
+  const H = props.bale.custom?.height ?? store.baleConfig?.height ?? 1
 
   const orientation = props.bale?.orientation || 'flat'
   if (orientation === 'pillar') return { width: W, height: H }

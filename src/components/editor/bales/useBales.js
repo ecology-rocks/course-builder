@@ -42,9 +42,13 @@ export function useBales(state, snapshot, notifications) {
     lean: null,
     supported: true,
     custom: {
-      fillColor: null,
-      strokeColor: null
-    }
+        fillColor: null,
+        strokeColor: null,
+        // [NEW] Dimension Overrides (null = use global defaults)
+        length: null, 
+        width: null, 
+        height: null
+      }
   }
   state.bales.value.push(newBale)
 }
