@@ -28,6 +28,7 @@ import DCMatContextMenu from './editor/mats/DCMatContextMenu.vue'
 import ZoneContextMenu from './editor/zones/ZoneContextMenu.vue'
 import StepContextMenu from './editor/steps/StepContextMenu.vue'
 import StartBoxContextMenu from './editor/mats/StartBoxContextMenu.vue'
+import TunnelBoxContextMenu from './editor/boards/TunnelBoxContextMenu.vue'
 
 // Setup
 const store = useMapStore()
@@ -198,6 +199,15 @@ async function handlePrint(options) {
       :y="store.activeStartBoxMenu.y"
       @close="store.activeStartBoxMenu = null"
     />
+
+    <TunnelBoxContextMenu
+      v-if="store.activeTunnelBoxMenu"
+      :id="store.activeTunnelBoxMenu.id"
+      :x="store.activeTunnelBoxMenu.x"
+      :y="store.activeTunnelBoxMenu.y"
+      @close="store.activeTunnelBoxMenu = null"
+    />
+    
     <CustomizationModal />
   </div>
 </template>

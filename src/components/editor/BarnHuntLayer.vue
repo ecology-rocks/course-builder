@@ -116,6 +116,10 @@ function handleStartBoxContextMenu({ e, id }) {
   store.activeStartBoxMenu = { id, x: e.clientX, y: e.clientY }
 }
 
+function handleTunnelBoxContextMenu({ e, id }) {
+  store.activeTunnelBoxMenu = { id, x: e.clientX, y: e.clientY }
+}
+
 function handleRightClick(e, id) {
   e.evt.preventDefault()
   e.cancelBubble = true
@@ -403,7 +407,10 @@ function getAnchorLines(bale) {
     <TunnelBoxObject v-for="board in store.tunnelBoards" :key="board.id" :board="board" :scale="scale"
       :isSelected="store.selection.includes(board.id)" :ref="(el) => setRef(el, board.id)" @select="handleSelect"
       @update="(attrs) => store.updateTunnelBoard(attrs.id, attrs)" @dragstart="handleDragStart($event, board.id)"
-      @dragmove="handleDragMove($event, board.id)" @dragend="handleDragEnd($event, board.id)" />
+      @dragmove="handleDragMove($event, board.id)" @dragend="handleDragEnd($event, board.id)" 
+      
+      @contextmenu="handleTunnelBoxContextMenu"
+    />
 
     <BoardObject v-for="board in store.boardEdges" :key="board.id" :board="board" :scale="scale"
       :ref="(el) => setRef(el, board.id)" @dragstart="handleDragStart($event, board.id)"

@@ -17,7 +17,8 @@ const selectedObject = computed(() => {
     store.dcMats?.find(m => m.id === selectedId.value) ||
     store.steps?.find(s => s.id === selectedId.value) ||
     store.notes?.find(n => n.id === selectedId.value) ||
-    store.zones?.find(z => z.id === selectedId.value)
+    store.zones?.find(z => z.id === selectedId.value) ||
+    store.tunnelBoards?.find(t => t.id === selectedId.value)
 
   if (foundInArray) return foundInArray
 

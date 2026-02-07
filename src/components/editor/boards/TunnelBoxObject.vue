@@ -1,180 +1,76 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed} from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
 const props = defineProps(['board', 'isSelected', 'scale'])
-const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend'])
+const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend', 'contextmenu'])
+
 const store = useMapStore()
 const groupRef = ref(null)
 
 defineExpose({ getNode: () => groupRef.value?.getNode() })
 
-const isCtrlPressed = ref(false)
 
-// 1. Computed Snaps: If Ctrl is held, snap to every 15 degrees
-const rotationSnaps = computed(() => {
-  if (!isCtrlPressed.value) return []
-  
-  // Generate angles from -360 to 360 in 15-degree steps
-  // This ensures it snaps correctly whether you rotate left or right
-  const snaps = []
-  for (let i = -24; i <= 24; i++) {
-    snaps.push(i * 15)
-  }
-  return snaps
+// --- CUSTOM STYLES ---
+
+const finalWidth = computed(() => {
+  return props.board.custom?.width != null ? props.board.custom.width : props.board.width
 })
 
-// 2. Window Listeners
-function handleKeyDown(e) {
-  if (e.key === 'Control' || e.metaKey) isCtrlPressed.value = true
-}
-
-function handleKeyUp(e) {
-  if (e.key === 'Control' || e.metaKey) isCtrlPressed.value = false
-}
-
-onMounted(() => {
-  window.addEventListener('keydown', handleKeyDown)
-  window.addEventListener('keyup', handleKeyUp)
+const finalHeight = computed(() => {
+  return props.board.custom?.height != null ? props.board.custom.height : props.board.height
 })
 
-onUnmounted(() => {
-  window.removeEventListener('keydown', handleKeyDown)
-  window.removeEventListener('keyup', handleKeyUp)
+const finalFill = computed(() => {
+  return props.board.custom?.fillColor || '#8B4513' // Original Brown
 })
 
-// [FIXED] Match NoteObject Logic
-// 1. Do NOT touch the rect (stroke/corners) during drag. This causes shrinking.
-// 2. DO update text width/height so centering works.
-function handleTransform() {
-  const group = groupRef.value.getNode()
-  const rect = group.findOne('.board-shape')
-  const text = group.findOne('.board-text')
+const finalStroke = computed(() => {
+  if (props.isSelected) return '#00a1ff'
+  return props.board.custom?.strokeColor || '#5D4037'
+})
 
-  const sx = group.scaleX()
-  const sy = group.scaleY()
+const finalTextColor = computed(() => {
+  return props.board.custom?.textColor || '#3e2723' // Original Dark Brown Text
+})
 
-  if (Math.abs(sx) < 0.001 || Math.abs(sy) < 0.001) return
+// --- HANDLERS ---
 
-  if (text) {
-    // Counter-scale text to keep font size constant
-    text.scaleX(1 / sx)
-    text.scaleY(1 / sy)
-
-    // Update dimensions to match the scaled group 
-    // (This ensures align='center' still works on the larger box)
-    text.width(rect.width() * sx)
-    text.height(rect.height() * sy)
-  }
+function handleContextMenu(e) {
+  e.evt.preventDefault()
+  e.cancelBubble = true
+  emit('contextmenu', { e: e.evt, id: props.board.id })
 }
 
-function handleTransformEnd() {
-  const group = groupRef.value.getNode()
-  const rect = group.findOne('.board-shape')
-  const text = group.findOne('.board-text')
-  
-  // 1. Calculate final dimensions
-  const finalW = rect.width() * group.scaleX()
-  const finalH = rect.height() * group.scaleY()
-
-  const rawRotation = group.rotation()
-  const normalizedRotation = (rawRotation % 360 + 360) % 360
-
-  // 2. RESET Group Scale to 1
-  group.scaleX(1)
-  group.scaleY(1)
-
-  group.rotation(normalizedRotation)
-  
-  // 3. Reset Children
-  if (text) { 
-    text.scaleX(1)
-    text.scaleY(1)
-    text.width(finalW)
-    text.height(finalH)
-  }
-  
-  // Reset visual properties (Snaps them back to perfect 2px / 10px)
-  rect.strokeWidth(2)
-  rect.cornerRadius(10)
-
-  // 4. Commit new Width/Height
-  rect.width(finalW)
-  rect.height(finalH)
-  
-  emit('update', {
-    id: props.board.id,
-    x: group.x() / props.scale,
-    y: group.y() / props.scale,
-    rotation: normalizedRotation,
-    width: finalW / props.scale,
-    height: finalH / props.scale
-  })
+function handleClick(e) {
+  e.cancelBubble = true
+  emit('select', props.board.id)
 }
 
 function handleDragEnd(e) {
-  // Was: emit('update', { ... })
   emit('dragend', e)
 }
 
-// --- 2. Handle Drag Constraints (Grid Snap + Ring Bounds) ---
-// [FIXED] Handle Drag Constraints for Box Objects
+// [RESTORED] Your original dragBoundFunc
 function dragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
-  const step = props.scale / 6 // 2-inch grid
+  const step = props.scale / 6 
   
-  // 1. Calculate Grid-Relative Position
   let relX = pos.x - layerAbs.x
   let relY = pos.y - layerAbs.y
   
-  // Snap to grid
   relX = Math.round(relX / step) * step
   relY = Math.round(relY / step) * step
 
-  // 2. Calculate Bounds
   const mapW = store.ringDimensions.width * props.scale
   const mapH = store.ringDimensions.height * props.scale
   
-  // Get object dimensions
-  const w = props.board.width * props.scale
-  const h = props.board.height * props.scale
-
-  // Handle Rotation to find visual bounding box relative to pivot (Top-Left)
-  // (We need to ensure no corner of the rotated box leaves the ring)
-  const rad = (props.board.rotation || 0) * (Math.PI / 180)
-  const cos = Math.cos(rad)
-  const sin = Math.sin(rad)
-  
-  // Calculate the 4 corners relative to the pivot (0,0)
-  // P1 is 0,0. P2 is Top-Right. P3 is Bottom-Right. P4 is Bottom-Left.
-  const cornersX = [
-    0, 
-    w * cos, 
-    w * cos - h * sin, 
-    -h * sin
-  ]
-  const cornersY = [
-    0, 
-    w * sin, 
-    w * sin + h * cos, 
-    h * cos
-  ]
-  
-  const minRx = Math.min(...cornersX)
-  const maxRx = Math.max(...cornersX)
-  const minRy = Math.min(...cornersY)
-  const maxRy = Math.max(...cornersY)
-
-  // 3. Clamp Pivot Position
-  // The pivot (relX) must be positioned such that:
-  // relX + minRx >= 0      => relX >= -minRx
-  // relX + maxRx <= mapW   => relX <= mapW - maxRx
-  
-  const minX = -minRx
-  const maxX = mapW - maxRx
-  const minY = -minRy
-  const maxY = mapH - maxRy
+  // Clamp to map edges
+  const minX = 0
+  const maxX = mapW
+  const minY = 0
+  const maxY = mapH
 
   relX = Math.max(minX, Math.min(relX, maxX))
   relY = Math.max(minY, Math.min(relY, maxY))
@@ -182,6 +78,51 @@ function dragBoundFunc(pos) {
   return { x: relX + layerAbs.x, y: relY + layerAbs.y }
 }
 
+// [RESTORED] Handle Transform Logic
+function handleTransform() {
+  // We keep this to satisfy the @transform event, 
+  // but we do the heavy lifting in transformEnd to avoid visual glitches
+}
+
+function handleTransformEnd() {
+  const group = groupRef.value.getNode()
+  
+  const scaleX = group.scaleX()
+  const scaleY = group.scaleY()
+  
+  // 1. Calculate new dimensions
+  const newW = finalWidth.value * scaleX
+  const newH = finalHeight.value * scaleY
+
+  // 2. Reset Scale to 1 (Standard Konva Pattern)
+  group.scaleX(1)
+  group.scaleY(1)
+  group.rotation(group.rotation())
+
+  // 3. Update Store
+  const updates = {
+    id: props.board.id,
+    x: group.x() / props.scale,
+    y: group.y() / props.scale,
+    rotation: group.rotation()
+  }
+
+  // Update Custom Width/Height if they exist, otherwise standard
+  if (props.board.custom?.width != null) {
+    updates.custom = { ...props.board.custom, width: newW }
+  } else {
+    updates.width = newW
+  }
+
+  if (props.board.custom?.height != null) {
+    const baseCustom = updates.custom || props.board.custom
+    updates.custom = { ...baseCustom, height: newH }
+  } else {
+    updates.height = newH
+  }
+
+  emit('update', updates)
+}
 </script>
 
 <template>
@@ -191,11 +132,12 @@ function dragBoundFunc(pos) {
       id: board.id,
       x: board.x * scale,
       y: board.y * scale,
-      rotation: board.rotation,
+      rotation: board.rotation || 0,
       draggable: true,
       dragBoundFunc: dragBoundFunc
     }"
-    @click="emit('select', board.id)"
+    @click="handleClick"
+    @contextmenu="handleContextMenu"
     @dragstart="emit('dragstart', $event)"
     @dragmove="emit('dragmove', $event)"
     @dragend="handleDragEnd"
@@ -205,12 +147,13 @@ function dragBoundFunc(pos) {
     <v-rect
       :config="{
         name: 'board-shape',
-        width: board.width * scale,
-        height: board.height * scale,
+        width: finalWidth * scale,
+        height: finalHeight * scale,
         cornerRadius: 10,
-        fill: 'rgba(139, 69, 19, 0.4)',
-        stroke: isSelected ? '#00a1ff' : '#5D4037',
-        strokeWidth: isSelected ? 2 : 2,
+        fill: finalFill,
+        opacity: 0.5,
+        stroke: finalStroke,
+        strokeWidth: isSelected ? 4 : 2,
       }"
     />
 
@@ -218,26 +161,25 @@ function dragBoundFunc(pos) {
       :config="{
         name: 'board-text',
         text: 'BOARD',
-        width: board.width * scale,
-        height: board.height * scale,
+        width: finalWidth * scale,
+        height: finalHeight * scale,
         fontSize: 12,
-        fill: '#3e2723',
+        fill: finalTextColor,
+        fontStyle: 'bold',
         align: 'center',
         verticalAlign: 'middle',
-        listening: false 
+        listening: false
       }"
     />
   </v-group>
   
-<v-transformer
+  <v-transformer
     v-if="isSelected"
     :config="{
       nodes: groupRef ? [groupRef.getNode()] : [],
       rotateEnabled: true,
-      ignoreStroke: true,
       keepRatio: false,
-      rotationSnaps: rotationSnaps,   rotationSnapTolerance: 15       }"
-    @transform="handleTransform"
+    }"
     @transformend="handleTransformEnd"
   />
 </template>
