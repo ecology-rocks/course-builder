@@ -112,6 +112,10 @@ function handleZoneContextMenu({ e, id }) {
   store.activeZoneMenu = { id, x: e.clientX, y: e.clientY }
 }
 
+function handleStartBoxContextMenu({ e, id }) {
+  store.activeStartBoxMenu = { id, x: e.clientX, y: e.clientY }
+}
+
 function handleRightClick(e, id) {
   e.evt.preventDefault()
   e.cancelBubble = true
@@ -356,7 +360,7 @@ function getAnchorLines(bale) {
     <StartBoxObject v-if="store.startBox" :scale="scale" :isSelected="store.selection.includes(store.startBox?.id)"
       :ref="(el) => setRef(el, store.startBox?.id || 'startbox')" @select="handleSelect($event)"
       @dragstart="handleDragStart($event, store.startBox?.id)" @dragmove="handleDragMove($event, store.startBox?.id)"
-      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragend="handleDragEnd($event, store.startBox?.id)" />
+      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragend="handleDragEnd($event, store.startBox?.id)" @contextmenu="handleStartBoxContextMenu" />
 
     <GateObject v-if="store.gate" :gate="store.gate" :scale="scale" :ringDimensions="store.ringDimensions"
       :ref="(el) => setRef(el, store.gate?.id)" @dragstart="handleDragStart($event, store.gate?.id)"

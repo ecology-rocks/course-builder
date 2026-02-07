@@ -42,7 +42,6 @@ const DEFAULT_MAP_DATA = {
   measurements: [],
 };
 
-
 export const useMapStore = defineStore("map", () => {
   const userStore = useUserStore();
 
@@ -100,6 +99,8 @@ export const useMapStore = defineStore("map", () => {
   const activeDCMatMenu = ref(null);
   const activeZoneMenu = ref(null);
   const activeStepMenu = ref(null);
+  const activeStartBoxMenu = ref(null);
+
   // ==========================================
   // 2. ACTIONS (Internal & External)
   // ==========================================
@@ -143,18 +144,18 @@ export const useMapStore = defineStore("map", () => {
     }
   }
 
- function realignGrid() {
+  function realignGrid() {
     // 1. Snap Generic Items
     gridLogic.realignGeneric();
 
     // 2. Snap Bales (Domain Specific)
     if (domainModules && domainModules.realignBales) {
-      domainModules.realignBales(); 
+      domainModules.realignBales();
     }
 
     // 3. Snap Singulars
     gridLogic.realignSingulars();
-    
+
     if (historyModule.snapshot) historyModule.snapshot();
     showNotification("Realigned to grid");
   }
@@ -163,7 +164,6 @@ export const useMapStore = defineStore("map", () => {
     activeTool.value = tool;
   }
 
-  
   // ==========================================
   // 3. MODULE INITIALIZATION (The Adapter Layer)
   // ==========================================
@@ -222,6 +222,7 @@ export const useMapStore = defineStore("map", () => {
     activeDCMatMenu,
     activeZoneMenu,
     activeStepMenu,
+    activeStartBoxMenu,
     comparisonMapName,
 
     reset,
@@ -260,13 +261,12 @@ export const useMapStore = defineStore("map", () => {
     show: showNotification,
   });
 
-const selectionLogic = useSelectionLogic(
-  stateRefs,
-  historyModule.snapshot,
-  // Pass the existing deps object which contains 'show'
-  deps 
-);
-
+  const selectionLogic = useSelectionLogic(
+    stateRefs,
+    historyModule.snapshot,
+    // Pass the existing deps object which contains 'show'
+    deps,
+  );
 
   function selectHide(id) {
     // Pass 'false' for isMulti to make it a single selection by default
@@ -353,6 +353,7 @@ const selectionLogic = useSelectionLogic(
     activeDCMatMenu,
     activeZoneMenu,
     activeStepMenu,
+    activeStartBoxMenu,
     ...domainModules,
     ...stats,
     ...historyModule,

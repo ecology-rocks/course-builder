@@ -11,14 +11,26 @@ const selectedId = computed(() => store.editingCustomObject)
 const selectedObject = computed(() => {
   if (!selectedId.value) return null
 
-  // Search all collections for the object
-  return store.hides.find(h => h.id === selectedId.value) ||
+  // Check generic arrays
+  const foundInArray = store.hides.find(h => h.id === selectedId.value) ||
     store.bales?.find(b => b.id === selectedId.value) ||
     store.dcMats?.find(m => m.id === selectedId.value) ||
     store.steps?.find(s => s.id === selectedId.value) ||
-    store.zones?.find(z => z.id === selectedId.value) ||
-    store.notes?.find(n => n.id === selectedId.value)
+    store.notes?.find(n => n.id === selectedId.value) ||
+    store.zones?.find(z => z.id === selectedId.value)
+
+  if (foundInArray) return foundInArray
+
+  // [NEW] Check Singleton Objects (Start Box)
+  // We check if store.startBox exists AND matches the ID
+  if (store.startBox && store.startBox.id === selectedId.value) {
+    return store.startBox
+  }
+
+  return null
 })
+
+
 
 function close() {
   store.showCustomizationModal = false

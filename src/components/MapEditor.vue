@@ -27,6 +27,7 @@ import CustomizationModal from 'modals/CustomizationModal.vue'
 import DCMatContextMenu from './editor/mats/DCMatContextMenu.vue'
 import ZoneContextMenu from './editor/zones/ZoneContextMenu.vue'
 import StepContextMenu from './editor/steps/StepContextMenu.vue'
+import StartBoxContextMenu from './editor/mats/StartBoxContextMenu.vue'
 
 // Setup
 const store = useMapStore()
@@ -188,6 +189,14 @@ async function handlePrint(options) {
       :x="store.activeStepMenu.x"
       :y="store.activeStepMenu.y"
       @close="store.activeStepMenu = null"
+    />
+
+    <StartBoxContextMenu
+      v-if="store.activeStartBoxMenu"
+      :id="store.activeStartBoxMenu.id"
+      :x="store.activeStartBoxMenu.x"
+      :y="store.activeStartBoxMenu.y"
+      @close="store.activeStartBoxMenu = null"
     />
     <CustomizationModal />
   </div>

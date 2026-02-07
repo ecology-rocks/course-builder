@@ -4,17 +4,36 @@ export function useStartBox(state) {
   }
 
   function addStartBox(x, y) {
-    // [FIX] Assign a random ID so selection/dragging logic works
     state.startBox.value = { 
       id: crypto.randomUUID(), 
       x: snapToGrid(x), 
-      y: snapToGrid(y) 
+      y: snapToGrid(y),
+      rotation: 0, // [NEW]
+      // [NEW] Customization (No dimensions/text allowed)
+      custom: {
+        fillColor: null,
+        strokeColor: null,
+        textColor: null,
+        borderStyle: 'solid'
+      }
     }
   }
 
   function removeStartBox() {
     state.startBox.value = null
+    // Close menu if it was open
+    if (state.activeStartBoxMenu?.value) {
+      state.activeStartBoxMenu.value = null
+    }
   }
 
-  return { addStartBox, removeStartBox }
+  // [NEW] Rotation Logic
+  function rotateStartBox() {
+    if (state.startBox.value) {
+      const current = state.startBox.value.rotation || 0
+      state.startBox.value.rotation = (current + 45) % 360
+    }
+  }
+
+  return { addStartBox, removeStartBox, rotateStartBox }
 }
