@@ -1,7 +1,7 @@
 <template>
   <div class="modal-overlay" @click.self="$emit('close')">
     <div class="modal">
-      
+
       <div v-if="!isPickingMap">
         <div class="modal-header">
           <h3>⚙️ Course Settings</h3>
@@ -21,12 +21,15 @@
               <input type="number" v-model.number="localHeight" @change="applyResize" step="1" min="10" />
             </div>
           </div>
-          <p class="hint">Instinct: 15x20-20x20; Novice & Open: 20x20-20x24; Senior: 20x24-24x32; Master & Crazy 8s: 24x24-24x32</p>
+          <p class="hint">Instinct: 15x20-20x20; Novice & Open: 20x20-20x24; Senior: 20x24-24x32; Master & Crazy 8s:
+            24x24-24x32</p>
         </div>
 
         <div class="settings-section">
-          <h4>Bale Dimensions (inches)<span class="info-icon" title="To ensure perfect alignment on the 2nd-inch grid and prevent gaps, dimensions must be even numbers.">?</span></h4>
-          
+          <h4>Starter Bale Dimensions (inches)<span class="info-icon"
+              title="To ensure perfect alignment on the 2nd-inch grid and prevent gaps, dimensions must be even numbers.">?</span>
+          </h4>
+
           <div class="form-group-row">
             <div class="form-group">
               <label>Length</label>
@@ -38,15 +41,37 @@
             </div>
             <div class="form-group">
               <label>Height (Tall)</label>
-              <input type="number" v-model.lazy="baleHeight"  step="2" />
+              <input type="number" v-model.lazy="baleHeight" step="2" />
             </div>
           </div>
           <p class="hint">
-            Standard 2-String: ~36" x 18" x 14" <br/> 
+            Standard 2-String: ~36" x 18" x 14" <br />
             Standard 3-String: ~44" x 22" x 16"
           </p>
         </div>
-
+        <div class="settings-section">
+          <h4>Bale Colors By Layer</h4>
+          <div class="form-group-row">
+            <div class="form-group">
+              <label>Layer 1</label>
+              <div class="color-input-wrapper">
+                <input type="color" v-model="store.baleColors[1]" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Layer 2</label>
+              <div class="color-input-wrapper">
+                <input type="color" v-model="store.baleColors[2]" />
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Layer 3</label>
+              <div class="color-input-wrapper">
+                <input type="color" v-model="store.baleColors[3]" />
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="settings-section">
           <h4>Trial Information</h4>
           <div class="form-grid">
@@ -79,8 +104,8 @@
           </div>
         </div>
 
-        <hr />    
-        
+        <hr />
+
         <h3>Statistics</h3>
         <div class="settings-section">
           <h4>Map View Options</h4>
@@ -99,12 +124,13 @@
                 <span v-if="store.comparisonMapName"><strong>{{ store.comparisonMapName }}</strong></span>
                 <span v-else class="placeholder">No map selected</span>
               </div>
-              
+
               <button @click="openMapPicker" class="btn-primary" style="padding: 6px 12px; font-size: 0.8rem;">
                 {{ store.comparisonMapName ? 'Change' : 'Select Map' }}
               </button>
-              
-              <button v-if="store.comparisonMapName" @click="handleClearComparison" class="btn-clear" title="Remove Comparison">
+
+              <button v-if="store.comparisonMapName" @click="handleClearComparison" class="btn-clear"
+                title="Remove Comparison">
                 Clear
               </button>
             </div>
@@ -193,7 +219,7 @@
           <h3>📂 Select Map</h3>
           <button class="close-btn" @click="isPickingMap = false">Back</button>
         </div>
-        
+
         <div class="picker-search">
           <input v-model="searchQuery" placeholder="Search maps by name..." autofocus />
         </div>
@@ -206,7 +232,7 @@
           <li v-if="filteredMaps.length === 0" class="empty-msg">No maps found.</li>
         </ul>
       </div>
-      </div>
+    </div>
   </div>
 </template>
 
@@ -258,12 +284,12 @@ const filteredMaps = computed(() => {
 })
 
 onMounted(async () => {
-    loadingMaps.value = true
-    try {
-      userMaps.value = await store.loadUserMaps()
-    } finally {
-      loadingMaps.value = false
-    }
+  loadingMaps.value = true
+  try {
+    userMaps.value = await store.loadUserMaps()
+  } finally {
+    loadingMaps.value = false
+  }
 })
 
 function openMapPicker() {
@@ -552,7 +578,11 @@ function formatCorner(c) {
   border-radius: 4px;
   font-size: 0.9rem;
 }
-.map-display-box .placeholder { color: #888; font-style: italic; }
+
+.map-display-box .placeholder {
+  color: #888;
+  font-style: italic;
+}
 
 .picker-view {
   display: flex;
@@ -570,7 +600,11 @@ function formatCorner(c) {
   border-radius: 4px;
   box-sizing: border-box;
 }
-.picker-search input:focus { border-color: #2196f3; outline: none; }
+
+.picker-search input:focus {
+  border-color: #2196f3;
+  outline: none;
+}
 
 .picker-list {
   flex: 1;
@@ -588,10 +622,27 @@ function formatCorner(c) {
   display: flex;
   justify-content: space-between;
 }
-.picker-list li:hover { background: #e3f2fd; }
-.picker-list li .map-name { font-weight: bold; color: #333; }
-.picker-list li .map-date { color: #888; font-size: 0.8rem; }
-.empty-msg { padding: 20px; text-align: center; color: #999; font-style: italic; }
+
+.picker-list li:hover {
+  background: #e3f2fd;
+}
+
+.picker-list li .map-name {
+  font-weight: bold;
+  color: #333;
+}
+
+.picker-list li .map-date {
+  color: #888;
+  font-size: 0.8rem;
+}
+
+.empty-msg {
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-style: italic;
+}
 
 /* src/components/modals/CourseSettingsModal.vue */
 

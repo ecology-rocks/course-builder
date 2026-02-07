@@ -103,6 +103,11 @@ export const useMapStore = defineStore("map", () => {
 const activeTunnelBoxMenu = ref(null);
 const activeBaleMenu = ref(null);
 const activeNoteMenu = ref(null);
+const baleColors = ref({
+    1: '#e6c200',
+    2: '#4caf50',
+    3: '#2196f3'
+  });
   // ==========================================
   // 2. ACTIONS (Internal & External)
   // ==========================================
@@ -133,6 +138,11 @@ const activeNoteMenu = ref(null);
       right: "fence",
       bottom: "fence",
       left: "fence",
+    };
+    baleColors.value = {
+      1: '#e6c200',
+      2: '#4caf50',
+      3: '#2196f3'
     };
     gridStartCorner.value = "top-left";
     trialLocation.value = "";
@@ -363,6 +373,7 @@ const activeNoteMenu = ref(null);
     activeStartBoxMenu,
     activeBaleMenu,
     activeNoteMenu,
+    baleColors,
     ...domainModules,
     ...stats,
     ...historyModule,

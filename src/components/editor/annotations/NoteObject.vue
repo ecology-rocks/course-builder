@@ -10,7 +10,7 @@ const groupRef = ref(null)
 defineExpose({ getNode: () => groupRef.value?.getNode() })
 
 // ## COMPUTED STYLES
-const textValue = computed(() => props.note.custom?.textValue || props.note.text || 'New Note')
+const textValue = computed(() => props.note.custom?.textValue || props.note.text || 'New Note, Right Click To Edit')
 const fillColor = computed(() => props.note.custom?.fillColor || 'transparent')
 const strokeColor = computed(() => props.note.custom?.strokeColor || '#333')
 const textColor = computed(() => props.note.custom?.textColor || '#000')

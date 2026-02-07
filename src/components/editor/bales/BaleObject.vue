@@ -39,14 +39,10 @@ const halfH = computed(() => (dims.value.height || 0) / 2)
 
 // --- 3. Appearance Logic ---
 const fillColor = computed(() => {
+  // Priority: Custom Color > Store Layer Color > Default Gray
   if (props.bale.custom?.fillColor) return props.bale.custom.fillColor
   
-  switch (props.bale.layer) {
-    case 1: return '#e6c200'
-    case 2: return '#4caf50'
-    case 3: return '#2196f3'
-    default: return '#ccc'
-  }
+  return store.baleColors[props.bale.layer] || '#ccc'
 })
 
 
