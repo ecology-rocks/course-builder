@@ -13,7 +13,7 @@ import DCMatObject from './mats/DCMatObject.vue'
 import MeasurementObject from './annotations/MeasurementObject.vue'
 import NoteObject from './annotations/NoteObject.vue'
 import TunnelBoxObject from './boards/TunnelBoxObject.vue'
-import GateObject from './walls/GateObject.vue'
+import GateObject from './gates/GateObject.vue'
 
 
 
@@ -101,6 +101,11 @@ function handleSelect(id, isMulti = false) {
 }
 
 // --- HANDLERS ---
+
+function handleStepContextMenu({ e, id }) {
+  // We use e.clientX and e.clientY to position the menu
+  store.activeStepMenu = { id, x: e.clientX, y: e.clientY }
+}
 
 function handleZoneContextMenu({ e, id }) {
   // Set the store state to open the menu at the mouse coordinates
@@ -377,7 +382,7 @@ function getAnchorLines(bale) {
     <StepMarker v-for="step in store.steps" :key="step.id" :step="step" :scale="scale"
       :isSelected="store.selection.includes(step.id)" :ref="(el) => setRef(el, step.id)" @select="handleSelect"
       @update="(id, attrs) => store.updateStep(id, attrs)" @dragstart="handleDragStart($event, step.id)"
-      @dragmove="handleDragMove($event, step.id)" @dragend="handleDragEnd($event, step.id)"
+      @dragmove="handleDragMove($event, step.id)" @dragend="handleDragEnd($event, step.id)" @contextmenu="handleStepContextMenu"
       :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @rotate="store.rotateStep" />
 
     <ZoneRect v-for="zone in store.zones" :key="zone.id" :zone="zone" :scale="scale"

@@ -26,6 +26,7 @@ import HideContextMenu from './editor/hides/HideContextMenu.vue'
 import CustomizationModal from 'modals/CustomizationModal.vue'
 import DCMatContextMenu from './editor/mats/DCMatContextMenu.vue'
 import ZoneContextMenu from './editor/zones/ZoneContextMenu.vue'
+import StepContextMenu from './editor/steps/StepContextMenu.vue'
 
 // Setup
 const store = useMapStore()
@@ -179,6 +180,14 @@ async function handlePrint(options) {
       :x="store.activeZoneMenu.x"
       :y="store.activeZoneMenu.y"
       @close="store.activeZoneMenu = null"
+    />
+
+    <StepContextMenu
+      v-if="store.activeStepMenu"
+      :stepId="store.activeStepMenu.id"
+      :x="store.activeStepMenu.x"
+      :y="store.activeStepMenu.y"
+      @close="store.activeStepMenu = null"
     />
     <CustomizationModal />
   </div>

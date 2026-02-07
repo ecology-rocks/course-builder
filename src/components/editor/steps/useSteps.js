@@ -7,7 +7,15 @@ export function useSteps(state, snapshot) {
       y, 
       width: 2, 
       height: 1.5, 
-      rotation: 0 
+      rotation: 0,
+      custom: {
+        width: null,
+        height: null,
+        fillColor: null,
+        strokeColor: null,
+        textValue: null,
+        textColor: null
+      } 
     })
     if (snapshot) snapshot()
   }

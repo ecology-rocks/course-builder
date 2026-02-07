@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
 const props = defineProps(['step', 'isSelected', 'scale'])
-const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend'])
+const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend', 'contextmenu'])
 
 const store = useMapStore()
 const groupRef = ref(null)
@@ -13,6 +13,31 @@ defineExpose({ getNode: () => groupRef.value?.getNode() })
 
 // --- 1. Rotation Snapping Logic ---
 const isCtrlPressed = ref(false)
+
+const finalWidth = computed(() => {
+  return props.step.custom?.width != null ? props.step.custom.width : props.step.width
+})
+
+const finalHeight = computed(() => {
+  return props.step.custom?.height != null ? props.step.custom.height : props.step.height
+})
+
+const fillColor = computed(() => {
+  return props.step.custom?.fillColor || '#8D6E63'
+})
+
+const strokeColor = computed(() => {
+  if (props.isSelected) return '#00a1ff'
+  return props.step.custom?.strokeColor || 'black'
+})
+
+const labelText = computed(() => {
+  return props.step.custom?.textValue || 'STEP'
+})
+
+const labelColor = computed(() => {
+  return props.step.custom?.textColor || 'white'
+})
 
 const rotationSnaps = computed(() => {
   if (!isCtrlPressed.value) return []
@@ -32,6 +57,15 @@ function handleKeyDown(e) {
 
 function handleKeyUp(e) {
   if (e.key === 'Control' || e.metaKey) isCtrlPressed.value = false
+}
+
+function handleContextMenu(e) {
+  // Prevent the browser menu
+  e.evt.preventDefault()
+  
+  // 2. Emit an OBJECT with 'e' (the native event) and 'id'
+  // If you just emit 'e', the parent won't be able to find .clientX
+  emit('contextmenu', { e: e.evt, id: props.step.id })
 }
 
 onMounted(() => {
@@ -70,38 +104,60 @@ function handleTransformEnd() {
   const rect = group.findOne('.step-rect')
   const text = group.findOne('.step-text')
 
-  // 1. Calculate final pixel dimensions
-  const finalW = Math.max(15, group.width() * group.scaleX())
-  const finalH = Math.max(15, group.height() * group.scaleY())
+  // Calculate final pixel dimensions based on current scale
+  const rawW = group.width() * group.scaleX()
+  const rawH = group.height() * group.scaleY()
+  
+  // Ensure minimum size (15px)
+  const finalPixelW = Math.max(15, rawW)
+  const finalPixelH = Math.max(15, rawH)
+  
+  // Convert back to World Units (feet)
+  const newWorldW = finalPixelW / props.scale
+  const newWorldH = finalPixelH / props.scale
 
-const rawRotation = group.rotation()
+  const rawRotation = group.rotation()
   const normalizedRotation = (rawRotation % 360 + 360) % 360
 
-  // 2. RESET Group Scale to 1
+  // RESET Group Scale to 1
   group.scaleX(1)
   group.scaleY(1)
-
   group.rotation(normalizedRotation)
 
-  // 3. Apply new dimensions to children
-  rect.width(finalW)
-  rect.height(finalH)
+  // Apply new dimensions to children visually immediately (prevents flicker)
+  rect.width(finalPixelW)
+  rect.height(finalPixelH)
   
   if (text) {
     text.scaleX(1)
     text.scaleY(1)
-    text.width(finalW)
-    text.height(finalH)
+    text.width(finalPixelW)
+    text.height(finalPixelH)
   }
 
-  // 4. Emit Update
-  emit('update', props.step.id, {
-    width: finalW / props.scale,
-    height: finalH / props.scale,
+  // [UPDATED] Smart Update Logic
+  const updates = {
     x: group.x() / props.scale,
     y: group.y() / props.scale,
     rotation: normalizedRotation
-  })
+  }
+
+  // If custom width exists, update it. Otherwise update standard width.
+  if (props.step.custom?.width != null) {
+    updates.custom = { ...props.step.custom, width: newWorldW }
+  } else {
+    updates.width = newWorldW
+  }
+
+  // If custom height exists, update it.
+  if (props.step.custom?.height != null) {
+    const baseCustom = updates.custom || props.step.custom
+    updates.custom = { ...baseCustom, height: newWorldH }
+  } else {
+    updates.height = newWorldH
+  }
+
+  emit('update', { id: props.step.id, ...updates })
 }
 
 // --- 3. Drag Constraints (Grid Snap + Ring Bounds) ---
@@ -157,13 +213,14 @@ function dragBoundFunc(pos) {
         id: step.id,
         x: step.x * scale, 
         y: step.y * scale,
-        width: step.width * scale,
-        height: step.height * scale,
+        width: finalWidth * scale,
+        height: finalHeight * scale,
         rotation: step.rotation || 0,
         draggable: true,
         dragBoundFunc: dragBoundFunc
       }"
       @click="emit('select', step.id, $event.evt.shiftKey)"
+      @contextmenu="handleContextMenu"
       @dragstart="emit('dragstart', $event)"
       @dragmove="emit('dragmove', $event)"
       @dragend="emit('dragend', $event)"
@@ -173,10 +230,10 @@ function dragBoundFunc(pos) {
       <v-rect 
         :config="{
           name: 'step-rect',
-          width: step.width * scale,
-          height: step.height * scale,
-          fill: '#8D6E63',
-          stroke: isSelected ? '#00a1ff' : 'black',
+          width: finalWidth * scale,
+        height: finalHeight * scale,
+          fill: fillColor,
+          stroke: isSelected ? '#00a1ff' : strokeColor || 'black',
           strokeWidth: isSelected ? 3 : 2,
           cornerRadius: 5
         }" 
@@ -185,11 +242,11 @@ function dragBoundFunc(pos) {
       <v-text 
         :config="{
           name: 'step-text',
-          text: 'STEP',
+          text: labelText,
           fontSize: scale * 0.5,
-          fill: 'white',
-          width: step.width * scale,
-          height: step.height * scale,
+          fill: labelColor,
+          width: finalWidth * scale,
+          height: finalHeight * scale,
           align: 'center',
           verticalAlign: 'middle',
           listening: false

@@ -12,7 +12,7 @@ import { useGridLogic } from "editor/logic/useGridLogic";
 import { useBales } from "editor/bales/useBales";
 import { useBoardEdges } from "editor/boards/useBoardEdges";
 import { useDCMats } from "editor/mats/useDCMats";
-import { useGates } from "editor/walls/useGates";
+import { useGates } from "editor/gates/useGates";
 import { useHides } from "editor/hides/useHides";
 import { useMeasurements } from "editor/annotations/useMeasurements";
 import { useNotes } from "editor/annotations/useNotes";
@@ -99,6 +99,7 @@ export const useMapStore = defineStore("map", () => {
   const editingCustomObject = ref(null);
   const activeDCMatMenu = ref(null);
   const activeZoneMenu = ref(null);
+  const activeStepMenu = ref(null);
   // ==========================================
   // 2. ACTIONS (Internal & External)
   // ==========================================
@@ -220,6 +221,7 @@ export const useMapStore = defineStore("map", () => {
     activeHideMenu,
     activeDCMatMenu,
     activeZoneMenu,
+    activeStepMenu,
     comparisonMapName,
 
     reset,
@@ -350,6 +352,7 @@ const selectionLogic = useSelectionLogic(
     editingCustomObject,
     activeDCMatMenu,
     activeZoneMenu,
+    activeStepMenu,
     ...domainModules,
     ...stats,
     ...historyModule,
