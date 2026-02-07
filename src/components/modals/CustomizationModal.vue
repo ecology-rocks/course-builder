@@ -10,9 +10,13 @@ const selectedId = computed(() => store.editingCustomObject)
 // Find the object in the store based on the ID
 const selectedObject = computed(() => {
   if (!selectedId.value) return null
-  // Search through different collections (hides, bales, etc.)
-  return store.hides.find(h => h.id === selectedId.value) || 
-         store.bales?.find(b => b.id === selectedId.value)
+
+  // Search all collections for the object
+  return store.hides.find(h => h.id === selectedId.value) ||
+    store.bales?.find(b => b.id === selectedId.value) ||
+    store.dcMats?.find(m => m.id === selectedId.value) ||
+    store.steps?.find(s => s.id === selectedId.value) ||
+    store.notes?.find(n => n.id === selectedId.value)
 })
 
 function close() {
@@ -20,17 +24,31 @@ function close() {
   store.editingCustomObject = null
 }
 
+
 function resetToDefault() {
-  if (selectedObject.value) {
-    selectedObject.value.custom = {
-      width: null,
-      height: null,
-      fillColor: null,
-      strokeColor: null,
-      borderStyle: 'solid',
-      textColor: '#000000'
-    }
+  if (!selectedObject.value) return
+
+  // Start with common dimension defaults
+  const newCustom = {
+    width: null,
+    height: null,
+    fillColor: null,
+    strokeColor: null
   }
+
+  // Only add specific properties if the object actually uses them
+  if (selectedObject.value.type === 'hide') {
+    newCustom.borderStyle = 'solid'
+    newCustom.textColor = null
+  }
+
+  if (selectedObject.value.type === 'dcMat') {
+    newCustom.textValue = null
+    newCustom.textColor = null
+  }
+
+  // Update the object in the store
+  selectedObject.value.custom = newCustom
 }
 </script>
 
@@ -50,7 +68,12 @@ function resetToDefault() {
           <input type="number" v-model.number="selectedObject.custom.height" placeholder="Default" />
         </div>
 
-        <div v-if="selectedObject.type" class="type-specific-section">
+        <div class="type-specific-section">
+          <div v-if="'textValue' in selectedObject.custom" class="form-group">
+            <label>Label Text</label>
+            <input type="text" v-model="selectedObject.custom.textValue" placeholder="Text" />
+          </div>
+
           <div class="form-group">
             <label>Fill Color</label>
             <input type="color" v-model="selectedObject.custom.fillColor" />
@@ -61,7 +84,7 @@ function resetToDefault() {
             <input type="color" v-model="selectedObject.custom.strokeColor" />
           </div>
 
-          <div class="form-group">
+          <div v-if="'borderStyle' in selectedObject.custom" class="form-group">
             <label>Border Style</label>
             <select v-model="selectedObject.custom.borderStyle">
               <option value="solid">Solid</option>
@@ -69,7 +92,7 @@ function resetToDefault() {
             </select>
           </div>
 
-          <div class="form-group">
+          <div v-if="'textColor' in selectedObject.custom" class="form-group">
             <label>Text Color</label>
             <input type="color" v-model="selectedObject.custom.textColor" />
           </div>
@@ -87,40 +110,78 @@ function resetToDefault() {
 <style scoped>
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 2000;
 }
+
 .modal-content {
   background: white;
   padding: 20px;
   border-radius: 12px;
   width: 300px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
+
 .form-container {
   margin: 15px 0;
   max-height: 400px;
   overflow-y: auto;
 }
+
 .form-group {
   margin-bottom: 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-.form-group label { font-size: 14px; color: #444; }
-.form-group input[type="number"] { width: 80px; padding: 4px; }
+
+.form-group label {
+  font-size: 14px;
+  color: #444;
+}
+
+.form-group input[type="number"] {
+  width: 80px;
+  padding: 4px;
+}
+
 .modal-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
 }
-.btn-primary { background: #00a1ff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
-.btn-secondary { background: #eee; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
+
+.btn-primary {
+  background: #00a1ff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: #eee;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group select {
+  width: 100px;
+  padding: 4px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
 </style>

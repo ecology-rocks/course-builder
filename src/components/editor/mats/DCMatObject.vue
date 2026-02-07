@@ -18,6 +18,28 @@ const rotationSnaps = computed(() => {
   return Array.from({ length: 24 }, (_, i) => i * 15) // [0, 15, 30... 345]
 })
 
+const fillColor = computed(() => props.mat.custom?.fillColor || '#d1c4e9')
+
+const strokeColor = computed(() => {
+  if (isSelected.value) return '#00a1ff'
+  return props.mat.custom?.strokeColor || 'black'
+})
+
+const textColor = computed(() => props.mat.custom?.textColor || 'black')
+
+const displayLabel = computed(() => props.mat.custom?.textValue || 'DC')
+
+const dimensions = computed(() => {
+  const w = props.mat.custom?.width || props.mat.width || store.dcMatConfig.width
+  const h = props.mat.custom?.height || props.mat.height || store.dcMatConfig.height
+  return {
+    width: w * props.scale,
+    height: h * props.scale,
+    rawW: w,
+    rawH: h
+  }
+})
+
 function handleKeyDown(e) {
   if (e.key === 'Control' || e.metaKey) isCtrlPressed.value = true
 }
@@ -25,6 +47,21 @@ function handleKeyDown(e) {
 function handleKeyUp(e) {
   if (e.key === 'Control' || e.metaKey) isCtrlPressed.value = false
 }
+
+// src/components/editor/mats/DCMatObject.vue
+
+function onRightClick(e) {
+  e.evt.preventDefault()
+  e.cancelBubble = true
+  
+  // This is what triggers the menu in MapEditor
+  store.activeDCMatMenu = { 
+    id: props.mat.id, 
+    x: e.evt.clientX, 
+    y: e.evt.clientY 
+  }
+}
+
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
@@ -49,11 +86,6 @@ function handleClick(e) {
     const isMulti = e.evt.shiftKey || e.evt.ctrlKey || e.evt.metaKey
     store.selectObject(props.mat.id, isMulti)
   }
-}
-
-function handleContextMenu(e) {
-  e.evt.preventDefault()
-  store.rotateDCMat(props.mat.id)
 }
 
 // --- FIX: Counter-Scale Text during Transform ---
@@ -179,15 +211,15 @@ function dcMatDragBoundFunc(pos) {
       id: mat.id,
       draggable: true,
       dragBoundFunc: dcMatDragBoundFunc,
-      x: (mat.x * scale) + (((mat.width || store.dcMatConfig.width) / 2) * scale),
-      y: (mat.y * scale) + (((mat.height || store.dcMatConfig.height) / 2) * scale),
-      offsetX: ((mat.width || store.dcMatConfig.width) / 2) * scale,
+      x: (mat.x * scale) + ((dimensions.rawW / 2) * scale),
+      y: (mat.y * scale) + ((dimensions.rawH / 2) * scale),
+      offsetX: (dimensions.rawW / 2) * scale,
+      offsetY: (dimensions.rawH / 2) * scale,
       opacity: opacity || 1,
-      offsetY: ((mat.height || store.dcMatConfig.height) / 2) * scale,
       rotation: mat.rotation
     }"
     @click="handleClick"
-    @contextmenu="handleContextMenu"
+    @contextmenu="onRightClick"
     @dragstart="emit('dragstart', $event)"
     @dragmove="emit('dragmove', $event)"
     @dragend="handleDragEnd"
@@ -196,10 +228,10 @@ function dcMatDragBoundFunc(pos) {
   >
     <v-rect 
       :config="{ 
-        width: (mat.width || store.dcMatConfig.width) * scale, 
-        height: (mat.height || store.dcMatConfig.height) * scale, 
-        fill: '#d1c4e9', 
-        stroke: isSelected ? '#00a1ff' : 'black',
+        width: dimensions.width, 
+        height: dimensions.height, 
+        fill: fillColor, 
+        stroke: strokeColor,
         strokeWidth: isSelected ? 3 : 1,
         shadowColor: '#00a1ff',
         shadowBlur: isSelected ? 10 : 0
@@ -207,7 +239,13 @@ function dcMatDragBoundFunc(pos) {
     />
     <v-text 
       ref="textRef"
-      :config="{ text: 'DC', fontSize: 12, x: 5, y: 5 }" 
+      :config="{ 
+        text: displayLabel, 
+        fontSize: 12, 
+        fill: textColor,
+        x: 5, 
+        y: 5 
+      }" 
     />
   </v-group>
 

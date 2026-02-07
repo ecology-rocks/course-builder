@@ -71,6 +71,7 @@ export const useMapStore = defineStore("map", () => {
   const previousClassCount = ref(0);
   const activeMeasurement = ref(null);
   const editingNoteId = ref(null);
+  
 
   // Configs
   const wallTypes = ref({
@@ -102,6 +103,7 @@ export const useMapStore = defineStore("map", () => {
   const activeHideMenu = ref(null); // Stores { id, x, y } or null
   const showCustomizationModal = ref(false);
   const editingCustomObject = ref(null);
+  const activeDCMatMenu = ref(null)
   // ==========================================
   // 2. ACTIONS (Internal & External)
   // ==========================================
@@ -560,6 +562,7 @@ export const useMapStore = defineStore("map", () => {
     activeHideMenu,
     showCustomizationModal,
     editingCustomObject,
+    activeDCMatMenu,
 
     ...historyModule,
     ...bhLogic,

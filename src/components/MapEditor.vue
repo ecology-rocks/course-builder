@@ -18,13 +18,13 @@ import { useContextMenu } from '@/components/editor/logic/useContextMenu'
 // Sub-Layers & Components
 import EditorSidebar from './editor/EditorSidebar.vue'
 import SelectionBar from './editor/SelectionBar.vue'
-
 import BarnHuntLayer from './editor/BarnHuntLayer.vue'
 import MapLegend from './editor/MapLegend.vue'
 import EditNoteModal from 'modals/EditNoteModal.vue'
 import HelpModal from 'modals/HelpModal.vue'
 import HideContextMenu from './editor/hides/HideContextMenu.vue'
 import CustomizationModal from 'modals/CustomizationModal.vue'
+import DCMatContextMenu from './editor/mats/DCMatContextMenu.vue'
 
 // Setup
 const store = useMapStore()
@@ -179,7 +179,15 @@ async function handlePrint(options) {
       :y="store.activeHideMenu.y"
       @close="store.closeHideMenu"
     />
-    <CustomizationModal />
+    
+    <DCMatContextMenu 
+  v-if="store.activeDCMatMenu" 
+  :matId="store.activeDCMatMenu.id" 
+  :x="store.activeDCMatMenu.x" 
+  :y="store.activeDCMatMenu.y" 
+  @close="store.activeDCMatMenu = null" 
+/>
+<CustomizationModal />
   </div>
 </template>
 

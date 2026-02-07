@@ -1,36 +1,35 @@
 import { useMapStore } from 'stores/mapStore'
+import { ref } from 'vue'
 
 export function useDCMats(state, snapshot) {
-  
-  function addDCMat(x, y) {
-    snapshot()
-    const store = useMapStore() // Access store for generic config if needed
-    
-    // Default to 4x3 if no config exists, or use current config as "Default Spawn Size"
-    const defW = store.dcMatConfig ? store.dcMatConfig.width : 3
-    const defH = store.dcMatConfig ? store.dcMatConfig.height : 4
 
-    const newMat = {
+
+  function addDCMat(x, y) {
+    state.dcMats.value.push({
       id: crypto.randomUUID(),
-      x: x,
-      y: y,
-      width: defW,  // Now saved individually
-      height: defH, // Now saved individually
+      x,
+      y,
+      type: 'dcMat',
+      width: state.dcMatConfig.value.width || 2,
+      height: state.dcMatConfig.value.height || 3,
       rotation: 0,
-      layer: 1
-    }
-    
-    state.dcMats.value.push(newMat)
-    return newMat
+      label: 'DC',
+      // [NEW] Custom properties
+      custom: {
+        width: null,
+        height: null,
+        fillColor: null, // Background
+        strokeColor: null, // Border
+        textColor: null,
+        textValue: null
+      }
+    })
+    if (snapshot) snapshot()
   }
 
   function removeDCMat(id) {
-    snapshot()
     state.dcMats.value = state.dcMats.value.filter(m => m.id !== id)
-    // Clear from selection if selected
-    if (state.selection.value.includes(id)) {
-      state.selection.value = state.selection.value.filter(selId => selId !== id)
-    }
+    if (snapshot) snapshot()
   }
 
   function rotateDCMat(id) {
@@ -42,12 +41,11 @@ export function useDCMats(state, snapshot) {
   }
 
   // New: Handle Resizing/Movement updates
-  function updateDCMat(id, attrs) {
-    // We don't snapshot here for every pixel drag (performance), 
-    // usually snapshot is handled by the interaction start/end.
+  function updateDCMat(id, updates) {
     const mat = state.dcMats.value.find(m => m.id === id)
     if (mat) {
-      Object.assign(mat, attrs)
+      Object.assign(mat, updates)
+      if (snapshot) snapshot()
     }
   }
 
