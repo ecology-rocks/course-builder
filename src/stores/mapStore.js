@@ -98,6 +98,7 @@ export const useMapStore = defineStore("map", () => {
   const showCustomizationModal = ref(false);
   const editingCustomObject = ref(null);
   const activeDCMatMenu = ref(null);
+  const activeZoneMenu = ref(null);
   // ==========================================
   // 2. ACTIONS (Internal & External)
   // ==========================================
@@ -218,6 +219,7 @@ export const useMapStore = defineStore("map", () => {
     wallTypes,
     activeHideMenu,
     activeDCMatMenu,
+    activeZoneMenu,
     comparisonMapName,
 
     reset,
@@ -347,6 +349,7 @@ const selectionLogic = useSelectionLogic(
     showCustomizationModal,
     editingCustomObject,
     activeDCMatMenu,
+    activeZoneMenu,
     ...domainModules,
     ...stats,
     ...historyModule,

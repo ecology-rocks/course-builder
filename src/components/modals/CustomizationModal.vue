@@ -16,6 +16,7 @@ const selectedObject = computed(() => {
     store.bales?.find(b => b.id === selectedId.value) ||
     store.dcMats?.find(m => m.id === selectedId.value) ||
     store.steps?.find(s => s.id === selectedId.value) ||
+    store.zones?.find(z => z.id === selectedId.value) ||
     store.notes?.find(n => n.id === selectedId.value)
 })
 
@@ -26,26 +27,26 @@ function close() {
 
 
 function resetToDefault() {
-  if (!selectedObject.value) return
+  if (!selectedObject.value || !selectedObject.value.custom) return
 
-  // Start with common dimension defaults
-  const newCustom = {
-    width: null,
-    height: null,
-    fillColor: null,
-    strokeColor: null
-  }
+  const current = selectedObject.value.custom
+  const newCustom = {}
 
-  // Only add specific properties if the object actually uses them
-  if (selectedObject.value.type === 'hide') {
-    newCustom.borderStyle = 'solid'
-    newCustom.textColor = null
-  }
+  // 1. Dimensions (If present)
+  if ('width' in current) newCustom.width = null
+  if ('height' in current) newCustom.height = null
 
-  if (selectedObject.value.type === 'dcMat') {
-    newCustom.textValue = null
-    newCustom.textColor = null
-  }
+  // 2. Colors (If present)
+  if ('fillColor' in current) newCustom.fillColor = null
+  if ('strokeColor' in current) newCustom.strokeColor = null
+  
+  // 3. Text (If present)
+  if ('textValue' in current) newCustom.textValue = null
+  if ('textColor' in current) newCustom.textColor = null
+
+  // 4. Styles (If present)
+  // 'borderStyle' usually defaults to 'solid' rather than null
+  if ('borderStyle' in current) newCustom.borderStyle = 'solid'
 
   // Update the object in the store
   selectedObject.value.custom = newCustom
@@ -59,12 +60,13 @@ function resetToDefault() {
       <hr />
 
       <div class="form-container">
-        <div class="form-group">
-          <label>Width (px)</label>
+        <div v-if="'width' in selectedObject.custom" class="form-group">
+          <label>Width (feet)</label>
           <input type="number" v-model.number="selectedObject.custom.width" placeholder="Default" />
         </div>
-        <div class="form-group">
-          <label>Height (px)</label>
+
+        <div v-if="'height' in selectedObject.custom" class="form-group">
+          <label>Height (feet)</label>
           <input type="number" v-model.number="selectedObject.custom.height" placeholder="Default" />
         </div>
 
@@ -74,12 +76,12 @@ function resetToDefault() {
             <input type="text" v-model="selectedObject.custom.textValue" placeholder="Text" />
           </div>
 
-          <div class="form-group">
+          <div v-if="'fillColor' in selectedObject.custom" class="form-group">
             <label>Fill Color</label>
             <input type="color" v-model="selectedObject.custom.fillColor" />
           </div>
 
-          <div class="form-group">
+          <div v-if="'strokeColor' in selectedObject.custom" class="form-group">
             <label>Border Color</label>
             <input type="color" v-model="selectedObject.custom.strokeColor" />
           </div>

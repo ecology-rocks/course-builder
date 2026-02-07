@@ -15,6 +15,8 @@ import NoteObject from './annotations/NoteObject.vue'
 import TunnelBoxObject from './boards/TunnelBoxObject.vue'
 import GateObject from './walls/GateObject.vue'
 
+
+
 const props = defineProps({
   bale: Object,
   scale: Number,
@@ -99,6 +101,12 @@ function handleSelect(id, isMulti = false) {
 }
 
 // --- HANDLERS ---
+
+function handleZoneContextMenu({ e, id }) {
+  // Set the store state to open the menu at the mouse coordinates
+  store.activeZoneMenu = { id, x: e.clientX, y: e.clientY }
+}
+
 function handleRightClick(e, id) {
   e.evt.preventDefault()
   e.cancelBubble = true
@@ -375,7 +383,7 @@ function getAnchorLines(bale) {
     <ZoneRect v-for="zone in store.zones" :key="zone.id" :zone="zone" :scale="scale"
       :isSelected="store.selection.includes(zone.id)" :ref="(el) => setRef(el, zone.id)" @select="handleSelect"
       @update="(attrs) => store.updateZone(attrs.id, attrs)" @dragstart="handleDragStart($event, zone.id)"
-      @dragmove="handleDragMove($event, zone.id)" @dragend="handleDragEnd($event, zone.id)" />
+      @dragmove="handleDragMove($event, zone.id)" @dragend="handleDragEnd($event, zone.id)" @contextmenu="handleZoneContextMenu" />
 
 
     <NoteObject v-for="note in store.notes" :key="note.id" :note="note" :scale="scale"

@@ -18,7 +18,9 @@ const inProgress = ref([
 const planned = ref([
   'Desktop Offline App (Late 2026)',
   'Mobile View Optimization',
-  'Individual Object Customization'
+  'Individual Object Customization',
+  'Fence tool for irregular rings',
+  'Print all or print group for trial sets of maps'
 ])
 // -------------------------------
 

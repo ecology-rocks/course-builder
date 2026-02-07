@@ -25,6 +25,7 @@ import HelpModal from 'modals/HelpModal.vue'
 import HideContextMenu from './editor/hides/HideContextMenu.vue'
 import CustomizationModal from 'modals/CustomizationModal.vue'
 import DCMatContextMenu from './editor/mats/DCMatContextMenu.vue'
+import ZoneContextMenu from './editor/zones/ZoneContextMenu.vue'
 
 // Setup
 const store = useMapStore()
@@ -42,8 +43,8 @@ useAutosave(3000)
 const { scale, stageConfig, zoom, fitToScreen } = useCanvasControls(store, wrapperRef, GRID_OFFSET)
 const { getWallStroke, getGridLabelX, getGridLabelY, getXAxisY, getYAxisX, getYAxisAlign } = useGridSystem(store, scale)
 const { handleSaveMap, handleLibrarySave } = useExportTools(store, stageRef, scale, GRID_OFFSET)
-const { selectionRect, handleStageMouseDown, handleStageMouseMove, 
-        handleStageMouseUp, handleDragStart } = useStageInteraction(store, scale, GRID_OFFSET)
+const { selectionRect, handleStageMouseDown, handleStageMouseMove,
+  handleStageMouseUp, handleDragStart } = useStageInteraction(store, scale, GRID_OFFSET)
 const { contextMenu, handleStageContextMenu, closeContextMenu } = useContextMenu(store)
 const { handlePrint: printLogic } = usePrinter(store, userStore, stageRef, scale)
 
@@ -63,16 +64,16 @@ function handleGlobalClick() {
 
 async function handlePrint(options) {
   isPrinting.value = true
-  
+
   // [CHECK] Extracting orientation here is correct
-  const orientation = options.orientation || 'landscape' 
-  
+  const orientation = options.orientation || 'landscape'
+
   showHides.value = options.withHides
   await nextTick()
 
   // [FIX] Ensure orientation is passed as the second argument explicitly
-  await printLogic(options, orientation) 
-  
+  await printLogic(options, orientation)
+
   isPrinting.value = false
   setTimeout(() => { showHides.value = true }, 2000)
 }
@@ -130,23 +131,19 @@ async function handlePrint(options) {
           </template>
 
           <template v-for="n in store.ringDimensions.width + 1" :key="'lx'+n">
-            <v-text
-              v-if="(n - 1) % store.gridStep === 0"
-              :config="{
-                x: (n - 1) * scale, y: getXAxisY(),
-                text: getGridLabelX(n - 1),
-                fontSize: 12, fill: '#666', align: 'center', width: 30, offsetX: 15
-              }" />
+            <v-text v-if="(n - 1) % store.gridStep === 0" :config="{
+              x: (n - 1) * scale, y: getXAxisY(),
+              text: getGridLabelX(n - 1),
+              fontSize: 12, fill: '#666', align: 'center', width: 30, offsetX: 15
+            }" />
           </template>
 
           <template v-for="n in store.ringDimensions.height + 1" :key="'ly'+n">
-            <v-text
-              v-if="(n - 1) % store.gridStep === 0"
-              :config="{
-                x: getYAxisX(), y: (n - 1) * scale - 6,
-                text: getGridLabelY(n - 1),
-                fontSize: 12, fill: '#666', align: getYAxisAlign(), width: 20
-              }" />
+            <v-text v-if="(n - 1) % store.gridStep === 0" :config="{
+              x: getYAxisX(), y: (n - 1) * scale - 6,
+              text: getGridLabelY(n - 1),
+              fontSize: 12, fill: '#666', align: getYAxisAlign(), width: 20
+            }" />
           </template>
 
           <v-group>
@@ -155,39 +152,35 @@ async function handlePrint(options) {
             <v-line
               :config="{ points: [0, store.ringDimensions.height * scale, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.bottom), y: getWallStroke(store.wallTypes.bottom) / 2, listening: false }" />
             <v-line
-              :config="{ points: [0, 0, 0, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.left),  x: -getWallStroke(store.wallTypes.left) / 2, listening: false}" />
+              :config="{ points: [0, 0, 0, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.left), x: -getWallStroke(store.wallTypes.left) / 2, listening: false }" />
             <v-line
               :config="{ points: [store.ringDimensions.width * scale, 0, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right), x: getWallStroke(store.wallTypes.right) / 2, listening: false }" />
           </v-group>
 
-          <BarnHuntLayer :scale="scale" :showHides="showHides"
-            :GRID_OFFSET="GRID_OFFSET" />
+          <BarnHuntLayer :scale="scale" :showHides="showHides" :GRID_OFFSET="GRID_OFFSET" />
 
           <v-rect v-if="selectionRect"
             :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
 
-          <MapLegend v-if="store.showMapStats && !isPrinting" :scale="scale"
-            :GRID_OFFSET="GRID_OFFSET" />
+          <MapLegend v-if="store.showMapStats && !isPrinting" :scale="scale" :GRID_OFFSET="GRID_OFFSET" />
 
         </v-layer>
       </v-stage>
     </div>
-    <HideContextMenu 
-      v-if="store.activeHideMenu"
-      :hideId="store.activeHideMenu.id"
-      :x="store.activeHideMenu.x"
-      :y="store.activeHideMenu.y"
-      @close="store.closeHideMenu"
+    <HideContextMenu v-if="store.activeHideMenu" :hideId="store.activeHideMenu.id" :x="store.activeHideMenu.x"
+      :y="store.activeHideMenu.y" @close="store.closeHideMenu" />
+
+    <DCMatContextMenu v-if="store.activeDCMatMenu" :matId="store.activeDCMatMenu.id" :x="store.activeDCMatMenu.x"
+      :y="store.activeDCMatMenu.y" @close="store.activeDCMatMenu = null" />
+
+      <ZoneContextMenu 
+      v-if="store.activeZoneMenu"
+      :zoneId="store.activeZoneMenu.id"
+      :x="store.activeZoneMenu.x"
+      :y="store.activeZoneMenu.y"
+      @close="store.activeZoneMenu = null"
     />
-    
-    <DCMatContextMenu 
-  v-if="store.activeDCMatMenu" 
-  :matId="store.activeDCMatMenu.id" 
-  :x="store.activeDCMatMenu.x" 
-  :y="store.activeDCMatMenu.y" 
-  @close="store.activeDCMatMenu = null" 
-/>
-<CustomizationModal />
+    <CustomizationModal />
   </div>
 </template>
 
