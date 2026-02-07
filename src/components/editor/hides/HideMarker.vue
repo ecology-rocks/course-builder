@@ -28,13 +28,22 @@ const strokeColor = computed(() => {
   return props.hide.custom?.strokeColor || 'black'
 })
 
+// [UPDATED] Dimensions now calculated in FEET and multiplied by scale
 const dimensions = computed(() => {
   const isNumbered = !!props.hide.number
-  const defaultW = isNumbered ? 32 : 24
-  const defaultH = 24
-return {
-    width: props.hide.custom?.width || defaultW,
-    height: props.hide.custom?.height || defaultH
+  
+  // Default sizes in FEET (World Units)
+  // 0.75 ft (9 inches) for standard, 1.0 ft for numbered
+  const defaultW = isNumbered ? 1.0 : 0.75
+  const defaultH = 0.75
+  
+  // Use custom feet value if set, otherwise default
+  const widthFt = props.hide.custom?.width != null ? props.hide.custom.width : defaultW
+  const heightFt = props.hide.custom?.height != null ? props.hide.custom.height : defaultH
+
+  return {
+    width: widthFt * props.scale,
+    height: heightFt * props.scale
   }
 })
 
@@ -96,19 +105,25 @@ function onRightClick(e) {
 }
 
 function dragBoundFunc(pos) {
-  const node = this
-  const layerAbs = node.getLayer().getAbsolutePosition()
+  // [UPDATED] Use dynamic dimensions for boundary check
+  const layerAbs = this.getLayer().getAbsolutePosition()
   const step = props.scale / 6
   
   let relX = Math.round((pos.x - layerAbs.x) / step) * step
   let relY = Math.round((pos.y - layerAbs.y) / step) * step
   
-  const r = 12
-  const maxX = (store.ringDimensions.width * props.scale) - r
-  const maxY = (store.ringDimensions.height * props.scale) - r
+  const w = dimensions.value.width
+  const h = dimensions.value.height
+  const halfW = w / 2
+  const halfH = h / 2
+  
+  // Clamp so the center point respects the boundary minus size
+  // (Adjust logic if you want the EDGE to hit the wall, currently ensuring center stays somewhat in bounds)
+  const maxX = (store.ringDimensions.width * props.scale) - halfW
+  const maxY = (store.ringDimensions.height * props.scale) - halfH
 
-  relX = Math.max(r, Math.min(relX, maxX))
-  relY = Math.max(r, Math.min(relY, maxY))
+  relX = Math.max(halfW, Math.min(relX, maxX))
+  relY = Math.max(halfH, Math.min(relY, maxY))
 
   return { x: relX + layerAbs.x, y: relY + layerAbs.y }
 }
