@@ -63,14 +63,13 @@ const borderConfig = computed(() => {
   const customStyle = props.hide.custom?.borderStyle
   const elevation = props.hide.elevation || 'regular_over'
   
-  // Custom border style takes precedence over elevation defaults
-  if (customStyle === 'dashed') return { strokeWidth: 2, dash: [4, 3] }
-  if (customStyle === 'solid') return { strokeWidth: 2, dash: null }
+  // If explicitly custom dashed OR elevation is under, use dashed
+  if (customStyle === 'dashed' || elevation === 'under') {
+    return { strokeWidth: 2, dash: [4, 3] }
+  }
 
-  // Fallback to existing elevation logic
-  return elevation === 'under' 
-    ? { strokeWidth: 2, dash: [4, 3] } 
-    : { strokeWidth: 2, dash: null }
+  // Otherwise solid
+  return { strokeWidth: 2, dash: null }
 })
 
 const textColor = computed(() => {

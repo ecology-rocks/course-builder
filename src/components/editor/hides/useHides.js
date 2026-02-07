@@ -24,7 +24,7 @@ function openHideMenu(id, x, y) {
         height: null,
         fillColor: null,
         strokeColor: null,
-        borderStyle: 'solid', // 'solid', 'dashed'
+        borderStyle: null, // 'solid', 'dashed'
         textColor: '#000000'
       }
     })
