@@ -24,6 +24,7 @@ import MapLegend from './editor/MapLegend.vue'
 import EditNoteModal from 'modals/EditNoteModal.vue'
 import HelpModal from 'modals/HelpModal.vue'
 import HideContextMenu from './editor/hides/HideContextMenu.vue'
+import CustomizationModal from 'modals/CustomizationModal.vue'
 
 // Setup
 const store = useMapStore()
@@ -178,6 +179,7 @@ async function handlePrint(options) {
       :y="store.activeHideMenu.y"
       @close="store.closeHideMenu"
     />
+    <CustomizationModal />
   </div>
 </template>
 

@@ -9,7 +9,12 @@ const groupRef = ref(null)
 
 defineExpose({ getNode: () => groupRef.value?.getNode() })
 
+// ## COMPUTED VALUES
+
 const fillColor = computed(() => {
+  // Priority: Custom Color > Type Default
+  if (props.hide.custom?.fillColor) return props.hide.custom.fillColor
+  
   switch (props.hide.type) {
     case 'rat': return '#ef5350'    
     case 'litter': return '#ffee58' 
@@ -18,10 +23,19 @@ const fillColor = computed(() => {
   }
 })
 
-// [NEW] Stroke color reacts to selection
 const strokeColor = computed(() => {
-  if (store.selection.includes(props.hide.id)) return '#00a1ff' // Blue highlight
-  return 'black'
+  if (store.selection.includes(props.hide.id)) return '#00a1ff'
+  return props.hide.custom?.strokeColor || 'black'
+})
+
+const dimensions = computed(() => {
+  const isNumbered = !!props.hide.number
+  const defaultW = isNumbered ? 32 : 24
+  const defaultH = 24
+return {
+    width: props.hide.custom?.width || defaultW,
+    height: props.hide.custom?.height || defaultH
+  }
 })
 
 // [NEW] Stroke width increases slightly on selection for visibility
@@ -37,14 +51,24 @@ const label = computed(() => {
 })
 
 const borderConfig = computed(() => {
+  const customStyle = props.hide.custom?.borderStyle
   const elevation = props.hide.elevation || 'regular_over'
   
-  if (elevation === 'under') {
-    return { strokeWidth: 2, dash: [4, 3] } // Dashed = Under
-  } else {
-    return { strokeWidth: 2, dash: null }   // Solid = Regular/Over
-  }
+  // Custom border style takes precedence over elevation defaults
+  if (customStyle === 'dashed') return { strokeWidth: 2, dash: [4, 3] }
+  if (customStyle === 'solid') return { strokeWidth: 2, dash: null }
+
+  // Fallback to existing elevation logic
+  return elevation === 'under' 
+    ? { strokeWidth: 2, dash: [4, 3] } 
+    : { strokeWidth: 2, dash: null }
 })
+
+const textColor = computed(() => {
+  return props.hide.custom?.textColor || 'black'
+})
+
+// ## FUNCTIONS
 
 function onLeftClick(e) {
   e.cancelBubble = true
@@ -107,32 +131,32 @@ function dragBoundFunc(pos) {
     @dragend="emit('dragend', $event)"
   >
     <v-rect 
-      :config="{ 
-        width: props.hide.number ? 32 : 24, 
-        height: 24,
-        x: props.hide.number ? -16 : -12,
-        y: -12,
-        cornerRadius: 12,
-        fill: fillColor, 
-        stroke: strokeColor, 
-        strokeWidth: strokeWidth,
-        dash: borderConfig.dash,
-        shadowBlur: store.selection.includes(hide.id) ? 10 : 2,
-        shadowColor: store.selection.includes(hide.id) ? '#00a1ff' : 'black'
-      }" 
-    />
-    <v-text 
-      :config="{ 
-        text: label, 
-        fontSize: 13, 
-        fontStyle: 'bold', 
-        fill: 'black', 
-        width: props.hide.number ? 32 : 24,
-        x: props.hide.number ? -16 : -12,
-        y: -6,
-        align: 'center',
-        listening: false
-      }" 
-    />
+  :config="{ 
+    width: dimensions.width, 
+    height: dimensions.height,
+    x: -(dimensions.width / 2),
+    y: -(dimensions.height / 2),
+    cornerRadius: 12,
+    fill: fillColor, 
+    stroke: strokeColor, 
+    strokeWidth: strokeWidth,
+    dash: borderConfig.dash,
+    shadowBlur: store.selection.includes(hide.id) ? 10 : 2,
+    shadowColor: store.selection.includes(hide.id) ? '#00a1ff' : 'black'
+  }" 
+/>
+<v-text 
+  :config="{ 
+    text: label, 
+    fontSize: 13, 
+    fontStyle: 'bold', 
+    fill: textColor, 
+    width: dimensions.width,
+    x: -(dimensions.width / 2),
+    y: -6,
+    align: 'center',
+    listening: false
+  }" 
+/>
   </v-group>
 </template>

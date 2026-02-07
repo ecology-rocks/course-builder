@@ -9,7 +9,15 @@ export function useHides(state, snapshot) {
       type: 'rat', // rat, litter, empty
       number: null,
       layer: state.currentLayer.value || 1,
-      elevation: 'regular_over' //  regular_over, under
+      elevation: 'regular_over', //  regular_over, under
+      custom: {
+        width: null,
+        height: null,
+        fillColor: null,
+        strokeColor: null,
+        borderStyle: 'solid', // 'solid', 'dashed'
+        textColor: '#000000'
+      }
     })
   }
 

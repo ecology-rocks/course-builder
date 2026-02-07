@@ -6,31 +6,7 @@ This is my one-true-copy of the project roadmap.
 ### OBJECT EDITS
 - Selecting a bale should show the rotate handle (easy) and the transform handles (harder, will have to update store to store individual dimensions) 
 
-### KEYBOARD SHORTCUTS (General)
-- Implement R for Rotate in 15 degree intervals. Shift+R to rotate in 45 degree intervals.
-- Implement E for Transform
-- Implement V for Select
-- Implement U for Cycle Hide Elevation
-- Implement Y for Cycle Hide Type
-- Implement O for Cycle Orientation
-- Implement L for Cycle Lean
-
-### TOOL SELECT SHORTCUTS
-- B for Bale
-- H for Hide
-- G for Gate
-- D for DC Mat
-- S for Start Box
-- T for Step
-- Q for Board Line
-- W for Board Box
-- Z for Dead Zone
-- X for Obstruction
-- M for Measure
-- N for Note
-
 ## RC MENUS
-
 All Menus should have delete, rotate, customize... (modal to edit colors, dimensions, text)
 
 ### BALES
@@ -46,6 +22,10 @@ All Menus should have delete, rotate, customize... (modal to edit colors, dimens
     Dead Zone
     Obstruction
 
+## Edits Starting 2/6
+ - Implemented keyboard shortcuts for tool selection and updated help menus
+ - Added elevation to Rat Hides
+ - Fixed startbox selection
 
 ## Edits Starting 2/2
  - (DONE) Bales placed close an edge will bleed over until they're moved and snapped back to the course
@@ -53,7 +33,7 @@ All Menus should have delete, rotate, customize... (modal to edit colors, dimens
  - (DONE) If you try to place a rat marker on top of a bale, it defaults to the top left corner
 
 
-## Requested Edits
+## Requested Edits 1/31 ish
  - (DONE) Bales are still having weird spacing issues. Maybe thicker lines to hide them? "Below is a screenshot of the bales flush. I hit the button you said and it seemed to align the two sides but not the top which I have circled and also the other circled one if I try to move the bale it overlaps."
  - (DONE) Give option to print landscape OR portrait (this went away with the last print modal update)
  - (DONE) Give option to print transparent multiple layers, "Is there a way to print with all the levels Opaque for the judges maps with the hides?"
