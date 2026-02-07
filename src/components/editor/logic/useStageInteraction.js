@@ -74,6 +74,15 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
 
   // --- MOUSE DOWN ---
   function handleStageMouseDown(e) {
+
+    if (e.evt.button === 2) return;
+    
+    store.activeStepMenu = null;
+    store.activeStartBoxMenu = null;
+    store.activeTunnelBoxMenu = null;
+    store.activeDCMatMenu = null;
+    store.activeZoneMenu = null;
+
     // Only handle Left Click on the Stage (Background)
     if (
       (store.activeTool !== "board" || store.activeTool !== "hide") &&

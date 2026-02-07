@@ -101,6 +101,7 @@ export const useMapStore = defineStore("map", () => {
   const activeStepMenu = ref(null);
   const activeStartBoxMenu = ref(null);
 const activeTunnelBoxMenu = ref(null);
+const activeBaleMenu = ref(null);
   // ==========================================
   // 2. ACTIONS (Internal & External)
   // ==========================================
@@ -224,6 +225,7 @@ const activeTunnelBoxMenu = ref(null);
     activeStepMenu,
     activeTunnelBoxMenu,
     activeStartBoxMenu,
+    activeBaleMenu,
     comparisonMapName,
 
     reset,
@@ -356,6 +358,7 @@ const activeTunnelBoxMenu = ref(null);
     activeStepMenu,
     activeTunnelBoxMenu,
     activeStartBoxMenu,
+    activeBaleMenu,
     ...domainModules,
     ...stats,
     ...historyModule,

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick, computed } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { useMapStore } from 'stores/mapStore'
 import { useUserStore } from '@/stores/userStore'
 import { useAutosave } from 'services/autosaveService'
@@ -13,8 +13,6 @@ import { useExportTools } from '@/components/editor/logic/useExportTools'
 import { useStageInteraction } from '@/components/editor/logic/useStageInteraction'
 import { useContextMenu } from '@/components/editor/logic/useContextMenu'
 
-
-
 // Sub-Layers & Components
 import EditorSidebar from './editor/EditorSidebar.vue'
 import SelectionBar from './editor/SelectionBar.vue'
@@ -22,13 +20,16 @@ import BarnHuntLayer from './editor/BarnHuntLayer.vue'
 import MapLegend from './editor/MapLegend.vue'
 import EditNoteModal from 'modals/EditNoteModal.vue'
 import HelpModal from 'modals/HelpModal.vue'
-import HideContextMenu from './editor/hides/HideContextMenu.vue'
 import CustomizationModal from 'modals/CustomizationModal.vue'
+
+// Context Menus
+import HideContextMenu from './editor/hides/HideContextMenu.vue'
 import DCMatContextMenu from './editor/mats/DCMatContextMenu.vue'
 import ZoneContextMenu from './editor/zones/ZoneContextMenu.vue'
 import StepContextMenu from './editor/steps/StepContextMenu.vue'
 import StartBoxContextMenu from './editor/mats/StartBoxContextMenu.vue'
 import TunnelBoxContextMenu from './editor/boards/TunnelBoxContextMenu.vue'
+import BaleContextMenu from './editor/bales/BaleContextMenu.vue'
 
 // Setup
 const store = useMapStore()
@@ -42,45 +43,67 @@ const showHelpModal = ref(false)
 
 useAutosave(3000)
 
-
 const { scale, stageConfig, zoom, fitToScreen } = useCanvasControls(store, wrapperRef, GRID_OFFSET)
 const { getWallStroke, getGridLabelX, getGridLabelY, getXAxisY, getYAxisX, getYAxisAlign } = useGridSystem(store, scale)
 const { handleSaveMap, handleLibrarySave } = useExportTools(store, stageRef, scale, GRID_OFFSET)
-const { selectionRect, handleStageMouseDown, handleStageMouseMove,
-  handleStageMouseUp, handleDragStart } = useStageInteraction(store, scale, GRID_OFFSET)
+const { selectionRect, handleStageMouseDown, handleStageMouseMove, handleStageMouseUp, handleDragStart } = useStageInteraction(store, scale, GRID_OFFSET)
 const { contextMenu, handleStageContextMenu, closeContextMenu } = useContextMenu(store)
 const { handlePrint: printLogic } = usePrinter(store, userStore, stageRef, scale)
 
 useKeyboardShortcuts(store, handleSaveMap)
 
 watch(() => [store.sport, store.ringDimensions.width], () => { nextTick(fitToScreen) }, { immediate: true })
-watch(() => store.activeHideMenu, (isOpen) => {
-  if (isOpen) {
-    closeContextMenu()
-  }
-})
 
-function handleGlobalClick() {
+// --- MENU MANAGEMENT ---
+
+// 1. Centralized "Close Everything" Function
+function closeAllMenus() {
+  // Close Generic Menu
   closeContextMenu()
+  
+  // Close Specific Object Menus
+  store.activeBaleMenu = null
+  store.activeDCMatMenu = null
+  store.activeHideMenu = null
+  store.activeStartBoxMenu = null
+  store.activeStepMenu = null
+  store.activeTunnelBoxMenu = null
+  store.activeZoneMenu = null
 }
 
+// 2. Global Click Handler
+function handleGlobalClick() {
+  closeAllMenus()
+}
+
+// 3. Watcher: If ANY specific menu opens, close the generic stage menu
+watch(
+  () => [
+    store.activeBaleMenu,
+    store.activeDCMatMenu,
+    store.activeHideMenu,
+    store.activeStartBoxMenu,
+    store.activeStepMenu,
+    store.activeTunnelBoxMenu,
+    store.activeZoneMenu
+  ],
+  (menus) => {
+    // If any menu in the array is truthy (open), close the generic context menu
+    if (menus.some(m => m !== null)) {
+      closeContextMenu()
+    }
+  }
+)
 
 async function handlePrint(options) {
   isPrinting.value = true
-
-  // [CHECK] Extracting orientation here is correct
   const orientation = options.orientation || 'landscape'
-
   showHides.value = options.withHides
   await nextTick()
-
-  // [FIX] Ensure orientation is passed as the second argument explicitly
   await printLogic(options, orientation)
-
   isPrinting.value = false
   setTimeout(() => { showHides.value = true }, 2000)
 }
-
 </script>
 
 <template>
@@ -96,13 +119,13 @@ async function handlePrint(options) {
       </Transition>
 
       <div class="zoom-controls">
-        <button @click="zoom(5)">+</button>
+        <button @click.stop="zoom(5)">+</button>
         <span>{{ scale }}px</span>
-        <button @click="zoom(-5)">-</button>
-        <button @click="fitToScreen">Fit</button>
+        <button @click.stop="zoom(-5)">-</button>
+        <button @click.stop="fitToScreen">Fit</button>
       </div>
 
-      <button class="help-fab" @click="showHelpModal = true" title="Keyboard Shortcuts & Help">
+      <button class="help-fab" @click.stop="showHelpModal = true" title="Keyboard Shortcuts & Help">
         ?
       </button>
 
@@ -118,11 +141,14 @@ async function handlePrint(options) {
         <button @click="fitToScreen">Fit to Screen</button>
       </div>
 
-      <v-stage ref="stageRef" :config="stageConfig" @mousedown="handleStageMouseDown" @dragstart="handleDragStart"
-        @mousemove="handleStageMouseMove" @mouseup="handleStageMouseUp" @contextmenu="handleStageContextMenu">
+      <v-stage ref="stageRef" :config="stageConfig" 
+        @mousedown="handleStageMouseDown" 
+        @dragstart="handleDragStart"
+        @mousemove="handleStageMouseMove" 
+        @mouseup="handleStageMouseUp" 
+        @contextmenu="handleStageContextMenu">
 
         <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
-
           <template v-for="n in store.ringDimensions.width + 1" :key="'v'+n">
             <v-line v-if="(n - 1) % store.gridStep === 0"
               :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#999', strokeWidth: 1 }" />
@@ -150,14 +176,10 @@ async function handlePrint(options) {
           </template>
 
           <v-group>
-            <v-line
-              :config="{ points: [0, 0, store.ringDimensions.width * scale, 0], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.top), y: -getWallStroke(store.wallTypes.top) / 2, listening: false }" />
-            <v-line
-              :config="{ points: [0, store.ringDimensions.height * scale, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.bottom), y: getWallStroke(store.wallTypes.bottom) / 2, listening: false }" />
-            <v-line
-              :config="{ points: [0, 0, 0, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.left), x: -getWallStroke(store.wallTypes.left) / 2, listening: false }" />
-            <v-line
-              :config="{ points: [store.ringDimensions.width * scale, 0, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right), x: getWallStroke(store.wallTypes.right) / 2, listening: false }" />
+            <v-line :config="{ points: [0, 0, store.ringDimensions.width * scale, 0], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.top), y: -getWallStroke(store.wallTypes.top) / 2, listening: false }" />
+            <v-line :config="{ points: [0, store.ringDimensions.height * scale, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.bottom), y: getWallStroke(store.wallTypes.bottom) / 2, listening: false }" />
+            <v-line :config="{ points: [0, 0, 0, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.left), x: -getWallStroke(store.wallTypes.left) / 2, listening: false }" />
+            <v-line :config="{ points: [store.ringDimensions.width * scale, 0, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right), x: getWallStroke(store.wallTypes.right) / 2, listening: false }" />
           </v-group>
 
           <BarnHuntLayer :scale="scale" :showHides="showHides" :GRID_OFFSET="GRID_OFFSET" />
@@ -166,48 +188,57 @@ async function handlePrint(options) {
             :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
 
           <MapLegend v-if="store.showMapStats && !isPrinting" :scale="scale" :GRID_OFFSET="GRID_OFFSET" />
-
         </v-layer>
       </v-stage>
     </div>
-    <HideContextMenu v-if="store.activeHideMenu" :hideId="store.activeHideMenu.id" :x="store.activeHideMenu.x"
-      :y="store.activeHideMenu.y" @close="store.closeHideMenu" />
 
-    <DCMatContextMenu v-if="store.activeDCMatMenu" :matId="store.activeDCMatMenu.id" :x="store.activeDCMatMenu.x"
-      :y="store.activeDCMatMenu.y" @close="store.activeDCMatMenu = null" />
-
-      <ZoneContextMenu 
-      v-if="store.activeZoneMenu"
-      :zoneId="store.activeZoneMenu.id"
-      :x="store.activeZoneMenu.x"
-      :y="store.activeZoneMenu.y"
-      @close="store.activeZoneMenu = null"
-    />
-
-    <StepContextMenu
-      v-if="store.activeStepMenu"
-      :stepId="store.activeStepMenu.id"
-      :x="store.activeStepMenu.x"
-      :y="store.activeStepMenu.y"
-      @close="store.activeStepMenu = null"
-    />
-
-    <StartBoxContextMenu
-      v-if="store.activeStartBoxMenu"
-      :id="store.activeStartBoxMenu.id"
-      :x="store.activeStartBoxMenu.x"
-      :y="store.activeStartBoxMenu.y"
-      @close="store.activeStartBoxMenu = null"
-    />
-
-    <TunnelBoxContextMenu
-      v-if="store.activeTunnelBoxMenu"
-      :id="store.activeTunnelBoxMenu.id"
-      :x="store.activeTunnelBoxMenu.x"
-      :y="store.activeTunnelBoxMenu.y"
-      @close="store.activeTunnelBoxMenu = null"
+    <HideContextMenu 
+      v-if="store.activeHideMenu" 
+      v-bind="store.activeHideMenu" 
+      :hideId="store.activeHideMenu.id"
+      @close="store.activeHideMenu = null" 
     />
     
+    <DCMatContextMenu 
+      v-if="store.activeDCMatMenu" 
+      v-bind="store.activeDCMatMenu" 
+      :matId="store.activeDCMatMenu.id"
+      @close="store.activeDCMatMenu = null" 
+    />
+    
+    <ZoneContextMenu 
+      v-if="store.activeZoneMenu" 
+      v-bind="store.activeZoneMenu" 
+      :zoneId="store.activeZoneMenu.id"
+      @close="store.activeZoneMenu = null" 
+    />
+    
+    <StepContextMenu 
+      v-if="store.activeStepMenu" 
+      v-bind="store.activeStepMenu" 
+      :stepId="store.activeStepMenu.id"
+      @close="store.activeStepMenu = null" 
+    />
+    
+    <StartBoxContextMenu 
+      v-if="store.activeStartBoxMenu" 
+      v-bind="store.activeStartBoxMenu" 
+      @close="store.activeStartBoxMenu = null" 
+    />
+    
+    <TunnelBoxContextMenu 
+      v-if="store.activeTunnelBoxMenu" 
+      v-bind="store.activeTunnelBoxMenu" 
+      @close="store.activeTunnelBoxMenu = null" 
+    />
+    
+    <BaleContextMenu 
+      v-if="store.activeBaleMenu" 
+      v-bind="store.activeBaleMenu" 
+      :baleId="store.activeBaleMenu.id"
+      @close="store.activeBaleMenu = null" 
+    />
+
     <CustomizationModal />
   </div>
 </template>

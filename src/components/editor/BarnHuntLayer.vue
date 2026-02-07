@@ -120,18 +120,21 @@ function handleTunnelBoxContextMenu({ e, id }) {
   store.activeTunnelBoxMenu = { id, x: e.clientX, y: e.clientY }
 }
 
+
+
 function handleRightClick(e, id) {
   e.evt.preventDefault()
   e.cancelBubble = true
+  
   if (store.activeTool === 'lean') return
   if (e.evt.ctrlKey || e.evt.altKey) return
+  
   if (store.activeTool === 'measure' && store.activeMeasurement) {
     store.finishMeasurement()
     return
   }
 
-  const amount = e.evt.shiftKey ? 45 : 15
-  store.rotateBale(id, amount)
+    store.activeBaleMenu = { id, x: e.evt.clientX, y: e.evt.clientY }
 }
 
 function handleLeftClick(e, id) {

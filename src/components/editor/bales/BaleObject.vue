@@ -39,7 +39,8 @@ const halfH = computed(() => (dims.value.height || 0) / 2)
 
 // --- 3. Appearance Logic ---
 const fillColor = computed(() => {
-  if (props.bale.supported === false) return '#ef5350'
+  if (props.bale.custom?.fillColor) return props.bale.custom.fillColor
+  
   switch (props.bale.layer) {
     case 1: return '#e6c200'
     case 2: return '#4caf50'
@@ -51,12 +52,15 @@ const fillColor = computed(() => {
 
 const strokeColor = computed(() => {
   if (store.selection.includes(props.bale.id)) return '#00a1ff'
+  if (props.bale.custom?.strokeColor) return props.bale.custom.strokeColor
   if (props.bale.isAnchor) return '#d32f2f'
   return 'black'
 })
 
 const strokeWidth = computed(() => {
   if (store.selection.includes(props.bale.id)) return 3
+  // Use a thicker border if a custom color is set so it's visible
+  if (props.bale.custom?.strokeColor) return 2
   if (props.bale.isAnchor) return 2
   return 1
 })
