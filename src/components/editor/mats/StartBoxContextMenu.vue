@@ -1,5 +1,7 @@
 <script setup>
 import { useMapStore } from '@/stores/mapStore'
+import { computed, ref, onMounted, onUnmounted } from 'vue' // for menu style
+import { useMenuPosition } from '@/services/menuPositionService' //for menu style
 
 const props = defineProps({
   id: String,
@@ -9,6 +11,41 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 const store = useMapStore()
+
+// menu options
+const menuRef = ref(null)
+const menuState = computed(() => store.activeStartBoxMenu) // change menu here
+console.log(menuState)
+const { style } = useMenuPosition(menuState, menuRef)
+function handleInteraction(e) {
+  // Handle Escape
+  if (e.type === 'keydown' && e.key === 'Escape') {
+    emit('close')
+    return
+  }
+  
+  // Handle Click Outside
+  if (e.type === 'click') {
+    if (menuRef.value && !menuRef.value.contains(e.target)) {
+      emit('close')
+    }
+  }
+}
+
+onMounted(() => {
+  // Use setTimeout to ensure we don't catch the initial click that opened the menu
+  setTimeout(() => {
+    window.addEventListener('click', handleInteraction)
+    window.addEventListener('keydown', handleInteraction)
+  }, 0)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('click', handleInteraction)
+  window.removeEventListener('keydown', handleInteraction)
+})
+
+// end menu edits
 
 function deleteBox() {
   store.removeStartBox()
@@ -28,7 +65,7 @@ function openCustomizer() {
 </script>
 
 <template>
-  <div class="context-menu" :style="{ top: y + 'px', left: x + 'px' }">
+  <div class="context-menu" :style="style" ref="menuRef" @click.stop>
     <div class="menu-header">Start Box Options</div>
     
     <div class="action-stack">
@@ -41,8 +78,7 @@ function openCustomizer() {
 
 <style scoped>
 .context-menu {
-  position: fixed;
-  z-index: 1000;
+  /* Position handled by style binding */
   background: white;
   border: 1px solid #ccc;
   border-radius: 8px;

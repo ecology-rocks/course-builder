@@ -150,7 +150,7 @@ function handleSave() {
       <div v-if="showMoreMenu" class="more-menu">
         <button v-if="isAdmin" @click="emit('save-library')">📚 Save to Library</button>
 
-        <button v-if="isPro" @click="triggerFileUpload">⬆ Import JSON</button>
+        <button @click="triggerFileUpload">⬆ Import JSON</button>
 
         <button @click="store.exportMapToJSON()">⬇ Export JSON</button>
 

@@ -1,20 +1,30 @@
 <script setup>
 import { useMapStore } from '@/stores/mapStore'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { useMenuPosition } from '@/services/menuPositionService'
 
+// MapEditor passes both 'id' (via v-bind) and 'baleId' (explicitly). 
+// We use 'id' to match the store object structure.
 const props = defineProps({
-  baleId: String,
+  id: String, 
   x: Number,
   y: Number
 })
 
 const emit = defineEmits(['close'])
 const store = useMapStore()
+const menuRef = ref(null)
 
-const currentBale = computed(() => store.bales.find(b => b.id === props.baleId))
+// 1. Setup Positioning
+const menuState = computed(() => store.activeBaleMenu)
+const { style } = useMenuPosition(menuState, menuRef)
+
+// 2. Computed Logic
+const currentBale = computed(() => store.bales.find(b => b.id === props.id))
 const isAnchor = computed(() => currentBale.value?.isAnchor || false)
+
 const canToggleAnchor = computed(() => {
-  const b = store.bales.find(i => i.id === props.baleId)
+  const b = currentBale.value
   if (!b) return false
   
   // Rule 1: Must be Layer 1
@@ -30,44 +40,38 @@ const canToggleAnchor = computed(() => {
   return true
 })
 
+// 3. Actions (Using EXISTING store methods only)
 function rotate(amt) {
-  store.rotateBale(props.baleId, amt)
-  emit('close')
+  store.rotateBale(props.id, amt)
+  // Don't close menu on rotate, users often click multiple times
 }
 
-// [FIX] Use store action to handle multi-selection support
 function setOrientation(type) {
-  store.setBaleOrientation(props.baleId, type)
+  store.setBaleOrientation(props.id, type)
   emit('close')
 }
-
-// [FIX] 'cycleLean' was unused; removed it. 
-// The template buttons call store.setLean directly, which is correct.
 
 function toggleAnchor() {
-  // [FIX] Pass baleId so it works even if the bale isn't currently selected
-  store.toggleAnchor(props.baleId) 
-  emit('close')
-}
-
-function openCustomizer() {
-  store.editingCustomObject = props.baleId
-  store.showCustomizationModal = true
+  store.toggleAnchor(props.id)
   emit('close')
 }
 
 function deleteBale() {
-  // [FIX] Use generic removeObject if available, or keep specific removeBale
-  store.removeBale(props.baleId)
+  store.removeBale(props.id)
+  emit('close')
+}
+
+function openCustomizer() {
+  store.editingCustomObject = props.id
+  store.showCustomizationModal = true
   emit('close')
 }
 </script>
 
 <template>
-  <div class="bale-context-menu" :style="{ top: y + 'px', left: x + 'px' }">
-    <div class="menu-header">Bale Menu</div>
+  <div ref="menuRef" class="bale-context-menu" :style="style">
+    <div class="menu-header">Bale Options</div>
 
-    <div class="section-label">Actions</div>
     <div class="action-stack">
       <button @click="openCustomizer" class="action-btn customize">🎨 Customize Style</button>
       <button @click="deleteBale" class="action-btn delete">🗑️ Delete Bale</button>
@@ -77,55 +81,126 @@ function deleteBale() {
          :disabled="!canToggleAnchor"
          :title="!canToggleAnchor ? 'Anchors must be Flat, Rectilinear, and on Layer 1' : ''"
        >
-         ⚓ Toggle Anchor
+         {{ isAnchor ? '⚓ Remove Anchor' : '⚓ Make Anchor' }}
        </button>
     </div>
   
+    <div class="menu-divider"></div>
+
     <div class="section-label">Orientation</div>
     <div class="type-row">
       <button 
-        v-for="ot in ['flat', 'tall', 'pillar']" 
-        :key="ot" 
-        @click="setOrientation(ot)"
+        @click="setOrientation('flat')" 
+        :class="{ active: currentBale?.orientation === 'flat' }"
         :disabled="isAnchor"
-        :class="{ disabled: isAnchor }"
-      >
-        {{ ot.charAt(0).toUpperCase() + ot.slice(1) }}
-      </button>
+      >Flat</button>
+      <button 
+        @click="setOrientation('tall')" 
+        :class="{ active: currentBale?.orientation === 'tall' }"
+        :disabled="isAnchor"
+      >Tall</button>
+      <button 
+        @click="setOrientation('pillar')" 
+        :class="{ active: currentBale?.orientation === 'pillar' }"
+        :disabled="isAnchor"
+      >Pillar</button>
     </div>
 
     <div class="section-label">Lean</div>
     <div class="type-row">
-      <button @click="store.setLean(baleId, 'left')" :disabled="isAnchor">Left</button>
-      <button @click="store.setLean(baleId, 'right')" :disabled="isAnchor">Right</button>
-      <button @click="store.setLean(baleId, null)" :disabled="isAnchor">None</button>
+      <button @click="store.setLean(id, 'left')" :disabled="isAnchor">Left</button>
+      <button @click="store.setLean(id, 'right')" :disabled="isAnchor">Right</button>
+      <button @click="store.setLean(id, null)" :disabled="isAnchor">None</button>
     </div>
 
     <div class="section-label">Rotate</div>
     <div class="number-grid">
+      <button @click="rotate(45)">45°</button>
       <button @click="rotate(90)">90°</button>
-      <button @click="rotate(-90)">-90°</button>
     </div>
   </div>
 </template>
 
 <style scoped>
 .bale-context-menu {
-  position: fixed;
-  z-index: 3000;
+  /* Position is controlled by :style binding (fixed, top, left) */
   background: white;
   border: 1px solid #ccc;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 12px;
-  width: 160px;
+  width: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
-.menu-header { font-weight: bold; margin-bottom: 8px; font-size: 12px; color: #666; }
-.section-label { font-size: 10px; text-transform: uppercase; color: #999; margin: 8px 0 4px; }
+
+.menu-header { 
+  font-weight: bold; 
+  margin-bottom: 4px; 
+  font-size: 12px; 
+  color: #666; 
+  text-transform: uppercase;
+}
+
+.menu-divider {
+  height: 1px;
+  background: #eee;
+  margin: 4px 0;
+}
+
+.section-label { 
+  font-size: 10px; 
+  text-transform: uppercase; 
+  color: #999; 
+  margin: 6px 0 2px; 
+  font-weight: 600;
+}
+
 .action-stack { display: flex; flex-direction: column; gap: 4px; }
-.action-btn { width: 100%; text-align: left; padding: 6px 8px; cursor: pointer; font-size: 11px; background: #f5f5f5; border: 1px solid #ddd; border-radius: 4px; }
-.type-row button { width: 100%; text-align: left; margin-bottom: 4px; padding: 4px 8px; cursor: pointer; }
-.number-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
-.number-grid button { padding: 4px; cursor: pointer; font-size: 11px; }
+
+.action-btn { 
+  width: 100%; 
+  text-align: left; 
+  padding: 6px 8px; 
+  cursor: pointer; 
+  font-size: 11px; 
+  background: #f5f5f5; 
+  border: 1px solid #ddd; 
+  border-radius: 4px; 
+  transition: background 0.1s;
+}
+
+.action-btn:hover:not(:disabled) { background: #eee; }
+.action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
 .delete { color: #d32f2f; background: #ffebee; border-color: #ffcdd2; }
+.delete:hover { background: #ffcdd2; }
+
+.type-row { display: flex; gap: 4px; }
+
+.type-row button { 
+  flex: 1; 
+  text-align: center; 
+  padding: 4px 2px; 
+  cursor: pointer; 
+  font-size: 11px;
+  background: #f9f9f9;
+  border: 1px solid #eee;
+  border-radius: 3px;
+}
+
+.type-row button:hover:not(:disabled) { background: #e0e0e0; }
+.type-row button.active { background: #e3f2fd; color: #1976d2; border-color: #90caf9; font-weight: bold; }
+
+.number-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 4px; }
+.number-grid button { 
+  padding: 6px; 
+  cursor: pointer; 
+  font-size: 11px;
+  background: #f9f9f9; 
+  border: 1px solid #eee;
+  border-radius: 3px;
+}
+.number-grid button:hover { background: #e0e0e0; }
 </style>

@@ -225,7 +225,7 @@ async function handlePrint(options) {
     <BaleContextMenu 
       v-if="store.activeBaleMenu" 
       v-bind="store.activeBaleMenu" 
-      :baleId="store.activeBaleMenu.id"
+      :id="store.activeBaleMenu.id"
       @close="store.activeBaleMenu = null" 
     />
 
