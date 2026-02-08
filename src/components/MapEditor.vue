@@ -23,6 +23,7 @@ import HelpModal from 'modals/HelpModal.vue'
 import CustomizationModal from 'modals/CustomizationModal.vue'
 
 // Context Menus
+import StageContextMenu from './editor/StageContextMenu.vue'
 import HideContextMenu from './editor/hides/HideContextMenu.vue'
 import DCMatContextMenu from './editor/mats/DCMatContextMenu.vue'
 import ZoneContextMenu from './editor/zones/ZoneContextMenu.vue'
@@ -57,11 +58,30 @@ useKeyboardShortcuts(store, handleSaveMap)
 watch(() => [store.sport, store.ringDimensions.width], () => { nextTick(fitToScreen) }, { immediate: true })
 
 // --- MENU MANAGEMENT ---
+function handleStageMenuClose() {
+  closeContextMenu()
+  store.setTool('select')
+}
 
-
-
-// 2. Global Click Handler
+// [UPDATED] Global Click Handler
 function handleGlobalClick() {
+  // If any item menu is currently open, we are "clicking off" to close it.
+  // In this case, we should also reset the tool to 'select'.
+  const isAnyItemMenuOpen = 
+    store.activeBaleMenu || 
+    store.activeDCMatMenu || 
+    store.activeHideMenu || 
+    store.activeStartBoxMenu || 
+    store.activeStepMenu || 
+    store.activeTunnelBoxMenu || 
+    store.activeZoneMenu || 
+    store.activeNoteMenu ||
+    store.activeWallMenu
+
+  if (isAnyItemMenuOpen) {
+    store.setTool('select')
+  }
+
   store.closeAllMenus()
 }
 
@@ -123,18 +143,13 @@ async function handlePrint(options) {
 
       <SelectionBar />
 
-      <div v-if="contextMenu.visible" class="context-menu"
-        :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }">
-
-        <button @click="store.pasteSelection(); closeContextMenu()">
-          Paste (Ctrl+V)
-        </button>
-
-        <button @click="store.clearSelection()" :disabled="store.selection.length === 0">
-          Deselect All
-        </button>
-        <button @click="fitToScreen">Fit to Screen</button>
-      </div>
+      <StageContextMenu 
+        v-if="contextMenu.visible"
+        :x="contextMenu.x"
+        :y="contextMenu.y"
+        @close="handleStageMenuClose"
+        @fit-screen="fitToScreen"
+      />
 
       <v-stage ref="stageRef" :config="stageConfig" 
         @mousedown="handleStageMouseDown" 
@@ -311,39 +326,6 @@ async function handlePrint(options) {
   width: 30px;
   height: 30px;
   cursor: pointer;
-}
-
-/* CONTEXT MENU */
-.context-menu {
-  position: fixed;
-  background: white;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-  display: flex;
-  flex-direction: column;
-  z-index: 3000;
-  min-width: 120px;
-}
-
-.context-menu button {
-  text-align: left;
-  background: none;
-  border: none;
-  padding: 8px 12px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  color: #333;
-}
-
-.context-menu button:hover {
-  background: #f5f5f5;
-}
-
-.context-menu button:disabled {
-  color: #aaa;
-  cursor: default;
-  background: none;
 }
 
 .help-fab {
