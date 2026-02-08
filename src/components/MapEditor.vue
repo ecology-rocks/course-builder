@@ -1,10 +1,10 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, computed } from 'vue'
 import { useMapStore } from 'stores/mapStore'
 import { useUserStore } from '@/stores/userStore'
 import { useAutosave } from 'services/autosaveService'
 import { usePrinter } from 'services/printerService'
-
+import { useBlindPrinter } from '@/services/blindPrinterService'
 // --- COMPOSABLES ---
 import { useKeyboardShortcuts } from '@/components/editor/logic/useKeyboardShortcuts'
 import { useCanvasControls } from '@/components/editor/logic/useCanvasControls'
@@ -21,6 +21,8 @@ import MapLegend from './editor/MapLegend.vue'
 import EditNoteModal from 'modals/EditNoteModal.vue'
 import HelpModal from 'modals/HelpModal.vue'
 import CustomizationModal from 'modals/CustomizationModal.vue'
+import TournamentSetupModal from 'modals/TournamentSetupModal.vue'
+import BlindManager from './editor/BlindManager.vue'
 
 // Context Menus
 import StageContextMenu from './editor/StageContextMenu.vue'
@@ -43,6 +45,9 @@ const GRID_OFFSET = 30
 const showHides = ref(true)
 const isPrinting = ref(false)
 const showHelpModal = ref(false)
+const showBlindSetup = ref(false)
+const isBlindMode = ref(false)
+const blindManagerRef = ref(null)
 
 useAutosave(3000)
 
@@ -52,11 +57,43 @@ const { handleSaveMap, handleLibrarySave } = useExportTools(store, stageRef, sca
 const { selectionRect, handleStageMouseDown, handleStageMouseMove, handleStageMouseUp, handleDragStart } = useStageInteraction(store, scale, GRID_OFFSET)
 const { contextMenu, handleStageContextMenu, closeContextMenu } = useContextMenu(store)
 const { handlePrint: printLogic } = usePrinter(store, userStore, stageRef, scale)
+const { printBlinds } = useBlindPrinter(store, userStore, stageRef, scale)
 
 useKeyboardShortcuts(store, handleSaveMap)
 
 watch(() => [store.sport, store.ringDimensions.width], () => { nextTick(fitToScreen) }, { immediate: true })
 
+const activeDisplayHides = computed(() => {
+  if (isBlindMode.value && blindManagerRef.value) {
+    return blindManagerRef.value.currentDisplayHides
+  }
+  return store.hides
+})
+
+function handleBlindSetupStart(config) {
+  store.initBlinds(config.numBlinds, config.generateRandoms)
+  showBlindSetup.value = false
+  isBlindMode.value = true
+  store.closeAllMenus()
+  store.setTool('select') // Disable map editor tools
+}
+
+async function handleBlindSave() {
+  await handleSaveMap() // Reuse existing save logic
+  isBlindMode.value = false
+}
+
+function handleOpenBlindManager() {
+  // If we already have blinds data, skip setup and just open the manager
+  if (store.mapData.blinds && store.mapData.blinds.length > 0) {
+    isBlindMode.value = true
+    store.closeAllMenus()
+    store.setTool('select')
+  } else {
+    // No data found? Show the setup modal
+    showBlindSetup.value = true
+  }
+}
 // --- MENU MANAGEMENT ---
 function handleStageMenuClose() {
   closeContextMenu()
@@ -85,6 +122,20 @@ function handleGlobalClick() {
   store.closeAllMenus()
 }
 
+// [NEW] Interceptor for Stage Clicks
+function onStageMouseDown(e) {
+  // If in Blind Mode, divert click to BlindManager
+  if (isBlindMode.value) {
+    if (blindManagerRef.value) {
+      blindManagerRef.value.handleCanvasClick(e, GRID_OFFSET, scale.value)
+    }
+    return
+  }
+
+  // Otherwise, normal editor behavior
+  handleStageMouseDown(e)
+}
+
 // 3. Watcher: If ANY specific menu opens, close the generic stage menu
 watch(
   () => [
@@ -105,6 +156,16 @@ watch(
   }
 )
 
+async function handleBatchPrint() {
+  isPrinting.value = true
+  try {
+    // Calls the service that loops through your blinds
+    await printBlinds()
+  } finally {
+    isPrinting.value = false
+  }
+}
+
 async function handlePrint(options) {
   isPrinting.value = true
   const orientation = options.orientation || 'landscape'
@@ -118,8 +179,13 @@ async function handlePrint(options) {
 
 <template>
   <div class="editor-container" @click="handleGlobalClick">
-    <EditorSidebar @print="handlePrint" @save-map="handleSaveMap" @save-library="handleLibrarySave" />
-
+    <EditorSidebar 
+      v-if="!isBlindMode" 
+      @print="handlePrint" 
+      @save-map="handleSaveMap" 
+      @save-library="handleLibrarySave" 
+      @blind-setup="handleOpenBlindManager"
+    />
     <div class="canvas-wrapper" ref="wrapperRef">
       <EditNoteModal v-if="store.editingNoteId" />
       <Transition name="fade">
@@ -152,7 +218,7 @@ async function handlePrint(options) {
       />
 
       <v-stage ref="stageRef" :config="stageConfig" 
-        @mousedown="handleStageMouseDown" 
+        @mousedown="onStageMouseDown" 
         @dragstart="handleDragStart"
         @mousemove="handleStageMouseMove" 
         @mouseup="handleStageMouseUp" 
@@ -192,8 +258,13 @@ async function handlePrint(options) {
             <v-line :config="{ points: [store.ringDimensions.width * scale, 0, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right), x: getWallStroke(store.wallTypes.right) / 2, listening: false }" />
           </v-group>
 
-          <BarnHuntLayer :scale="scale" :showHides="showHides" :GRID_OFFSET="GRID_OFFSET" />
-
+          <BarnHuntLayer 
+            :scale="scale" 
+            :showHides="showHides" 
+            :hides="activeDisplayHides" 
+            :GRID_OFFSET="GRID_OFFSET" 
+            :locked="isBlindMode && !isPrinting"
+          />
           <v-rect v-if="selectionRect"
             :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
 
@@ -259,6 +330,19 @@ async function handlePrint(options) {
     <WallContextMenu v-if="store.activeWallMenu" />
 
     <CustomizationModal />
+    <TournamentSetupModal 
+  v-if="showBlindSetup" 
+  @close="showBlindSetup = false"
+  @start="handleBlindSetupStart"
+/>
+
+<BlindManager 
+  v-if="isBlindMode"
+  ref="blindManagerRef"
+  @close="isBlindMode = false"
+  @print="handleBatchPrint"
+  @save="handleBlindSave"
+/>
   </div>
 </template>
 

@@ -25,6 +25,15 @@ const props = defineProps({
     default: 1
   },
   showHides: true,
+  locked: { type: Boolean, default: false },
+  hides: {
+    type: Array,
+    default: () => []
+  },
+  GRID_OFFSET: {
+    type: Number,
+    default: 0
+  }
 })
 const store = useMapStore()
 
@@ -36,6 +45,15 @@ const objectRefs = ref({})
 const dragStartPos = ref({})
 
 // --- COMPUTED ---
+const displayedHides = computed(() => {
+  // If the layer is locked (Blind Mode), use the specific list passed down
+  if (props.locked) {
+    return props.hides
+  }
+  // Otherwise (Normal Mode / Quick Print), always read from the Master Store
+  return store.hides
+})
+
 const visibleBales = computed(() => {
   // [FIX] If overlay is OFF, only show bales that match the current layer exactly
   let filtered;
@@ -368,7 +386,7 @@ function getAnchorLines(bale) {
 </script>
 
 <template>
-  <v-group>
+  <v-group :config="{ listening: !props.locked }">
     <template v-for="wall in store.customWalls" :key="wall.id">
       <WallObject :wall="wall" :scale="scale" />
     </template>
@@ -376,25 +394,21 @@ function getAnchorLines(bale) {
     <v-group v-if="store.activeWall">
       <v-line :config="{
         points: store.activeWall.points.flatMap(p => [p.x * scale, p.y * scale]),
-        stroke: '#555', 
-        strokeWidth: 4, 
+        stroke: '#555',
+        strokeWidth: 4,
         dash: [10, 5],
         listening: false // Important: Let clicks pass through to the stage
       }" />
 
-      <v-circle 
-        v-for="(pt, i) in store.activeWall.points" 
-        :key="'active-pt-'+i"
-        :config="{
-          x: pt.x * scale,
-          y: pt.y * scale,
-          radius: 6,
-          fill: '#ff9800',  
-          stroke: 'white',
-          strokeWidth: 2,
-          listening: false // Critical: If true, these dots block the next click!
-        }" 
-      />
+      <v-circle v-for="(pt, i) in store.activeWall.points" :key="'active-pt-' + i" :config="{
+        x: pt.x * scale,
+        y: pt.y * scale,
+        radius: 6,
+        fill: '#ff9800',
+        stroke: 'white',
+        strokeWidth: 2,
+        listening: false // Critical: If true, these dots block the next click!
+      }" />
     </v-group>
 
     <StartBoxObject v-if="store.startBox" :scale="scale" :isSelected="store.selection.includes(store.startBox?.id)"
@@ -428,39 +442,41 @@ function getAnchorLines(bale) {
       :ref="(el) => setRef(el, board.id)" @dragstart="handleDragStart($event, board.id)"
       :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragmove="handleDragMove($event, board.id)"
       @dragend="handleDragEnd($event, board.id)" />
+  </v-group>
 
-    <template v-if="props.showHides">
-      <HideMarker v-for="hide in store.hides" :key="hide.id" :hide="hide" :scale="scale"
-        :ref="(el) => setRef(el, hide.id)" @dragstart="handleDragStart($event, hide.id)"
-        @dragmove="handleDragMove($event, hide.id)" @dragend="handleDragEnd($event, hide.id)" />
-    </template>
+  <template v-if="props.showHides">
+    <HideMarker v-for="hide in displayedHides" :key="hide.id" :hide="hide" :scale="scale"
+      :ref="(el) => setRef(el, hide.id)" @dragstart="handleDragStart($event, hide.id)"
+      @dragmove="handleDragMove($event, hide.id)" @dragend="handleDragEnd($event, hide.id)" />
+  </template>
 
-    <StepMarker v-for="step in store.steps" :key="step.id" :step="step" :scale="scale"
-      :isSelected="store.selection.includes(step.id)" :ref="(el) => setRef(el, step.id)" @select="handleSelect"
-      @update="(id, attrs) => store.updateStep(id, attrs)" @dragstart="handleDragStart($event, step.id)"
-      @dragmove="handleDragMove($event, step.id)" @dragend="handleDragEnd($event, step.id)"
-      @contextmenu="handleStepContextMenu" :opacity="store.currentLayer > 1 ? store.layerOpacity : 1"
-      @rotate="store.rotateStep" />
+  <v-group :config="{ listening: !props.locked }">
+  <StepMarker v-for="step in store.steps" :key="step.id" :step="step" :scale="scale"
+    :isSelected="store.selection.includes(step.id)" :ref="(el) => setRef(el, step.id)" @select="handleSelect"
+    @update="(id, attrs) => store.updateStep(id, attrs)" @dragstart="handleDragStart($event, step.id)"
+    @dragmove="handleDragMove($event, step.id)" @dragend="handleDragEnd($event, step.id)"
+    @contextmenu="handleStepContextMenu" :opacity="store.currentLayer > 1 ? store.layerOpacity : 1"
+    @rotate="store.rotateStep" />
 
-    <ZoneRect v-for="zone in store.zones" :key="zone.id" :zone="zone" :scale="scale"
-      :isSelected="store.selection.includes(zone.id)" :ref="(el) => setRef(el, zone.id)" @select="handleSelect"
-      @update="(attrs) => store.updateZone(attrs.id, attrs)" @dragstart="handleDragStart($event, zone.id)"
-      @dragmove="handleDragMove($event, zone.id)" @dragend="handleDragEnd($event, zone.id)"
-      @contextmenu="handleZoneContextMenu" />
+  <ZoneRect v-for="zone in store.zones" :key="zone.id" :zone="zone" :scale="scale"
+    :isSelected="store.selection.includes(zone.id)" :ref="(el) => setRef(el, zone.id)" @select="handleSelect"
+    @update="(attrs) => store.updateZone(attrs.id, attrs)" @dragstart="handleDragStart($event, zone.id)"
+    @dragmove="handleDragMove($event, zone.id)" @dragend="handleDragEnd($event, zone.id)"
+    @contextmenu="handleZoneContextMenu" />
 
-    <NoteObject v-for="note in store.notes" :key="note.id" :note="note" :scale="scale"
-      :isSelected="store.selection.includes(note.id)" :ref="(el) => setRef(el, note.id)" @select="handleSelect"
-      @update="(attrs) => store.updateNote(attrs.id, attrs)" @dragstart="handleDragStart($event, note.id)"
-      @dragmove="handleDragMove($event, note.id)" @dragend="handleDragEnd($event, note.id)"
-      @contextmenu="handleNoteContextMenu($event, note.id)" />
+  <NoteObject v-for="note in store.notes" :key="note.id" :note="note" :scale="scale"
+    :isSelected="store.selection.includes(note.id)" :ref="(el) => setRef(el, note.id)" @select="handleSelect"
+    @update="(attrs) => store.updateNote(attrs.id, attrs)" @dragstart="handleDragStart($event, note.id)"
+    @dragmove="handleDragMove($event, note.id)" @dragend="handleDragEnd($event, note.id)"
+    @contextmenu="handleNoteContextMenu($event, note.id)" />
 
-    <v-group>
-      <MeasurementObject v-for="m in visibleMeasurements" :key="m.id" :measurement="m" :scale="scale"
-        :opacity="store.multiLayerView && m.layer !== store.currentLayer ? store.layerOpacity : 1" />
+  <v-group>
+    <MeasurementObject v-for="m in visibleMeasurements" :key="m.id" :measurement="m" :scale="scale"
+      :opacity="store.multiLayerView && m.layer !== store.currentLayer ? store.layerOpacity : 1" />
 
-      <MeasurementObject v-if="store.activeMeasurement" :measurement="store.activeMeasurement" :scale="scale" />
-    </v-group>
+    <MeasurementObject v-if="store.activeMeasurement" :measurement="store.activeMeasurement" :scale="scale" />
+  </v-group>
 
-    
+
   </v-group>
 </template>

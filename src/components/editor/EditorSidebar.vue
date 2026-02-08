@@ -20,7 +20,7 @@ import PrintModal from 'modals/PrintModal.vue' // [NEW]
 const store = useMapStore()
 const userStore = useUserStore()
 const router = useRouter()
-const emit = defineEmits(['print', 'save-map', 'save-library'])
+const emit = defineEmits(['print', 'save-map', 'save-library', 'blind-setup'])
 
 // State for Modals & Menus
 const showShareModal = ref(false)
@@ -141,6 +141,7 @@ function handleSave() {
         <button @click="showLoadModal = true">📂 Load</button>
         <button v-if="userStore.isPro" @click="showShareModal = true">🔗 Share</button>
         <button @click="showLibraryModal = true">📖 Lib</button>
+        <button @click="emit('blind-setup')" title="Blind Manager">🏆 Blinds</button>
       </div>
 
       <button class="btn-more" @click="showMoreMenu = !showMoreMenu">

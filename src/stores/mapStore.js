@@ -31,6 +31,7 @@ const DEFAULT_MAP_DATA = {
   bales: [],
   boardEdges: [],
   hides: [],
+  blinds: [],
   dcMats: [],
   steps: [],
   zones: [],
@@ -160,6 +161,23 @@ export const useMapStore = defineStore("map", () => {
     if (domainModules && domainModules.closeNoteEditor) {
       domainModules.closeNoteEditor();
     }
+  }
+
+function initBlinds(count, generateRandoms = true) {
+    const newBlinds = [];
+    for (let i = 1; i <= count; i++) {
+      newBlinds.push({
+        id: i,
+        name: `Blind ${i}`,
+        // If generateRandoms is true, create 5 random numbers 1-5
+        randoms: generateRandoms 
+          ? Array(5).fill(0).map(() => Math.floor(Math.random() * 5) + 1)
+          : [],
+        hides: [] // Start empty, or we could clone 'master' hides if desired
+      });
+    }
+    // Update the mapData directly so it reacts and saves
+    mapData.value.blinds = newBlinds;
   }
 
   function realignGrid() {
@@ -358,6 +376,7 @@ export const useMapStore = defineStore("map", () => {
     closeAllMenus,
     gridStartCorner,
     gridStep,
+    initBlinds,
     isDraggingSelection,
     isDrawingBoard,
     isShared,
