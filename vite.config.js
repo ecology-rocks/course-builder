@@ -19,6 +19,7 @@ export default defineConfig({
       'editor': fileURLToPath(new URL('./src/components/editor', import.meta.url)),
       'modals': fileURLToPath(new URL('./src/components/modals', import.meta.url)),
       'views': fileURLToPath(new URL('./src/views', import.meta.url)),
+      'common': fileURLToPath(new URL('./src/components/common', import.meta.url)),
     },
   },
 })

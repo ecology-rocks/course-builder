@@ -1,17 +1,21 @@
 <script setup>
 import { useMapStore } from 'stores/mapStore'
 const store = useMapStore()
+const emit = defineEmits(['tool-select', 'blind-setup'])
 </script>
 
 <template>
   <div class="toolbox">
-    <div class="tool-section"  v-if="store.currentLayer === 1">
-      <h3>Walls</h3>
+    <div class="tool-section" v-if="store.currentLayer === 1">
+      <h3>Walls & Zones</h3>
       <div class="tool-grid">
         <button @click="store.setTool('wall')" :class="{ active: store.activeTool === 'wall' }">
           🧱 Ring Shape
         </button>
         <button @click="store.setTool('gate')" :class="{ active: store.activeTool === 'gate' }">🚪 Gate</button>
+        <button @click="store.setTool('dead')" :class="{ active: store.activeTool === 'dead' }">🚫 Dead Zone</button>
+        <button @click="store.setTool('obstruction')" :class="{ active: store.activeTool === 'obstruction' }">🧱
+          Obstruction</button>
       </div>
     </div>
     <div class="tool-section">
@@ -39,40 +43,49 @@ const store = useMapStore()
     </div>
 
     <div class="tool-section">
-      <h3>Annotations</h3>
-      <div class="tool-grid" v-if="store.currentLayer === 1">
-        <button @click="store.setTool('dead')" :class="{ active: store.activeTool === 'dead' }">🚫 Dead Zone</button>
-        <button @click="store.setTool('obstruction')" :class="{ active: store.activeTool === 'obstruction' }">🧱
-          Obstruction</button>
-      </div>
+      <h3>Blinds & Hides</h3>
       <div class="tool-grid">
-        <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Hide</button>
-        <button @click="store.setTool('note')" :class="{ active: store.activeTool === 'note' }">📝 Note</button>
-      </div>
+      <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Quick Hide</button>
+      <button class="tool-btn action-btn" @click="$emit('blind-setup')" title="Blind Manager">🏆 Full Blinds</button>
     </div>
+  </div>
 
-    <div class="tool-section">
+  <div class="tool-section">
       <h3>Tools</h3>
-      <div class="list-tools">
+      <div class="tool-grid">
         <button @click="store.setTool('select')" :class="{ active: store.activeTool === 'select' }">
-          ⬜ Select (Click + Drag)
-        </button>
-        <button @click="store.setTool('measure')" :class="{ active: store.activeTool === 'measure' }">📏
-          Add Measurement</button>
-        <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">
-          🗑️ Delete Tool
+          ⬜ Select (V)
         </button>
         <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">
-          🔄 Rotate Item
+          🔄 Rotate (R)
         </button>
-        <div v-if="store.activeTool === 'bale'">
+
+        <button @click="store.setTool('measure')" :class="{ active: store.activeTool === 'measure' }">
+          📏 Measure
+        </button>
+        <button @click="store.setTool('note')" :class="{ active: store.activeTool === 'note' }">
+          📝 Note (N)
+        </button>
+
+        <button @click="store.copySelection()">
+          📋 Copy
+        </button>
+        <button @click="store.pasteSelection()">
+          📋 Paste
+        </button>
+
+        <button @click="store.cutSelection()">
+          ✂️ Cut
+        </button>
+        <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">
+          🗑️ Delete
+        </button>
           <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">
-            📐 Orientation Tool
+            📐 Orient
           </button>
           <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">
-            ↗️ Lean Tool
+            ↗️ Lean
           </button>
-        </div>
       </div>
     </div>
   </div>

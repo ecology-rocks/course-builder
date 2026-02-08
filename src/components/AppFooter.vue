@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import BugReportModal from 'modals/BugReportModal.vue'
+import BugReportModal from 'common/BugReportModal.vue'
 const showBugModal = ref(false)
 </script>
 

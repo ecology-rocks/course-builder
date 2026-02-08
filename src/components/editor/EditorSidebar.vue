@@ -11,7 +11,7 @@ import BarnHuntToolbox from './BarnHuntToolbox.vue'
 import ShareMapModal from 'modals/ShareMapModal.vue'
 import LoadMapModal from 'modals/LoadMapModal.vue'
 import CourseSettingsModal from 'modals/CourseSettingsModal.vue'
-import BugReportModal from 'modals/BugReportModal.vue'
+import BugReportModal from 'common/BugReportModal.vue'
 import DeleteMapModal from 'modals/DeleteMapModal.vue'
 import LibraryModal from 'modals/LibraryModal.vue'
 import UpgradeModal from 'modals/UpgradeModal.vue' // [NEW]
@@ -20,7 +20,7 @@ import PrintModal from 'modals/PrintModal.vue' // [NEW]
 const store = useMapStore()
 const userStore = useUserStore()
 const router = useRouter()
-const emit = defineEmits(['print', 'save-map', 'save-library', 'blind-setup'])
+const emit = defineEmits(['print', 'save-map', 'save-library'])
 
 // State for Modals & Menus
 const showShareModal = ref(false)
@@ -141,7 +141,6 @@ function handleSave() {
         <button @click="showLoadModal = true">📂 Load</button>
         <button v-if="userStore.isPro" @click="showShareModal = true">🔗 Share</button>
         <button @click="showLibraryModal = true">📖 Lib</button>
-        <button @click="emit('blind-setup')" title="Blind Manager">🏆 Blinds</button>
       </div>
 
       <button class="btn-more" @click="showMoreMenu = !showMoreMenu">
