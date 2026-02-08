@@ -19,6 +19,58 @@ defineExpose({
   getNode: () => groupRef.value?.getNode()
 })
 
+const anchorLines = computed(() => {
+  if (!props.bale.isAnchor) return []
+
+  const cx = props.bale.x + dims.value.width / 2
+  const cy = props.bale.y + dims.value.height / 2
+  
+  let candidates = []
+
+  // A. CUSTOM RINGS LOGIC (Measure to Corners)
+  // If any custom ring exists, we ONLY measure to its corner nodes.
+  // We completely ignore the standard grid edges in this case.
+  if (store.customWalls && store.customWalls.length > 0) {
+    store.customWalls.forEach(wall => {
+      // Iterate through every corner point (vertex) of the polygon
+      wall.points.forEach(pt => {
+        // Calculate direct distance to the corner
+        const dist = Math.sqrt((cx - pt.x) ** 2 + (cy - pt.y) ** 2)
+        
+        candidates.push({
+          x: pt.x,
+          y: pt.y,
+          dist: dist
+        })
+      })
+    })
+  } 
+  // B. STANDARD GRID LOGIC (Fallback)
+  // Only measure to grid edges if NO custom rings exist.
+  else if (store.ringDimensions) {
+    const W = store.ringDimensions.width
+    const H = store.ringDimensions.height
+    
+    // Top Edge Point
+    candidates.push({ x: cx, y: 0, dist: cy }) 
+    // Bottom Edge Point
+    candidates.push({ x: cx, y: H, dist: H - cy })
+    // Left Edge Point
+    candidates.push({ x: 0, y: cy, dist: cx })
+    // Right Edge Point
+    candidates.push({ x: W, y: cy, dist: W - cx })
+  }
+
+  // Sort by distance (shortest first) and take the top 2
+  return candidates.sort((a, b) => a.dist - b.dist).slice(0, 2)
+})
+
+const fmtDist = (val) => {
+  const ft = Math.floor(val)
+  const inc = Math.round((val - ft) * 12)
+  return inc === 0 ? `${ft}'` : `${ft}' ${inc}"`
+}
+
 // --- 1. Dynamic Dimensions (Based on Settings) ---
 const dims = computed(() => {
   // Priority: Custom -> Global Config -> Hard Default
@@ -136,10 +188,9 @@ function baleDragBoundFunc(pos) {
     ref="groupRef"
     :config="{
       id: bale.id,
-      draggable: store.activeTool !== 'board' && store.activeTool !== 'hide', // Simple draggable (logic handled by Layer if multi-selected)
+      draggable: store.activeTool !== 'board' && store.activeTool !== 'hide', 
       dragBoundFunc: baleDragBoundFunc,
       listening: (bale.layer === store.currentLayer || store.selection.includes(bale.id)) && store.activeTool !== 'board' && store.activeTool !== 'hide',
-      // [FIX] Dynamic Pivot Positioning
       x: ((bale.x || 0) * s) + (halfW * s),
       y: ((bale.y || 0) * s) + (halfH * s),
       rotation: bale.rotation,
@@ -162,6 +213,44 @@ function baleDragBoundFunc(pos) {
       shadowBlur: shadowBlur,
       shadowColor: '#00a1ff'
     }" />
+
+    <v-group v-if="bale.isAnchor && anchorLines.length">
+      <template v-for="(line, i) in anchorLines" :key="'anch-'+i">
+        <v-line :config="{
+          points: [
+            dims.width * s / 2,         // Start: Center of Bale X
+            dims.height * s / 2,        // Start: Center of Bale Y
+            (line.x - bale.x) * scale,  // End: Wall X (converted to local space)
+            (line.y - bale.y) * scale   // End: Wall Y (converted to local space)
+          ],
+          stroke: '#d32f2f',
+          strokeWidth: 3,
+          dash: [6, 4],
+          listening: false // Click-through
+        }" />
+        
+        <v-label :config="{
+          // Position label at midpoint of the line
+          x: ((dims.width * s / 2) + ((line.x - bale.x) * scale)) / 2,
+          y: ((dims.height * s / 2) + ((line.y - bale.y) * scale)) / 2
+        }">
+          <v-tag :config="{ 
+            fill: 'white', 
+            stroke: '#d32f2f', 
+            strokeWidth: 1, 
+            cornerRadius: 4,
+            opacity: 0.9 
+          }" />
+          <v-text :config="{
+            text: fmtDist(line.dist),
+            fontSize: 18,
+            padding: 4,
+            fill: '#d32f2f',
+            fontStyle: 'bold'
+          }" />
+        </v-label>
+      </template>
+    </v-group>
 
     <v-line v-if="bale.orientation === 'tall'" :config="{
       points: [0, 0, dims.width * scale, dims.height * scale],

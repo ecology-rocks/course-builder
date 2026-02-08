@@ -38,7 +38,21 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
   }
 
   // --- GATE LOGIC ---
+  // --- GATE LOGIC ---
   function placeGate(rawX, rawY) {
+    // 1. Try Custom Walls First
+    if (store.customWalls && store.customWalls.length > 0) {
+      // Use the helper we created in store/useCustomWalls.js
+      const { point, dist, angle } = store.getNearestWallPoint(rawX, rawY);
+      
+      // If we clicked reasonably close to a custom wall (approx 2ft)
+      if (dist < 2) {
+        store.setGate({ x: point.x, y: point.y, rotation: angle });
+        return;
+      }
+    }
+
+    // 2. Fallback to Standard Grid (Existing Logic)
     const W = store.ringDimensions.width;
     const H = store.ringDimensions.height;
     const gateWidth = 3;
@@ -73,7 +87,15 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
   }
 
   // --- MOUSE DOWN ---
+
+
   function handleStageMouseDown(e) {
+
+console.log('[Stage] MouseDown:', { 
+      targetType: e.target.className || e.target.nodeType, 
+      isStage: e.target === e.target.getStage(),
+      tool: store.activeTool 
+    })
 
     if (e.evt.button === 2) return;
     
@@ -82,6 +104,10 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
     store.activeTunnelBoxMenu = null;
     store.activeDCMatMenu = null;
     store.activeZoneMenu = null;
+
+    if (e.target !== e.target.getStage()) {
+      return;
+    }
 
     // Only handle Left Click on the Stage (Background)
     if (
@@ -120,6 +146,14 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
 
     if (store.activeTool === "tunnelboard") {
       store.addTunnelBoard(x, y);
+      return;
+    }
+
+    if (store.activeTool === "wall") {
+      // Optional: Snap to 6-inch grid (0.5 units) for cleaner lines
+      const snapX = Math.round(x * 2) / 2;
+      const snapY = Math.round(y * 2) / 2;
+      store.addWallPoint(snapX, snapY);
       return;
     }
 

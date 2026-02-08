@@ -31,6 +31,7 @@ import StartBoxContextMenu from './editor/mats/StartBoxContextMenu.vue'
 import TunnelBoxContextMenu from './editor/boards/TunnelBoxContextMenu.vue'
 import BaleContextMenu from './editor/bales/BaleContextMenu.vue'
 import NoteContextMenu from './editor/annotations/NoteContextMenu.vue'
+import WallContextMenu from './editor/walls/WallContextMenu.vue'
 
 // Setup
 const store = useMapStore()
@@ -248,6 +249,8 @@ async function handlePrint(options) {
       :noteId="store.activeNoteMenu.id"
       @close="store.activeNoteMenu = null" 
     />
+
+    <WallContextMenu v-if="store.activeWallMenu" />
 
     <CustomizationModal />
   </div>

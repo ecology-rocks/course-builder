@@ -7,42 +7,82 @@ const emit = defineEmits(['dragstart', 'dragmove', 'dragend'])
 const store = useMapStore()
 const groupRef = ref(null)
 
-// --- EXPOSE KONVA NODE ---
-// This is required for the BarnHuntLayer to calculate multi-object drags correctly.
 defineExpose({
   getNode: () => groupRef.value?.getNode()
 })
 
-// --- SELECTION STATE ---
 const isSelected = computed(() => store.selection.includes(props.gate.id))
 const strokeColor = computed(() => isSelected.value ? '#2196f3' : 'black')
 const strokeWidth = computed(() => isSelected.value ? 3 : 2)
 
 // --- HANDLERS ---
-// [FIX] Use explicit functions instead of inline $emit to prevent "handler.call" errors
-function handleDragStart(e) { emit('dragstart', e) }
+
+// [FIX 1] Stop Mousedown propagation immediately so the Stage doesn't try to "Place" a new gate
+function handleMouseDown(e) {
+  e.cancelBubble = true
+}
+
+function handleDragStart(e) { 
+  emit('dragstart', e) 
+}
+
+// [FIX 2] Handle Rotation here, not in dragBoundFunc
 function handleDragMove(e) {
   emit('dragmove', e)
-
-  if (!props.ringDimensions) return
-
+  
   const node = e.target
-  const x = node.x() / props.scale
+  const rawX = node.x() / props.scale
+  const rawY = node.y() / props.scale
+
+  // A. Check Custom Walls for Rotation (Priority 1)
+  if (store.customWalls && store.customWalls.length > 0 && store.getNearestWallPoint) {
+    const { dist, angle } = store.getNearestWallPoint(rawX, rawY)
+    
+    // If snapped to custom wall (approx 2ft threshold matching dragBoundFunc)
+    if (dist < 2) {
+      node.rotation(angle)
+      return
+    }
+  }
+
+  // B. Fallback to Standard Grid Rotation (Priority 2)
+  if (!props.ringDimensions) return
+  
   const W = props.ringDimensions.width
+  const H = props.ringDimensions.height
 
-  // Detect Wall Side: 
-  // If x is 0 (Left) or x is Width (Right), we are on a vertical wall.
-  // We use a small epsilon (0.1) for float safety, though dragBoundFunc snaps to exact values.
-  const isVertical = (Math.abs(x) < 0.1 || Math.abs(x - W) < 0.1)
+  // Calculate which wall we are closest to (using snapped coordinates)
+  const distTop = Math.abs(rawY)
+  const distBottom = Math.abs(rawY - H)
+  const distLeft = Math.abs(rawX)
+  const distRight = Math.abs(rawX - W)
 
-  // Rotate 90 if vertical, 0 if horizontal
-  const targetRot = isVertical ? 90 : 0
+  // Find the winner
+  const min = Math.min(distTop, distBottom, distLeft, distRight)
 
-  if (node.rotation() !== targetRot) {
+  // Determine Target Rotation based on "Winner"
+  // Priority MUST match dragBoundFunc: Top -> Bottom -> Left -> Right
+  let targetRot = 0
+  if (min === distTop || min === distBottom) {
+    targetRot = 0 
+  } else {
+    targetRot = 90
+  }
+
+  // Apply rotation if different (removed the < 91 restriction)
+  if (Math.abs(node.rotation() - targetRot) > 0.1) {
     node.rotation(targetRot)
   }
 }
+
 function handleDragEnd(e) { 
+  const node = e.target
+  store.setGate({
+    ...props.gate,
+    x: node.x() / props.scale,
+    y: node.y() / props.scale,
+    rotation: node.rotation()
+  })
   emit('dragend', e) 
 }
 
@@ -58,46 +98,45 @@ function handleClick(e) {
 
 function handleDblClick(e) {
   e.cancelBubble = true
-  if (store.activeTool === 'delete') {
-    store.removeGate()
-  }
+  store.removeGate()
 }
 
-// --- CONSTRAINTS ---
-// Keeps the gate glued to the perimeter walls
-// --- CONSTRAINTS ---
-// Keeps the gate glued to the perimeter walls
+// --- CONSTRAINTS (Position Only) ---
 function dragBoundFunc(pos) {
-  const node = this 
+  const node = groupRef.value ? groupRef.value.getNode() : null
+  if (!node) return pos
+
   const layerAbs = node.getLayer().getAbsolutePosition()
-  const step = props.scale / 6 // 2-inch grid step
-
-  if (!props.ringDimensions) return pos
-
-  // 1. Convert absolute pointer position to grid coordinates
   const rawX = (pos.x - layerAbs.x) / props.scale
   const rawY = (pos.y - layerAbs.y) / props.scale
+  
+  // 1. Custom Wall Snap
+  if (store.customWalls && store.customWalls.length > 0 && store.getNearestWallPoint) {
+    const { point, dist } = store.getNearestWallPoint(rawX, rawY)
+    if (dist < 2) {
+      // Return position ONLY. Rotation is handled in dragMove.
+      return {
+        x: point.x * props.scale + layerAbs.x,
+        y: point.y * props.scale + layerAbs.y
+      }
+    }
+  }
 
+  // 2. Standard Grid Snap
+  if (!props.ringDimensions) return pos
   const W = props.ringDimensions.width
   const H = props.ringDimensions.height
+  const margin = 1.5 
+  const snap = (val) => Math.round(val * 6) / 6
 
-  // 2. Find distance to each wall
   const distTop = Math.abs(rawY)
   const distBottom = Math.abs(rawY - H)
   const distLeft = Math.abs(rawX)
   const distRight = Math.abs(rawX - W)
-
-  // 3. Snap to closest wall
   const min = Math.min(distTop, distBottom, distLeft, distRight)
 
   let finalX = rawX
   let finalY = rawY
-
-  const snap = (val) => Math.round(val * 6) / 6
-  
-  // [FIX] Constrain center to keep the 3ft gate fully on the wall segment
-  // Since the gate is 3ft wide and centered, we need a 1.5ft margin from corners.
-  const margin = 1.5 
 
   if (min === distTop) {
     finalY = 0
@@ -108,12 +147,11 @@ function dragBoundFunc(pos) {
   } else if (min === distLeft) {
     finalX = 0
     finalY = Math.max(margin, Math.min(snap(finalY), H - margin))
-  } else { // Right
+  } else { 
     finalX = W
     finalY = Math.max(margin, Math.min(snap(finalY), H - margin))
   }
 
-  // 4. Return absolute position
   return {
     x: finalX * props.scale + layerAbs.x,
     y: finalY * props.scale + layerAbs.y
@@ -132,12 +170,21 @@ function dragBoundFunc(pos) {
       dragBoundFunc: dragBoundFunc,
       name: 'gate'
     }"
+    @mousedown="handleMouseDown"
     @click="handleClick"
     @dblclick="handleDblClick"
     @dragstart="handleDragStart"
     @dragmove="handleDragMove"
     @dragend="handleDragEnd"
   >
+    <v-rect :config="{ 
+      width: 3 * scale, 
+      height: 30, 
+      offsetX: (3 * scale) / 2, 
+      offsetY: 15, 
+      fill: 'transparent'
+    }" />
+
     <v-rect :config="{ 
       width: 3 * scale, 
       height: 6, 

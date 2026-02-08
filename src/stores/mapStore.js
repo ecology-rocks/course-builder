@@ -20,6 +20,7 @@ import { useStartBox } from "editor/mats/useStartBox";
 import { useSteps } from "editor/steps/useSteps";
 import { useTunnelBoards } from "editor/boards/useTunnelBoards";
 import { useZones } from "editor/zones/useZones";
+import { useCustomWalls } from "editor/walls/useCustomWalls";
 
 // ==========================================
 // 0. CONSTANTS & STRATEGIES
@@ -34,7 +35,7 @@ const DEFAULT_MAP_DATA = {
   steps: [],
   zones: [],
   tunnelBoards: [],
-
+  customWalls: [],
   notes: [],
   masterBlinds: [],
   startBox: null,
@@ -103,6 +104,7 @@ export const useMapStore = defineStore("map", () => {
 const activeTunnelBoxMenu = ref(null);
 const activeBaleMenu = ref(null);
 const activeNoteMenu = ref(null);
+const activeWallMenu = ref(null);
 const baleColors = ref({
     1: '#e6c200',
     2: '#4caf50',
@@ -200,7 +202,9 @@ const baleColors = ref({
     tunnelBoards: createMapRef("tunnelBoards"),
     zones: createMapRef("zones"),
     masterBlinds: createMapRef("masterBlinds"),
-
+    customWalls: createMapRef("customWalls"),
+    activeWall: ref(null),
+    activeWallMenu: ref(null),
     activeMeasurement,
     activeTool,
     baleConfig,
@@ -268,6 +272,7 @@ const baleColors = ref({
     ...useSteps(stateRefs, deps.snapshot),
     ...useTunnelBoards(stateRefs, deps.snapshot),
     ...useZones(stateRefs, deps.snapshot),
+    ...useCustomWalls(stateRefs, deps.snapshot),
   };
 
   // 2. Initialize Statistics (Logic moved from barnHuntLogic)
@@ -323,7 +328,9 @@ const baleColors = ref({
     tunnelBoards: stateRefs.tunnelBoards,
     zones: stateRefs.zones,
     masterBlinds: stateRefs.masterBlinds,
-
+    customWalls: stateRefs.customWalls,
+    activeWall: stateRefs.activeWall,
+    activeWallMenu: stateRefs.activeWallMenu,
     activeMeasurement,
     activeTool,
     baleConfig,

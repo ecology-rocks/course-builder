@@ -11,16 +11,16 @@ const released = ref([
 
 const inProgress = ref([
   'Allowing custom objects in the print legend',
-  'Blind/Hide Management/Printing',
-  'Multiple Bale Sizes'
+  'Blind/Hide Management/Printing Flow',
+  'Fence tool for irregular rings',
 ])
 
 const planned = ref([
   'Desktop Offline App (Late 2026)',
   'Mobile View Optimization',
   'Individual Object Customization',
-  'Fence tool for irregular rings',
-  'Print all or print group for trial sets of maps'
+  'Print all or print group for trial sets of maps',
+  '3d view - research to see if implementation is possible'
 ])
 // -------------------------------
 

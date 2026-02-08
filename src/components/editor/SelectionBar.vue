@@ -122,7 +122,7 @@ const hideTypes = [
             ⚓
           </button>
 
-          <button @click="store.rotateBale(selectionContext.data.id)" title="Rotate 90°">🔄</button>
+          <button @click="store.rotateBale(selectionContext.data.id)" title="Rotate 15°">🔄</button>
         </div>
 
         <div v-if="isTunnel" class="context-group">

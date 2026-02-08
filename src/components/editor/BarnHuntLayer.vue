@@ -14,7 +14,7 @@ import MeasurementObject from './annotations/MeasurementObject.vue'
 import NoteObject from './annotations/NoteObject.vue'
 import TunnelBoxObject from './boards/TunnelBoxObject.vue'
 import GateObject from './gates/GateObject.vue'
-
+import WallObject from './walls/WallObject.vue'
 
 
 const props = defineProps({
@@ -130,16 +130,16 @@ function handleNoteContextMenu(e, id) {
 function handleRightClick(e, id) {
   e.evt.preventDefault()
   e.cancelBubble = true
-  
+
   if (store.activeTool === 'lean') return
   if (e.evt.ctrlKey || e.evt.altKey) return
-  
+
   if (store.activeTool === 'measure' && store.activeMeasurement) {
     store.finishMeasurement()
     return
   }
 
-    store.activeBaleMenu = { id, x: e.evt.clientX, y: e.evt.clientY }
+  store.activeBaleMenu = { id, x: e.evt.clientX, y: e.evt.clientY }
 }
 
 function handleLeftClick(e, id) {
@@ -369,25 +369,65 @@ function getAnchorLines(bale) {
 
 <template>
   <v-group>
+    <template v-for="wall in store.customWalls" :key="wall.id">
+      <WallObject :wall="wall" :scale="scale" />
+    </template>
+
+    <v-group v-if="store.activeWall">
+      <v-line :config="{
+        points: store.activeWall.points.flatMap(p => [p.x * scale, p.y * scale]),
+        stroke: '#555', 
+        strokeWidth: 4, 
+        dash: [10, 5],
+        listening: false // Important: Let clicks pass through to the stage
+      }" />
+
+      <v-circle 
+        v-for="(pt, i) in store.activeWall.points" 
+        :key="'active-pt-'+i"
+        :config="{
+          x: pt.x * scale,
+          y: pt.y * scale,
+          radius: 6,
+          fill: '#ff9800',  
+          stroke: 'white',
+          strokeWidth: 2,
+          listening: false // Critical: If true, these dots block the next click!
+        }" 
+      />
+    </v-group>
+
     <StartBoxObject v-if="store.startBox" :scale="scale" :isSelected="store.selection.includes(store.startBox?.id)"
       :ref="(el) => setRef(el, store.startBox?.id || 'startbox')" @select="handleSelect($event)"
       @dragstart="handleDragStart($event, store.startBox?.id)" @dragmove="handleDragMove($event, store.startBox?.id)"
-      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragend="handleDragEnd($event, store.startBox?.id)" @contextmenu="handleStartBoxContextMenu" />
-
-    <GateObject v-if="store.gate" :gate="store.gate" :scale="scale" :ringDimensions="store.ringDimensions"
-      :ref="(el) => setRef(el, store.gate?.id)" @dragstart="handleDragStart($event, store.gate?.id)"
-      @dragmove="handleDragMove($event, store.gate?.id)" @dragend="handleDragEnd($event, store.gate?.id)" />
+      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragend="handleDragEnd($event, store.startBox?.id)"
+      @contextmenu="handleStartBoxContextMenu" />
 
     <DCMatObject v-for="mat in store.dcMats" :key="mat.id" :mat="mat" :scale="scale" :ref="(el) => setRef(el, mat.id)"
       @dragstart="handleDragStart($event, mat.id)" @dragmove="handleDragMove($event, mat.id)"
       :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragend="handleDragEnd($event, mat.id)"
       @update="(attrs) => store.updateDCMat(mat.id, attrs)" />
 
+    <GateObject v-if="store.gate" :gate="store.gate" :scale="scale" :ringDimensions="store.ringDimensions"
+      :ref="(el) => setRef(el, store.gate?.id)" @dragstart="handleDragStart($event, store.gate?.id)"
+      @dragmove="handleDragMove($event, store.gate?.id)" @dragend="handleDragEnd($event, store.gate?.id)" />
+
     <BaleObject v-for="bale in visibleBales" :key="bale.id" :bale="bale" :scale="scale"
       :opacity="store.multiLayerView && bale.layer !== store.currentLayer ? store.layerOpacity : 1"
       :ref="(el) => setRef(el, bale.id)" @contextmenu="handleRightClick($event, bale.id)"
       @click="handleLeftClick($event, bale.id)" @dragstart="handleDragStart($event, bale.id)"
       @dragmove="handleDragMove($event, bale.id)" @dragend="handleDragEnd($event, bale.id)" />
+
+    <TunnelBoxObject v-for="board in store.tunnelBoards" :key="board.id" :board="board" :scale="scale"
+      :isSelected="store.selection.includes(board.id)" :ref="(el) => setRef(el, board.id)" @select="handleSelect"
+      @update="(attrs) => store.updateTunnelBoard(attrs.id, attrs)" @dragstart="handleDragStart($event, board.id)"
+      @dragmove="handleDragMove($event, board.id)" @dragend="handleDragEnd($event, board.id)"
+      @contextmenu="handleTunnelBoxContextMenu" />
+
+    <BoardObject v-for="board in store.boardEdges" :key="board.id" :board="board" :scale="scale"
+      :ref="(el) => setRef(el, board.id)" @dragstart="handleDragStart($event, board.id)"
+      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragmove="handleDragMove($event, board.id)"
+      @dragend="handleDragEnd($event, board.id)" />
 
     <template v-if="props.showHides">
       <HideMarker v-for="hide in store.hides" :key="hide.id" :hide="hide" :scale="scale"
@@ -398,32 +438,21 @@ function getAnchorLines(bale) {
     <StepMarker v-for="step in store.steps" :key="step.id" :step="step" :scale="scale"
       :isSelected="store.selection.includes(step.id)" :ref="(el) => setRef(el, step.id)" @select="handleSelect"
       @update="(id, attrs) => store.updateStep(id, attrs)" @dragstart="handleDragStart($event, step.id)"
-      @dragmove="handleDragMove($event, step.id)" @dragend="handleDragEnd($event, step.id)" @contextmenu="handleStepContextMenu"
-      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @rotate="store.rotateStep" />
+      @dragmove="handleDragMove($event, step.id)" @dragend="handleDragEnd($event, step.id)"
+      @contextmenu="handleStepContextMenu" :opacity="store.currentLayer > 1 ? store.layerOpacity : 1"
+      @rotate="store.rotateStep" />
 
     <ZoneRect v-for="zone in store.zones" :key="zone.id" :zone="zone" :scale="scale"
       :isSelected="store.selection.includes(zone.id)" :ref="(el) => setRef(el, zone.id)" @select="handleSelect"
       @update="(attrs) => store.updateZone(attrs.id, attrs)" @dragstart="handleDragStart($event, zone.id)"
-      @dragmove="handleDragMove($event, zone.id)" @dragend="handleDragEnd($event, zone.id)" @contextmenu="handleZoneContextMenu" />
-
+      @dragmove="handleDragMove($event, zone.id)" @dragend="handleDragEnd($event, zone.id)"
+      @contextmenu="handleZoneContextMenu" />
 
     <NoteObject v-for="note in store.notes" :key="note.id" :note="note" :scale="scale"
       :isSelected="store.selection.includes(note.id)" :ref="(el) => setRef(el, note.id)" @select="handleSelect"
       @update="(attrs) => store.updateNote(attrs.id, attrs)" @dragstart="handleDragStart($event, note.id)"
-      @dragmove="handleDragMove($event, note.id)" @dragend="handleDragEnd($event, note.id)" @contextmenu="handleNoteContextMenu($event, note.id)" />
-
-    <TunnelBoxObject v-for="board in store.tunnelBoards" :key="board.id" :board="board" :scale="scale"
-      :isSelected="store.selection.includes(board.id)" :ref="(el) => setRef(el, board.id)" @select="handleSelect"
-      @update="(attrs) => store.updateTunnelBoard(attrs.id, attrs)" @dragstart="handleDragStart($event, board.id)"
-      @dragmove="handleDragMove($event, board.id)" @dragend="handleDragEnd($event, board.id)" 
-      
-      @contextmenu="handleTunnelBoxContextMenu"
-    />
-
-    <BoardObject v-for="board in store.boardEdges" :key="board.id" :board="board" :scale="scale"
-      :ref="(el) => setRef(el, board.id)" @dragstart="handleDragStart($event, board.id)"
-      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragmove="handleDragMove($event, board.id)"
-      @dragend="handleDragEnd($event, board.id)" />
+      @dragmove="handleDragMove($event, note.id)" @dragend="handleDragEnd($event, note.id)"
+      @contextmenu="handleNoteContextMenu($event, note.id)" />
 
     <v-group>
       <MeasurementObject v-for="m in visibleMeasurements" :key="m.id" :measurement="m" :scale="scale"
@@ -432,43 +461,6 @@ function getAnchorLines(bale) {
       <MeasurementObject v-if="store.activeMeasurement" :measurement="store.activeMeasurement" :scale="scale" />
     </v-group>
 
-    <v-group>
-      <template v-for="bale in visibleBales" :key="'anchor-'+bale.id">
-        <template v-if="bale.isAnchor">
-          <v-group v-for="(line, i) in getAnchorLines(bale)" :key="i">
-            <v-arrow :config="{
-              points: line.points,
-              pointerLength: 6,
-              pointerWidth: 6,
-              fill: '#d32f2f',
-              stroke: '#d32f2f',
-              strokeWidth: 2,
-              dash: [6, 4],
-              listening: false
-            }" />
-
-            <v-label :config="{ x: line.textX, y: line.textY, opacity: 1.0 }">
-              <v-tag :config="{
-                fill: 'white',
-                stroke: '#d32f2f',
-                strokeWidth: 1,
-                cornerRadius: 3,
-                pointerDirection: line.dir,
-                pointerWidth: 8,
-                pointerHeight: 6
-              }" />
-              <v-text :config="{
-                text: line.text,
-                fontSize: 18,
-                fill: '#d32f2f',
-                fontStyle: 'bold',
-                padding: 5,
-                align: 'center'
-              }" />
-            </v-label>
-          </v-group>
-        </template>
-      </template>
-    </v-group>s
+    
   </v-group>
 </template>
