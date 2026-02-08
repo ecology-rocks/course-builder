@@ -12,7 +12,7 @@ export function useContextMenu(store) {
       return
     }
 
-    store.closeHideMenu()
+    store.closeAllMenus()
 
     // Priority 2: Only show on background (Stage) clicks
     if (e.target !== e.target.getStage()) return

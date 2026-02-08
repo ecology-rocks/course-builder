@@ -81,6 +81,11 @@ export const useMapStore = defineStore("map", () => {
   const trialNumber = ref("");
   const baleConfig = ref({ length: 36 / 12, width: 18 / 12, height: 14 / 12 });
   const dcMatConfig = ref({ width: 2, height: 3 });
+    const baleColors = ref({
+    1: "#e6c200",
+    2: "#4caf50",
+    3: "#2196f3",
+  });
 
   // Editor State
   const savedMaps = ref([]);
@@ -97,19 +102,18 @@ export const useMapStore = defineStore("map", () => {
   const activeHideMenu = ref(null); // Stores { id, x, y } or null
   const showCustomizationModal = ref(false);
   const editingCustomObject = ref(null);
+
+  // context menus
   const activeDCMatMenu = ref(null);
   const activeZoneMenu = ref(null);
   const activeStepMenu = ref(null);
   const activeStartBoxMenu = ref(null);
-const activeTunnelBoxMenu = ref(null);
-const activeBaleMenu = ref(null);
-const activeNoteMenu = ref(null);
-const activeWallMenu = ref(null);
-const baleColors = ref({
-    1: '#e6c200',
-    2: '#4caf50',
-    3: '#2196f3'
-  });
+  const activeTunnelBoxMenu = ref(null);
+  const activeBaleMenu = ref(null);
+  const activeNoteMenu = ref(null);
+  const activeWallMenu = ref(null);
+  const activeWall = ref(null);
+
   // ==========================================
   // 2. ACTIONS (Internal & External)
   // ==========================================
@@ -142,9 +146,9 @@ const baleColors = ref({
       left: "fence",
     };
     baleColors.value = {
-      1: '#e6c200',
-      2: '#4caf50',
-      3: '#2196f3'
+      1: "#e6c200",
+      2: "#4caf50",
+      3: "#2196f3",
     };
     gridStartCorner.value = "top-left";
     trialLocation.value = "";
@@ -203,8 +207,6 @@ const baleColors = ref({
     zones: createMapRef("zones"),
     masterBlinds: createMapRef("masterBlinds"),
     customWalls: createMapRef("customWalls"),
-    activeWall: ref(null),
-    activeWallMenu: ref(null),
     activeMeasurement,
     activeTool,
     baleConfig,
@@ -242,9 +244,8 @@ const baleColors = ref({
     activeStartBoxMenu,
     activeBaleMenu,
     activeNoteMenu,
-    comparisonMapName,
-    
-
+    activeWall,
+    activeWallMenu,
     reset,
   };
 
@@ -281,6 +282,18 @@ const baleColors = ref({
   const persistence = useMapPersistence(stateRefs, userStore, {
     show: showNotification,
   });
+
+  function closeAllMenus() {
+    stateRefs.activeStepMenu.value = null;
+    stateRefs.activeStartBoxMenu.value = null;
+    stateRefs.activeTunnelBoxMenu.value = null;
+    stateRefs.activeDCMatMenu.value = null;
+    stateRefs.activeZoneMenu.value = null;
+    stateRefs.activeNoteMenu.value = null;
+    stateRefs.activeWallMenu.value = null;
+    stateRefs.activeBaleMenu.value = null;
+    stateRefs.activeHideMenu.value = null;
+  }
 
   const selectionLogic = useSelectionLogic(
     stateRefs,
@@ -329,8 +342,8 @@ const baleColors = ref({
     zones: stateRefs.zones,
     masterBlinds: stateRefs.masterBlinds,
     customWalls: stateRefs.customWalls,
-    activeWall: stateRefs.activeWall,
-    activeWallMenu: stateRefs.activeWallMenu,
+    activeWall,
+    activeWallMenu,
     activeMeasurement,
     activeTool,
     baleConfig,
@@ -342,6 +355,7 @@ const baleColors = ref({
     dcMatConfig,
     folders,
     gridSize,
+    closeAllMenus,
     gridStartCorner,
     gridStep,
     isDraggingSelection,

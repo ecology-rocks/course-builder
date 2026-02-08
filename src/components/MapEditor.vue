@@ -58,25 +58,11 @@ watch(() => [store.sport, store.ringDimensions.width], () => { nextTick(fitToScr
 
 // --- MENU MANAGEMENT ---
 
-// 1. Centralized "Close Everything" Function
-function closeAllMenus() {
-  // Close Generic Menu
-  closeContextMenu()
-  
-  // Close Specific Object Menus
-  store.activeBaleMenu = null
-  store.activeDCMatMenu = null
-  store.activeHideMenu = null
-  store.activeStartBoxMenu = null
-  store.activeStepMenu = null
-  store.activeTunnelBoxMenu = null
-  store.activeZoneMenu = null
-  store.activeNoteMenu = null
-}
+
 
 // 2. Global Click Handler
 function handleGlobalClick() {
-  closeAllMenus()
+  store.closeAllMenus()
 }
 
 // 3. Watcher: If ANY specific menu opens, close the generic stage menu

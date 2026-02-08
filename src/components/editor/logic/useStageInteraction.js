@@ -44,7 +44,7 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
     if (store.customWalls && store.customWalls.length > 0) {
       // Use the helper we created in store/useCustomWalls.js
       const { point, dist, angle } = store.getNearestWallPoint(rawX, rawY);
-      
+
       // If we clicked reasonably close to a custom wall (approx 2ft)
       if (dist < 2) {
         store.setGate({ x: point.x, y: point.y, rotation: angle });
@@ -88,22 +88,16 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
 
   // --- MOUSE DOWN ---
 
-
   function handleStageMouseDown(e) {
-
-console.log('[Stage] MouseDown:', { 
-      targetType: e.target.className || e.target.nodeType, 
+    console.log("[Stage] MouseDown:", {
+      targetType: e.target.className || e.target.nodeType,
       isStage: e.target === e.target.getStage(),
-      tool: store.activeTool 
-    })
+      tool: store.activeTool,
+    });
 
     if (e.evt.button === 2) return;
-    
-    store.activeStepMenu = null;
-    store.activeStartBoxMenu = null;
-    store.activeTunnelBoxMenu = null;
-    store.activeDCMatMenu = null;
-    store.activeZoneMenu = null;
+
+    store.closeAllMenus();
 
     if (e.target !== e.target.getStage()) {
       return;
