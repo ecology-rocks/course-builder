@@ -2,6 +2,7 @@
 import { useMapStore } from '@/stores/mapStore'
 import { computed, ref, onMounted, onUnmounted } from 'vue' // for menu style
 import { useMenuPosition } from '@/services/menuPositionService' //for menu style
+import ClipboardRow from '../../common/ClipboardRow.vue'
 
 const props = defineProps({
   noteId: String,
@@ -69,7 +70,7 @@ function rotate() {
 <template>
   <div class="context-menu" :style="style" ref="menuRef">
     <div class="menu-header">Note Options</div>
-    
+    <ClipboardRow :id="id" @close="emit('close')" />
     <div class="action-stack">
       <button @click="openCustomizer" class="action-btn customize">🎨 Customize & Edit</button>
       <button @click="rotate" class="action-btn rotate">🔄 Rotate 45°</button>

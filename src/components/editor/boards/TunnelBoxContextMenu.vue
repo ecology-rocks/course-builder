@@ -2,6 +2,7 @@
 import { useMapStore } from '@/stores/mapStore'
 import { computed, ref, onMounted, onUnmounted } from 'vue' // for menu style
 import { useMenuPosition } from '@/services/menuPositionService' //for menu style
+import ClipboardRow from '../../common/ClipboardRow.vue'
 
 const props = defineProps({
   id: String,
@@ -66,7 +67,7 @@ function openCustomizer() {
 <template>
   <div class="context-menu" :style="style" ref="menuRef">
     <div class="menu-header">Tunnel Board Options</div>
-    
+    <ClipboardRow :id="id" @close="emit('close')" />
     <div class="action-stack">
       <button @click="openCustomizer" class="action-btn customize">🎨 Customize Style</button>
       <button @click="rotateBoard" class="action-btn rotate">🔄 Rotate 45°</button>

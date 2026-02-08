@@ -125,6 +125,11 @@ async function handlePrint(options) {
 
       <div v-if="contextMenu.visible" class="context-menu"
         :style="{ top: contextMenu.y + 'px', left: contextMenu.x + 'px' }">
+
+        <button @click="store.pasteSelection(); closeContextMenu()">
+          Paste (Ctrl+V)
+        </button>
+
         <button @click="store.clearSelection()" :disabled="store.selection.length === 0">
           Deselect All
         </button>

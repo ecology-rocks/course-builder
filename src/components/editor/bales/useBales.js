@@ -44,6 +44,7 @@ export function useBales(state, snapshot, notifications) {
     custom: {
         fillColor: null,
         strokeColor: null,
+        borderStyle: null,
         // [NEW] Dimension Overrides (null = use global defaults)
         length: null, 
         width: null, 

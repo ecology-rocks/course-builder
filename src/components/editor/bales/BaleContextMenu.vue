@@ -2,6 +2,7 @@
 import { useMapStore } from '@/stores/mapStore'
 import { computed, ref } from 'vue'
 import { useMenuPosition } from '@/services/menuPositionService'
+import ClipboardRow from '../../common/ClipboardRow.vue'
 
 // MapEditor passes both 'id' (via v-bind) and 'baleId' (explicitly). 
 // We use 'id' to match the store object structure.
@@ -71,7 +72,8 @@ function openCustomizer() {
 <template>
   <div ref="menuRef" class="bale-context-menu" :style="style">
     <div class="menu-header">Bale Options</div>
-
+<ClipboardRow :id="id" @close="emit('close')" />
+<div class="menu-divider"></div>
     <div class="action-stack">
       <button @click="openCustomizer" class="action-btn customize">🎨 Customize Style</button>
       <button @click="deleteBale" class="action-btn delete">🗑️ Delete Bale</button>
@@ -122,6 +124,12 @@ function openCustomizer() {
 </template>
 
 <style scoped>
+.menu-divider {
+  height: 1px;
+  background: #eee;
+  margin: 6px 0;
+}
+
 .bale-context-menu {
   /* Position is controlled by :style binding (fixed, top, left) */
   background: white;

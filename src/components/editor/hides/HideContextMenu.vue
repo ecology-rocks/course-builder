@@ -2,6 +2,7 @@
 import { useMapStore } from '@/stores/mapStore'
 import { computed, ref, onMounted, onUnmounted } from 'vue' // for menu style
 import { useMenuPosition } from '@/services/menuPositionService' //for menu style
+import ClipboardRow from '../../common/ClipboardRow.vue'
 
 const props = defineProps({
   hideId: String,
@@ -88,7 +89,7 @@ function openCustomizer() {
 <template>
   <div class="hide-context-menu"  :style="style" ref="menuRef">
     <div class="menu-header">Hide Menu</div>
-
+<ClipboardRow :id="id" @close="emit('close')" />
     <div class="section-label">Actions</div>
     <div class="action-stack">
       <button @click="openCustomizer" class="action-btn customize">🎨 Customize Style</button>

@@ -97,6 +97,11 @@ const fillColor = computed(() => {
   return store.baleColors[props.bale.layer] || '#ccc'
 })
 
+const boxDash = computed(() => {
+  const style = props.bale.custom?.borderStyle
+  if (style === 'dashed') return [10, 5] // standard dash pattern
+  return null // null = solid line
+})
 
 const strokeColor = computed(() => {
   if (store.selection.includes(props.bale.id)) return '#00a1ff'
@@ -210,6 +215,7 @@ function baleDragBoundFunc(pos) {
       fill: fillColor,
       stroke: strokeColor,
       strokeWidth: strokeWidth,
+      dash: boxDash,
       shadowBlur: shadowBlur,
       shadowColor: '#00a1ff'
     }" />
