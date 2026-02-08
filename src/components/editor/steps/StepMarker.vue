@@ -62,9 +62,9 @@ function handleKeyUp(e) {
 function handleContextMenu(e) {
   // Prevent the browser menu
   e.evt.preventDefault()
+  e.cancelBubble = true // <--- ADD THIS
   
   // 2. Emit an OBJECT with 'e' (the native event) and 'id'
-  // If you just emit 'e', the parent won't be able to find .clientX
   emit('contextmenu', { e: e.evt, id: props.step.id })
 }
 

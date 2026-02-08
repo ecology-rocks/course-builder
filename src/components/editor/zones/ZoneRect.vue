@@ -99,6 +99,7 @@ const handleTransformEnd = () => {
 
 function handleContextMenu(e) {
   e.evt.preventDefault() // Stop browser context menu
+  e.cancelBubble = true // <--- ADD THIS
   emit('contextmenu', { e: e.evt, id: props.zone.id })
 }
 

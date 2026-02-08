@@ -45,6 +45,7 @@ const textFill = computed(() => {
 // [NEW] Handle Context Menu
 function handleContextMenu(e) {
   e.evt.preventDefault()
+  e.cancelBubble = true // <--- ADD THIS
   emit('contextmenu', { e: e.evt, id: store.startBox.id })
 }
 

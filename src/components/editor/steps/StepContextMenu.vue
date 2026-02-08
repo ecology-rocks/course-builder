@@ -1,5 +1,8 @@
 <script setup>
 import { useMapStore } from '@/stores/mapStore'
+import { computed, ref, onMounted, onUnmounted } from 'vue' // for menu style
+import { useMenuPosition } from '@/services/menuPositionService' //for menu style
+
 
 const props = defineProps({
   stepId: String,
@@ -9,6 +12,40 @@ const props = defineProps({
 
 const emit = defineEmits(['close'])
 const store = useMapStore()
+
+// menu options
+const menuRef = ref(null)
+const menuState = computed(() => store.activeStepMenu) // change menu here
+const { style } = useMenuPosition(menuState, menuRef)
+function handleInteraction(e) {
+  // Handle Escape
+  if (e.type === 'keydown' && e.key === 'Escape') {
+    emit('close')
+    return
+  }
+  
+  // Handle Click Outside
+  if (e.type === 'click') {
+    if (menuRef.value && !menuRef.value.contains(e.target)) {
+      emit('close')
+    }
+  }
+}
+
+onMounted(() => {
+  // Use setTimeout to ensure we don't catch the initial click that opened the menu
+  setTimeout(() => {
+    window.addEventListener('click', handleInteraction)
+    window.addEventListener('keydown', handleInteraction)
+  }, 0)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('click', handleInteraction)
+  window.removeEventListener('keydown', handleInteraction)
+})
+
+// end menu edits
 
 function deleteStep() {
   store.removeStep(props.stepId)
@@ -28,7 +65,7 @@ function openCustomizer() {
 </script>
 
 <template>
-  <div class="context-menu" :style="{ top: y + 'px', left: x + 'px' }">
+  <div class="context-menu"  :style="style" ref="menuRef">
     <div class="menu-header">Step Options</div>
     
     <div class="action-stack">
