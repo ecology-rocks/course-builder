@@ -386,10 +386,34 @@ function getAnchorLines(bale) {
 </script>
 
 <template>
-  <v-group :config="{ listening: !props.locked }">
+ <v-group :config="{ listening: !props.locked, name: 'floor-layer' }">
+    
     <template v-for="wall in store.customWalls" :key="wall.id">
       <WallObject :wall="wall" :scale="scale" />
     </template>
+
+    <DCMatObject v-for="mat in store.dcMats" :key="mat.id" :mat="mat" :scale="scale" 
+      :ref="(el) => setRef(el, mat.id)"
+      @dragstart="handleDragStart($event, mat.id)" 
+      @dragmove="handleDragMove($event, mat.id)"
+      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" 
+      @dragend="handleDragEnd($event, mat.id)"
+      @update="(attrs) => store.updateDCMat(mat.id, attrs)" 
+    />
+
+    <StartBoxObject v-if="store.startBox" :scale="scale" 
+      :isSelected="store.selection.includes(store.startBox?.id)"
+      :ref="(el) => setRef(el, store.startBox?.id || 'startbox')" 
+      @select="handleSelect($event)"
+      @dragstart="handleDragStart($event, store.startBox?.id)" 
+      @dragmove="handleDragMove($event, store.startBox?.id)"
+      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" 
+      @dragend="handleDragEnd($event, store.startBox?.id)"
+      @contextmenu="handleStartBoxContextMenu" 
+    />
+  </v-group>
+
+  <v-group :config="{ listening: !props.locked, name: 'object-layer' }">
 
     <v-group v-if="store.activeWall">
       <v-line :config="{
@@ -410,17 +434,6 @@ function getAnchorLines(bale) {
         listening: false // Critical: If true, these dots block the next click!
       }" />
     </v-group>
-
-    <StartBoxObject v-if="store.startBox" :scale="scale" :isSelected="store.selection.includes(store.startBox?.id)"
-      :ref="(el) => setRef(el, store.startBox?.id || 'startbox')" @select="handleSelect($event)"
-      @dragstart="handleDragStart($event, store.startBox?.id)" @dragmove="handleDragMove($event, store.startBox?.id)"
-      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragend="handleDragEnd($event, store.startBox?.id)"
-      @contextmenu="handleStartBoxContextMenu" />
-
-    <DCMatObject v-for="mat in store.dcMats" :key="mat.id" :mat="mat" :scale="scale" :ref="(el) => setRef(el, mat.id)"
-      @dragstart="handleDragStart($event, mat.id)" @dragmove="handleDragMove($event, mat.id)"
-      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragend="handleDragEnd($event, mat.id)"
-      @update="(attrs) => store.updateDCMat(mat.id, attrs)" />
 
     <GateObject v-if="store.gate" :gate="store.gate" :scale="scale" :ringDimensions="store.ringDimensions"
       :ref="(el) => setRef(el, store.gate?.id)" @dragstart="handleDragStart($event, store.gate?.id)"
