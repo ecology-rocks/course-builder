@@ -10,27 +10,12 @@ const router = useRouter()
 
 const newName = ref('')
 const newJudgeEmail = ref('') // Input for the email to add
-const localClubName = ref('')
 // --- STRIPE CONFIGURATION ---
 const PRICE_ID_FOUNDER = import.meta.env.VITE_STRIPE_PRICE_FOUNDER
 
 // In <script setup>
-async function handleLogoUpload(event) {
-  const file = event.target.files[0]
-  if (!file) return
-
-  // Basic validation
-  if (file.size > 1024 * 1024) { // 1MB limit
-    return alert("File is too large. Please use an image under 1MB.")
-  }
-
-  await userStore.uploadLogo(file)
-}
 
 onMounted(() => {
-  if (userStore.clubName) {
-    localClubName.value = userStore.clubName
-  }
   if (userStore.user) {
     newName.value = userStore.judgeName
   } else {
@@ -38,10 +23,7 @@ onMounted(() => {
   }
 })
 
-async function saveClubName() {
-  await userStore.updateClubName(localClubName.value)
-  alert("Club Name Saved!")
-}
+
 
 async function handleUpdateProfile() {
   if (newName.value && newName.value.trim() !== "") {
@@ -84,21 +66,7 @@ async function handleManageBilling() {
     const response = await createPortal({ returnUrl: window.location.href })
     if (response.data.url) window.location.href = response.data.url
   } catch (e) {
-    alert("Could not open billing portal.")
-  }
-}
-
-async function handleAddJudge() {
-  if (!newJudgeEmail.value || !newJudgeEmail.value.includes('@')) {
-    return alert("Please enter a valid email.")
-  }
-  await userStore.addSponsoredJudge(newJudgeEmail.value.trim())
-  newJudgeEmail.value = '' // Clear input
-}
-
-async function handleRemoveJudge(email) {
-  if (confirm(`Remove access for ${email}?`)) {
-    await userStore.removeSponsoredJudge(email)
+    alert("Could not open billing portal. Pleas email support@k9coursebuilder.com.")
   }
 }
 </script>
@@ -121,13 +89,8 @@ async function handleRemoveJudge(email) {
         
         <div class="card-body">
           <div v-if="userStore.isPro">
-            <div v-if="userStore.sponsoringClubName" class="sponsor-msg">
-              🎉 <strong>Pro Access Active</strong> (Beta Program via {{ userStore.sponsoringClubName }})
-            </div>
-            <div v-else class="founder-msg">
               👑 <strong>Founder's License Active</strong><br>
               Thank you for supporting early development.
-            </div>
             <button class="btn-outline" @click="handleManageBilling">Manage Subscription</button>
           </div>
 
@@ -152,26 +115,6 @@ async function handleRemoveJudge(email) {
         </div>
       </section>
 
-      <section v-if="userStore.tier === 'club'" class="card admin-card">
-        <div class="card-header">
-          <h2>👑 Beta Admin / Club Roster</h2>
-          <span class="badge club">{{ userStore.sponsoredEmails.length }} / {{ userStore.seatLimit }} Seats</span>
-        </div>
-
-        <p class="hint">Add Beta Testers here. They get instant Pro access.</p>
-
-        <div class="roster-add-row">
-          <input v-model="newJudgeEmail" placeholder="tester@example.com" @keyup.enter="handleAddJudge" />
-          <button @click="handleAddJudge" class="btn-primary">Add</button>
-        </div>
-
-        <ul class="roster-list">
-          <li v-for="email in userStore.sponsoredEmails" :key="email">
-            <span>👤 {{ email }}</span>
-            <button @click="handleRemoveJudge(email)" class="btn-xs delete">Remove</button>
-          </li>
-        </ul>
-      </section>
 
       <section class="card">
         <h2>Judge Profile</h2>

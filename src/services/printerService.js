@@ -61,7 +61,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
             </div>
             <div class="compact-row secondary">
                <div><strong>Judge:</strong> ${userStore.judgeName || "________"}</div>
-               <div><strong>Blind:</strong> _______</div>
+               <div><strong>Club:</strong> ${store.trialLocation}</div>
             </div>
           </div>
          `;
