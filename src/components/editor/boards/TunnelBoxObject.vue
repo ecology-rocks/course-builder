@@ -52,6 +52,8 @@ function handleDragEnd(e) {
 }
 
 // [RESTORED] Your original dragBoundFunc
+// src/components/editor/boards/TunnelBoxObject.vue
+
 function dragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
@@ -60,18 +62,27 @@ function dragBoundFunc(pos) {
   let relX = pos.x - layerAbs.x
   let relY = pos.y - layerAbs.y
   
+  // Snap Position to Grid
   relX = Math.round(relX / step) * step
   relY = Math.round(relY / step) * step
+
+  // [FIX] Calculate Max Bounds based on Object Size
+  // Since TunnelBoxes use Top-Left anchors (x,y is top-left),
+  // we must ensure x + width <= mapWidth.
+  
+  // Get current dimensions (accounting for scale)
+  const currentW = finalWidth.value * props.scale
+  const currentH = finalHeight.value * props.scale
 
   const mapW = store.ringDimensions.width * props.scale
   const mapH = store.ringDimensions.height * props.scale
   
-  // Clamp to map edges
   const minX = 0
-  const maxX = mapW
+  const maxX = mapW - currentW // Subtract width
   const minY = 0
-  const maxY = mapH
+  const maxY = mapH - currentH // Subtract height
 
+  // Apply Constraints
   relX = Math.max(minX, Math.min(relX, maxX))
   relY = Math.max(minY, Math.min(relY, maxY))
 

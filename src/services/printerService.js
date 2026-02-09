@@ -19,7 +19,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
     }
 
     // 2. Setup Watermark (The Gate)
-    // We use the getter added to userStore
     const isPro = userStore.isPro;
     const watermarkHtml = !isPro
       ? `<div class="watermark">DRAFT - UPGRADE TO REMOVE</div>`
@@ -31,7 +30,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
     scale.value = 40; 
     const originalStep = store.gridStep;
     store.gridStep = 1;
-    const originalMultiView = store.multiLayerView; //
+    const originalMultiView = store.multiLayerView; 
 
     await nextTick();
     const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -46,19 +45,24 @@ export function usePrinter(store, userStore, stageRef, scale) {
       ? `<div class="meta"><strong>Club:</strong> ${clubName}</div>`
       : "";
 
-      
-    
-
-    // Header Generator (Supports Full & Compact)
+    // Header Generator
     const getHeader = (subtitleSuffix = "", isCompact = false) => {
-      // Quarter Page Header
+      // Quarter Page Header (Expanded Metadata)
       if (isCompact) {
+        let meta = store.classLevel || "";
+        if (store.trialNumber) meta += ` | T${store.trialNumber}`;
+        if (store.trialDay) meta += ` | ${store.trialDay}`;
+
         return `
           <div class="header compact">
-            <div class="title-block">
-               <h1>${store.mapName} ${subtitleSuffix}</h1>
+            <div class="compact-row">
+               <h1 class="compact-title">${store.mapName}</h1>
+               <div class="compact-meta">${meta}</div>
             </div>
-             <div class="meta-compact">Judge: ${userStore.judgeName || "___"}</div>
+            <div class="compact-row secondary">
+               <div><strong>Judge:</strong> ${userStore.judgeName || "________"}</div>
+               <div><strong>Blind:</strong> _______</div>
+            </div>
           </div>
          `;
       }
@@ -94,7 +98,34 @@ export function usePrinter(store, userStore, stageRef, scale) {
       `;
     };
 
-    // Helper for Differentials (Changes vs Previous)
+    // [UPDATED] Mini Legend for Quarter Views
+    const getMiniLegend = () => `
+      <div class="mini-legend">
+      <div class="legend-item"><span class="symbol layer-1"></span>Layer 1</div>
+        <div class="legend-item"><span class="symbol layer-2"></span>Layer 2</div>
+        <div class="legend-item"><span class="symbol layer-3"></span>Layer 3</div>
+        <div class="legend-item"><span class="symbol flat"></span> Flat</div>
+        <div class="legend-item"><span class="symbol tall"></span> Tall</div>
+        <div class="legend-item"><span class="symbol pillar"></span> Pillar</div>
+        <div class="legend-item"><span class="symbol leaner">↗</span> Lean</div>
+        </div>
+      <div class="mini-legend">
+        <div class="legend-item"><span class="symbol hide-rat">R</span> Rat</div>
+        <div class="legend-item"><span class="symbol hide-litter">L</span> Litter</div>
+        <div class="legend-item"><span class="symbol hide-empty">E</span> Empty</div>
+        <div class="legend-item"><span class="symbol hide-rat-under">R</span>Hide Below</div>
+        <div class="legend-item">
+          <svg width="24" height="12" style="margin-right:4px">
+             <circle cx="4" cy="6" r="3" fill="#2e7d32" stroke="#2e7d32" stroke-width="2" />
+             <circle cx="20" cy="6" r="3" fill="#2e7d32" stroke="#2e7d32" stroke-width="2" />
+             <line x1="7" y1="6" x2="17" y2="6" stroke="#2e7d32" stroke-width="2" />
+          </svg>
+          Board Edge
+        </div> 
+      </div>
+    `;
+
+    // Helper for Differentials
     const getDiffHtml = () => {
       const diffs = store.differentials;
       if (!diffs) return "";
@@ -128,7 +159,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
       `;
     };
 
-    // Legend Generator (Hides Stats for Free Users)
+    // Legend Generator (Full Page)
     const getLegendHtml = () => `
       <div class="legend-sidebar">
         <h3>Legend</h3>
@@ -201,7 +232,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
 
     // 5. CSS Styles
     const printStyles = `
-      
       * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
@@ -211,59 +241,35 @@ export function usePrinter(store, userStore, stageRef, scale) {
       html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
       body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; }
       
-      /* Watermark - The Gate */
       .watermark {
         position: fixed;
-        top: 50%; 
-        left: 50%;
+        top: 50%; left: 50%;
         transform: translate(-50%, -50%) rotate(-45deg);
-        font-size: 80px;
-        font-weight: bold;
+        font-size: 80px; font-weight: bold;
         color: rgba(0, 0, 0, 0.08);
-        z-index: 9999;
-        pointer-events: none;
-        white-space: nowrap;
-        user-select: none;
-        width: 100%;
-        text-align: center;
+        z-index: 9999; pointer-events: none;
+        white-space: nowrap; user-select: none;
+        width: 100%; text-align: center;
       }
 
       .print-page { height: 98vh; width: 100%; display: flex; flex-direction: column; break-after: page; page-break-after: always; position: relative; }
       .print-page:last-child { break-after: auto; page-break-after: auto; }
       
+      /* Header Styles */
       .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 2px solid #333;
-      padding-bottom: 10px;
-      margin-bottom: 20px;
-      /* [FIX] Added horizontal padding to prevent edges from feeling too wide */
-      padding-left: 15px;
-      padding-right: 15px;
-    }
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 20px;
+        padding-left: 15px; padding-right: 15px;
+      }
       .header-left { display: flex; align-items: center; gap: 15px; }
       .print-logo { height: 60px; width: auto; object-fit: contain; }
-      .title-block {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      /* [FIX] Added margin to push logo/title away from the far left edge */
-      margin-left: 5px;
-    }
+      .title-block { display: flex; align-items: center; gap: 15px; margin-left: 5px; }
       .title-block h2 { margin: 0; font-size: 16px; font-weight: normal; color: #666; }
-      .header-right {
-      text-align: right;
-      /* [FIX] Added margin to push judge info away from the far right edge */
-      margin-right: 5px;
-    }
-      .meta {
-      font-size: 1rem;
-      line-height: 1.4;
-    }
+      .header-right { text-align: right; margin-right: 5px; }
+      .meta { font-size: 1rem; line-height: 1.4; }
       .sub-meta { font-size: 11px; color: #888; margin-top: 4px; }
 
-      /* Layout */
+      /* Full Layout */
       .page-body { flex: 1; display: flex; min-height: 0; gap: 20px; }
       .map-container { flex: 1; display: flex; justify-content: center; align-items: flex-start; overflow: hidden; }
       img.map-img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #eee; }
@@ -308,7 +314,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .hide-litter { background: yellow; color: black; }
       .hide-empty { background: white; color: black; }
 
-      /* [NEW] Quarter Layout Styles */
+      /* Quarter Layout Styles */
       .quarter-grid { 
         display: grid; 
         grid-template-columns: 1fr 1fr; 
@@ -320,13 +326,31 @@ export function usePrinter(store, userStore, stageRef, scale) {
         border: 1px dashed #ccc; padding: 10px; 
         display: flex; flex-direction: column; overflow: hidden; 
       }
-      .header.compact { border-bottom: 1px solid #999; padding-bottom: 5px; margin-bottom: 5px; }
-      .header.compact h1 { font-size: 14px; margin: 0; }
-      .meta-compact { font-size: 10px; color: #666; }
-      .quarter-item .map-img-wrapper { flex: 1; display: flex; justify-content: center; align-items: center; overflow: hidden; }
+      .quarter-item .map-img-wrapper { 
+        flex: 1; display: flex; justify-content: center; align-items: center; 
+        overflow: hidden; min-height: 0;
+      }
       .quarter-item img { max-width: 98%; max-height: 98%; object-fit: contain; }
+      
+      /* Compact Header */
+      .header.compact { 
+        border-bottom: 1px solid #999; padding-bottom: 5px; margin-bottom: 5px; 
+        display: flex; flex-direction: column; gap: 4px; align-items: stretch;
+      }
+      .compact-row { display: flex; justify-content: space-between; align-items: baseline; }
+      .compact-title { font-size: 16px; margin: 0; font-weight: bold; }
+      .compact-meta { font-size: 12px; color: #444; }
+      .compact-row.secondary { font-size: 11px; border-top: 1px solid #eee; padding-top: 4px; }
+      
+      /* [UPDATED] Mini Legend */
+      .mini-legend {
+        display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 12px; 
+        border-top: 1px solid #ccc; padding-top: 6px; margin-top: 8px;
+      }
+      .mini-legend .legend-item { font-size: 10px; }
+      .mini-legend .symbol { width: 12px; height: 12px; line-height: 10px; font-size: 9px; }
 
-      /* [NEW] Randoms Page Styles */
+      /* Randoms Page */
       .randoms-page .randoms-body { column-count: 2; column-gap: 40px; padding: 20px; font-size: 14px; }
       .trial-block { break-inside: avoid; margin-bottom: 30px; border: 1px solid #eee; padding: 15px; border-radius: 4px; }
       .trial-title { font-size: 18px; font-weight: bold; border-bottom: 2px solid #333; margin-bottom: 10px; }
@@ -334,7 +358,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
       .blind-numbers { font-family: monospace; font-size: 16px; font-weight: bold; letter-spacing: 2px; }
     `;
 
-    // [NEW] Logic to hide hides via CSS
+    // Logic to hide hides via CSS
     const hideCss = !config.withHides
       ? `
       .hide-rat, .hide-litter, .hide-empty, .hide-rat-under { display: none !important; }
@@ -349,9 +373,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
     const captureLayer = async (layerNum) => {
       store.currentLayer = layerNum;
       store.showHides = config.withHides;
-      
-      // We set multiLayerView to the current layer number.
-      // This allows the component to filter out any bales that belong to higher layers.
       store.multiLayerView = config.overlayAll ? layerNum : false;
 
       await nextTick();
@@ -373,7 +394,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
     scale.value = originalScale;
     store.gridStep = originalStep;
     store.multiLayerView = originalMultiView;
-
     
     // 8. Generate HTML based on Layout
     let pagesHtml = "";
@@ -412,6 +432,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
                 <div class="map-img-wrapper">
                   <img src="${p.img}" />
                 </div>
+                ${getMiniLegend()}
               </div>
             `,
               )
@@ -431,7 +452,6 @@ export function usePrinter(store, userStore, stageRef, scale) {
       for (let t = 1; t <= trials; t++) {
         randomsHtml += `<div class="trial-block"><div class="trial-title">Trial ${t}</div>`;
         for (let b = 1; b <= blinds; b++) {
-          // Generate 5 random numbers between 1 and 5 (Simulate blind draw)
           const nums = Array(5)
             .fill(0)
             .map(() => Math.floor(Math.random() * 5) + 1);

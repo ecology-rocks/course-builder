@@ -1,7 +1,13 @@
 <script setup>
+import { computed } from 'vue'
 import { useMapStore } from 'stores/mapStore'
 const store = useMapStore()
 const emit = defineEmits(['tool-select', 'blind-setup'])
+
+
+import { useUserStore } from '@/stores/userStore'
+const userStore = useUserStore()
+const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
 </script>
 
 <template>
@@ -46,7 +52,7 @@ const emit = defineEmits(['tool-select', 'blind-setup'])
       <h3>Blinds & Hides</h3>
       <div class="tool-grid">
       <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Quick Hide</button>
-      <button class="tool-btn action-btn" @click="$emit('blind-setup')" title="Blind Manager">🏆 Full Blinds</button>
+      <button v-if="isAdmin" class="tool-btn action-btn" @click="$emit('blind-setup')" title="Blind Manager">🏆 Full Blinds</button>
     </div>
   </div>
 

@@ -20,7 +20,7 @@ import PrintModal from 'modals/PrintModal.vue' // [NEW]
 const store = useMapStore()
 const userStore = useUserStore()
 const router = useRouter()
-const emit = defineEmits(['print', 'save-map', 'save-library'])
+const emit = defineEmits(['print', 'save-map', 'save-library', 'blind-setup'])
 
 // State for Modals & Menus
 const showShareModal = ref(false)
@@ -126,7 +126,7 @@ function handleSave() {
   </div>
 </div>
     <div class="zone-middle">
-      <component :is="toolboxComponent" />
+      <component :is="toolboxComponent" @blind-setup="emit('blind-setup')"/>
     </div>
 
     <div class="zone-bottom">

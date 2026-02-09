@@ -66,13 +66,25 @@ function dragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
   const step = props.scale / 6
+  
+  // Calculate relative position (center of box)
   let relX = Math.round((pos.x - layerAbs.x) / step) * step
   let relY = Math.round((pos.y - layerAbs.y) / step) * step
+  
   const boxSize = 4 * props.scale
-  const maxX = (store.ringDimensions.width * props.scale) - boxSize
-  const maxY = (store.ringDimensions.height * props.scale) - boxSize
-  relX = Math.max(0, Math.min(relX, maxX))
-  relY = Math.max(0, Math.min(relY, maxY))
+  const halfBox = boxSize / 2
+  
+  // Bounds adjusted for center anchor
+  // Min is half width (so left edge is 0)
+  // Max is Grid Width - half width (so right edge is Grid Width)
+  const minX = halfBox
+  const minY = halfBox
+  const maxX = (store.ringDimensions.width * props.scale) - halfBox
+  const maxY = (store.ringDimensions.height * props.scale) - halfBox
+  
+  relX = Math.max(minX, Math.min(relX, maxX))
+  relY = Math.max(minY, Math.min(relY, maxY))
+  
   return { x: relX + layerAbs.x, y: relY + layerAbs.y }
 }
 </script>
