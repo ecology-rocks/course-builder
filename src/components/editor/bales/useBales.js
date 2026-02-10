@@ -175,8 +175,8 @@ function cycleLean(id) {
     let changeCount = 0
     state.bales.value.forEach((b) => {
       if (targets.includes(b.id)) {
-        if (!b.isAnchor && b.orientation !== 'flat') {
-          notifications.show("Only FLAT bales can be anchors.", "error")
+        if (!b.isAnchor && b.orientation == 'pillar') {
+          notifications.show("Only FLAT/TALL bales can be anchors.", "error")
           return 
         }
         const rot = Math.abs(b.rotation) % 90

@@ -13,13 +13,13 @@ const showBugModal = ref(false)
       <div class="links">
         <a href="/about">About</a>
         <span class="divider">•</span>
-        <router-link to="/terms">Terms of Service</router-link>
+        <router-link to="/terms">ToS</router-link>
         <span class="divider">•</span>
         <router-link to="/privacy">Privacy Policy</router-link>
         <span class="divider">•</span>
-        <a href="mailto:support@k9coursebuilder.com">Contact Support</a>
+        <a href="https://docs.k9coursebuilder.com">Docs</a>
         <span class="divider">•</span>
-        <a href="#" @click.prevent="showBugModal = true">🐛 Bugs & Feature Requests</a>
+        <a href="https://docs.k9corusebuilder.com/blog">Blog</a>
         <span class="divider">•</span>
         <router-link to="/roadmap">Roadmap</router-link>
       </div>
