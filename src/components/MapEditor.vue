@@ -12,6 +12,7 @@ import { useGridSystem } from '@/components/editor/logic/useGridSystem'
 import { useExportTools } from '@/components/editor/logic/useExportTools'
 import { useStageInteraction } from '@/components/editor/logic/useStageInteraction'
 import { useContextMenu } from '@/components/editor/logic/useContextMenu'
+import { useCustomWalls } from '@/components/editor/walls/useCustomWalls'
 
 // Sub-Layers & Components
 import EditorSidebar from './editor/EditorSidebar.vue'
@@ -49,6 +50,8 @@ const showBlindSetup = ref(false)
 const isBlindMode = ref(false)
 const blindManagerRef = ref(null)
 
+const { getNearestSnapPoint, getAngleSnapPoint } = useCustomWalls(store)
+
 useAutosave(3000)
 
 const { scale, stageConfig, zoom, fitToScreen } = useCanvasControls(store, wrapperRef, GRID_OFFSET)
@@ -75,35 +78,30 @@ function handleBlindSetupStart(config) {
   showBlindSetup.value = false
   isBlindMode.value = true
   store.closeAllMenus()
-  store.setTool('select') // Disable map editor tools
+  store.setTool('select') 
 }
 
 async function handleBlindSave() {
-  await handleSaveMap() // Reuse existing save logic
+  await handleSaveMap() 
   isBlindMode.value = false
 }
 
 function handleOpenBlindManager() {
-  // If we already have blinds data, skip setup and just open the manager
   if (store.mapData.blinds && store.mapData.blinds.length > 0) {
     isBlindMode.value = true
     store.closeAllMenus()
     store.setTool('select')
   } else {
-    // No data found? Show the setup modal
     showBlindSetup.value = true
   }
 }
-// --- MENU MANAGEMENT ---
+
 function handleStageMenuClose() {
   closeContextMenu()
   store.setTool('select')
 }
 
-// [UPDATED] Global Click Handler
 function handleGlobalClick() {
-  // If any item menu is currently open, we are "clicking off" to close it.
-  // In this case, we should also reset the tool to 'select'.
   const isAnyItemMenuOpen = 
     store.activeBaleMenu || 
     store.activeDCMatMenu || 
@@ -122,7 +120,7 @@ function handleGlobalClick() {
   store.closeAllMenus()
 }
 
-// [NEW] Interceptor for Stage Clicks
+// [UPDATED] Interceptor for Stage Clicks
 function onStageMouseDown(e) {
   // If in Blind Mode, divert click to BlindManager
   if (isBlindMode.value) {
@@ -132,11 +130,47 @@ function onStageMouseDown(e) {
     return
   }
 
+  // [UPDATED] Anchor Tool Creation with Angle Snap
+  if (store.activeTool === 'anchor' && store.selection.length === 1) {
+    const selectedId = store.selection[0]
+    const bale = store.bales.find(b => b.id === selectedId)
+    
+    // Only proceed if selected item is a bale and is an Anchor
+    if (bale && bale.isAnchor) {
+      const stage = e.target.getStage()
+      const pos = stage.getPointerPosition()
+      const gridX = (pos.x - GRID_OFFSET) / scale.value
+      const gridY = (pos.y - GRID_OFFSET) / scale.value
+
+      const L = bale.custom?.length ?? store.baleConfig?.length ?? 3
+      const W = bale.custom?.width ?? store.baleConfig?.width ?? 1.5
+      
+      let w = L, h = W
+      if (bale.orientation === 'tall') { w = L; h = store.baleConfig?.height ?? 1 }
+      else if (bale.orientation === 'pillar') { w = W; h = store.baleConfig?.height ?? 1 }
+      
+      const cx = bale.x + w/2
+      const cy = bale.y + h/2
+
+      // Use Angle Snapping Raycast
+      const snap = getAngleSnapPoint({x: cx, y: cy}, {x: gridX, y: gridY}, store.ringDimensions.width, store.ringDimensions.height)
+      
+      if (snap) {
+        const count = store.addAnchor(bale.id, snap)
+        
+        // Switch to Select if limit reached
+        if (count >= 2) {
+             store.setTool('select')
+        }
+        return // Stop standard selection drag behavior
+      }
+    }
+  }
+
   // Otherwise, normal editor behavior
   handleStageMouseDown(e)
 }
 
-// 3. Watcher: If ANY specific menu opens, close the generic stage menu
 watch(
   () => [
     store.activeBaleMenu,
@@ -149,7 +183,6 @@ watch(
     store.activeNoteMenu
   ],
   (menus) => {
-    // If any menu in the array is truthy (open), close the generic context menu
     if (menus.some(m => m !== null)) {
       closeContextMenu()
     }
@@ -159,7 +192,6 @@ watch(
 async function handleBatchPrint() {
   isPrinting.value = true
   try {
-    // Calls the service that loops through your blinds
     await printBlinds()
   } finally {
     isPrinting.value = false
@@ -186,7 +218,12 @@ async function handlePrint(options) {
       @save-library="handleLibrarySave" 
       @blind-setup="handleOpenBlindManager"
     />
-    <div class="canvas-wrapper" ref="wrapperRef">
+    
+    <div 
+      class="canvas-wrapper" 
+      ref="wrapperRef" 
+      :class="{ 'is-anchor-mode': store.activeTool === 'anchor' }"
+    >
       <EditNoteModal v-if="store.editingNoteId" />
       <Transition name="fade">
         <div v-if="store.notification" class="toast-notification" :class="store.notification.type">
@@ -273,76 +310,19 @@ async function handlePrint(options) {
       </v-stage>
     </div>
 
-    <HideContextMenu 
-      v-if="store.activeHideMenu" 
-      v-bind="store.activeHideMenu" 
-      :hideId="store.activeHideMenu.id"
-      @close="store.activeHideMenu = null" 
-    />
-    
-    <DCMatContextMenu 
-      v-if="store.activeDCMatMenu" 
-      v-bind="store.activeDCMatMenu" 
-      :matId="store.activeDCMatMenu.id"
-      @close="store.activeDCMatMenu = null" 
-    />
-    
-    <ZoneContextMenu 
-      v-if="store.activeZoneMenu" 
-      v-bind="store.activeZoneMenu" 
-      :zoneId="store.activeZoneMenu.id"
-      @close="store.activeZoneMenu = null" 
-    />
-    
-    <StepContextMenu 
-      v-if="store.activeStepMenu" 
-      v-bind="store.activeStepMenu" 
-      :stepId="store.activeStepMenu.id"
-      @close="store.activeStepMenu = null" 
-    />
-    
-    <StartBoxContextMenu 
-      v-if="store.activeStartBoxMenu" 
-      v-bind="store.activeStartBoxMenu" 
-      @close="store.activeStartBoxMenu = null" 
-    />
-    
-    <TunnelBoxContextMenu 
-      v-if="store.activeTunnelBoxMenu" 
-      v-bind="store.activeTunnelBoxMenu" 
-      @close="store.activeTunnelBoxMenu = null" 
-    />
-    
-    <BaleContextMenu 
-      v-if="store.activeBaleMenu" 
-      v-bind="store.activeBaleMenu" 
-      :id="store.activeBaleMenu.id"
-      @close="store.activeBaleMenu = null" 
-    />
-
-    <NoteContextMenu 
-      v-if="store.activeNoteMenu" 
-      v-bind="store.activeNoteMenu" 
-      :noteId="store.activeNoteMenu.id"
-      @close="store.activeNoteMenu = null" 
-    />
-
+    <HideContextMenu v-if="store.activeHideMenu" v-bind="store.activeHideMenu" :hideId="store.activeHideMenu.id" @close="store.activeHideMenu = null" />
+    <DCMatContextMenu v-if="store.activeDCMatMenu" v-bind="store.activeDCMatMenu" :matId="store.activeDCMatMenu.id" @close="store.activeDCMatMenu = null" />
+    <ZoneContextMenu v-if="store.activeZoneMenu" v-bind="store.activeZoneMenu" :zoneId="store.activeZoneMenu.id" @close="store.activeZoneMenu = null" />
+    <StepContextMenu v-if="store.activeStepMenu" v-bind="store.activeStepMenu" :stepId="store.activeStepMenu.id" @close="store.activeStepMenu = null" />
+    <StartBoxContextMenu v-if="store.activeStartBoxMenu" v-bind="store.activeStartBoxMenu" @close="store.activeStartBoxMenu = null" />
+    <TunnelBoxContextMenu v-if="store.activeTunnelBoxMenu" v-bind="store.activeTunnelBoxMenu" @close="store.activeTunnelBoxMenu = null" />
+    <BaleContextMenu v-if="store.activeBaleMenu" v-bind="store.activeBaleMenu" :id="store.activeBaleMenu.id" @close="store.activeBaleMenu = null" />
+    <NoteContextMenu v-if="store.activeNoteMenu" v-bind="store.activeNoteMenu" :noteId="store.activeNoteMenu.id" @close="store.activeNoteMenu = null" />
     <WallContextMenu v-if="store.activeWallMenu" />
 
     <CustomizationModal />
-    <TournamentSetupModal 
-  v-if="showBlindSetup" 
-  @close="showBlindSetup = false"
-  @start="handleBlindSetupStart"
-/>
-
-<BlindManager 
-  v-if="isBlindMode"
-  ref="blindManagerRef"
-  @close="isBlindMode = false"
-  @print="handleBatchPrint"
-  @save="handleBlindSave"
-/>
+    <TournamentSetupModal v-if="showBlindSetup" @close="showBlindSetup = false" @start="handleBlindSetupStart"/>
+    <BlindManager v-if="isBlindMode" ref="blindManagerRef" @close="isBlindMode = false" @print="handleBatchPrint" @save="handleBlindSave"/>
   </div>
 </template>
 
@@ -362,11 +342,20 @@ async function handlePrint(options) {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  /* INCREASED bottom padding from 40px to 150px to clear the selection bar */
   padding: 40px 40px 150px 40px;
   background: #e0e0e0;
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.1);
   position: relative;
+}
+
+/* [NEW] Anchor Mode Cursor Override */
+.canvas-wrapper.is-anchor-mode {
+  cursor: crosshair !important;
+}
+
+/* Ensure inner Konva content also gets the cursor */
+.canvas-wrapper.is-anchor-mode :deep(.konvajs-content) {
+  cursor: crosshair !important;
 }
 
 .toast-notification {

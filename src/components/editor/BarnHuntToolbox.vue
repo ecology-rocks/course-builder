@@ -8,6 +8,9 @@ const emit = defineEmits(['tool-select', 'blind-setup'])
 import { useUserStore } from '@/stores/userStore'
 const userStore = useUserStore()
 const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
+const hasBaleSelected = computed(() => {
+  return store.selection.some(id => store.bales.some(b => b.id === id))
+})
 </script>
 
 <template>
@@ -39,6 +42,24 @@ const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.co
     </div>
 
     <div class="tool-section">
+      <h3>Bale Modifiers</h3>
+      <div class="tool-grid">
+        <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">
+          📐 Orient
+        </button>
+        <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">
+          ↗️ Lean
+        </button>
+        <button @click="store.toggleAnchor()" :disabled="!hasBaleSelected" :style="{ opacity: hasBaleSelected ? 1 : 0.5 }">
+            ⚓ Mark Bale
+          </button>
+        <button @click="store.setTool('anchor')" :class="{ active: store.activeTool === 'anchor' }">
+          ⚓ Mark Lines
+        </button>
+      </div>
+    </div>
+
+    <div class="tool-section">
       <h3>Tunnels</h3>
       <div class="tool-grid">
         <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Board Line</button>
@@ -51,12 +72,13 @@ const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.co
     <div class="tool-section">
       <h3>Blinds & Hides</h3>
       <div class="tool-grid">
-      <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Quick Hide</button>
-      <button v-if="isAdmin" class="tool-btn action-btn" @click="$emit('blind-setup')" title="Blind Manager">🏆 Full Blinds</button>
+        <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Quick Hide</button>
+        <button v-if="isAdmin" class="tool-btn action-btn" @click="$emit('blind-setup')" title="Blind Manager">🏆 Full
+          Blinds</button>
+      </div>
     </div>
-  </div>
 
-  <div class="tool-section">
+    <div class="tool-section">
       <h3>Tools</h3>
       <div class="tool-grid">
         <button @click="store.setTool('select')" :class="{ active: store.activeTool === 'select' }">
@@ -86,12 +108,7 @@ const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.co
         <button @click="store.setTool('delete')" :class="{ active: store.activeTool === 'delete' }">
           🗑️ Delete
         </button>
-          <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">
-            📐 Orient
-          </button>
-          <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">
-            ↗️ Lean
-          </button>
+
       </div>
     </div>
   </div>

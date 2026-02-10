@@ -41,6 +41,7 @@ export function useBales(state, snapshot, notifications) {
     orientation: 'flat',
     lean: null,
     supported: true,
+    customAnchors: [],
     custom: {
         fillColor: null,
         strokeColor: null,
@@ -161,51 +162,72 @@ function cycleLean(id) {
 // --- EXTENDED ACTIONS ---
 
   function toggleAnchor(targetId = null) {
-    // 1. Determine targets (Specific ID or Selection)
     const targets = targetId 
       ? (state.selection.value.includes(targetId) ? state.selection.value : [targetId]) 
       : state.selection.value
 
     if (targets.length === 0) return
-
-    // 2. Guard Clause: Layer Check
     if (state.currentLayer.value !== 1) {
       notifications.show("Anchors can only be created on Layer 1.", "error")
       return
     }
 
     let changeCount = 0
-
     state.bales.value.forEach((b) => {
       if (targets.includes(b.id)) {
-        
-        // 3. Guard Clause: Orientation Check (Must be Flat)
         if (!b.isAnchor && b.orientation !== 'flat') {
           notifications.show("Only FLAT bales can be anchors.", "error")
           return 
         }
-
-        // 4. Guard Clause: Rotation Check (Must be 90-degree increments)
         const rot = Math.abs(b.rotation) % 90
         if (!b.isAnchor && rot !== 0) {
            notifications.show("Anchors must be aligned to the grid (0, 90, 180, 270).", "error")
            return
         }
-
-        // Apply Toggle
         b.isAnchor = !b.isAnchor
-        
-        // If becoming an anchor, force cleanup of lean just in case
         if (b.isAnchor) {
           b.lean = null 
+          // Initialize array if missing
+          if (!b.customAnchors) b.customAnchors = [] 
         }
         changeCount++
       }
     })
-
     if (changeCount > 0 && snapshot) snapshot()
   }
 
+  // [NEW] Add a manual anchor point
+function addAnchor(baleId, point) {
+    const bale = state.bales.value.find(b => b.id === baleId)
+    if (bale) {
+      if (!bale.customAnchors) bale.customAnchors = []
+      
+      // [FIX] Limit to 2: Remove oldest if full
+      if (bale.customAnchors.length >= 2) {
+        bale.customAnchors.shift()
+      }
+      
+      bale.customAnchors.push(point)
+      if (snapshot) snapshot()
+      
+      // Return count to help with tool switching
+      return bale.customAnchors.length
+    }
+    return 0
+  }
+
+
+  
+  // [NEW] Update manual anchor point (for dragging)
+  function updateAnchor(baleId, index, point) {
+    const bale = state.bales.value.find(b => b.id === baleId)
+    if (bale && bale.customAnchors && bale.customAnchors[index]) {
+      bale.customAnchors[index] = point
+      // No snapshot on drag, usually handled by dragend event in component
+    }
+  }
+
+  
   function setComparisonBales(bales, name = "Custom Map") {
     state.previousBales.value = JSON.parse(JSON.stringify(bales));
     state.comparisonMapName.value = name;
@@ -270,5 +292,7 @@ function cycleLean(id) {
     realignBales, 
     setBaleOrientation,
     setLean,
+    addAnchor,
+    updateAnchor,
   }
 }
