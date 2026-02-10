@@ -7,7 +7,7 @@ const emit = defineEmits(['tool-select', 'blind-setup'])
 
 import { useUserStore } from '@/stores/userStore'
 const userStore = useUserStore()
-const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
+const isBeta = userStore.isBeta
 const hasBaleSelected = computed(() => {
   return store.selection.some(id => store.bales.some(b => b.id === id))
 })
@@ -73,7 +73,7 @@ const hasBaleSelected = computed(() => {
       <h3>Blinds & Hides</h3>
       <div class="tool-grid">
         <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Quick Hide</button>
-        <button v-if="isAdmin" class="tool-btn action-btn" @click="$emit('blind-setup')" title="Blind Manager">🏆 Full
+        <button v-if="isBeta" class="tool-btn action-btn" @click="$emit('blind-setup')" title="Blind Manager">🏆 Full
           Blinds</button>
       </div>
     </div>

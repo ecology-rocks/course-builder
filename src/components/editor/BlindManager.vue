@@ -12,12 +12,14 @@ const {
   activeBlind, 
   currentDisplayHides, 
   handleCanvasClick, 
-  copyFromPrevious 
+  copyFromPrevious,
+  addNewBlind,
+  removeBlind // <--- Import here
 } = useBlindManager(store)
 
 defineExpose({ currentDisplayHides, handleCanvasClick })
 
-// [NEW] Find the currently selected hide within our active blind
+// Find the currently selected hide within our active blind
 const selectedHide = computed(() => {
   if (store.selection.length !== 1) return null
   const id = store.selection[0]
@@ -27,7 +29,7 @@ const selectedHide = computed(() => {
 function updateNumber(num) {
   if (!selectedHide.value) return
 
-  // [NEW] Unique check: If we are assigning a real number (not clearing it)
+  // Unique check: If we are assigning a real number (not clearing it)
   if (num !== null) {
     // Find any OTHER hide that already has this number
     const duplicate = activeBlind.value.hides.find(h => 
@@ -84,7 +86,15 @@ function handleCloseAttempt() {
           <span class="count-badge" :class="{ 'has-hides': blind.hides.length > 0 }">
             {{ blind.hides.length }}
           </span>
+
+          <button 
+            class="btn-remove-blind" 
+            @click.stop="removeBlind(idx)" 
+            title="Delete Blind"
+          >×</button>
         </div>
+        
+        <button class="btn-add-blind" @click="addNewBlind">+ Add Blind</button>
       </div>
 
       <div class="controls">
@@ -144,7 +154,10 @@ function handleCloseAttempt() {
 .sidebar-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; }
 .close-icon { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
 .blind-list { flex: 1; overflow-y: auto; padding: 10px; }
-.blind-item { padding: 10px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; }
+
+/* [UPDATED] Add relative positioning to allow absolute placement of the X button */
+.blind-item { position: relative; padding: 10px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; padding-right: 25px; /* Make room for X */ }
+
 .blind-item:hover { background: #f5f5f5; }
 .blind-item.active { background: #e3f2fd; border-color: #2196f3; }
 .blind-info { display: flex; flex-direction: column; }
@@ -164,7 +177,6 @@ function handleCloseAttempt() {
 .btn-save:hover { background: #43a047; }
 .top-status { position: absolute; top: 20px; left: 300px; background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 20px; border: 1px solid #ccc; font-size: 14px; color: #333; pointer-events: none; }
 
-/* [NEW STYLES FOR PROPERTIES PANEL] */
 .properties-panel { background: #f0f4f8; padding: 10px; border-radius: 6px; border: 1px solid #d1d9e6; }
 .panel-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; }
 .number-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 10px; }
@@ -173,4 +185,38 @@ function handleCloseAttempt() {
 .number-grid .btn-clear { grid-column: span 5; font-weight: normal; font-size: 11px; }
 .btn-delete { width: 100%; background: #ffebee; color: #c62828; border: 1px solid #ffcdd2; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; }
 .btn-delete:hover { background: #ffcdd2; }
+
+.btn-add-blind {
+  width: 100%;
+  padding: 8px;
+  background: #f1f3f4;
+  border: 1px dashed #ccc;
+  color: #5f6368;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 8px;
+  font-size: 13px;
+}
+.btn-add-blind:hover {
+  background: #e8eaed;
+  border-color: #999;
+  color: #333;
+}
+
+/* [NEW STYLES FOR DELETE BLIND BUTTON] */
+.btn-remove-blind {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: transparent;
+  border: none;
+  color: #ccc;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.btn-remove-blind:hover {
+  color: #f44336;
+}
 </style>

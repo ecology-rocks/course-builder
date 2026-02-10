@@ -22,6 +22,8 @@ export const useUserStore = defineStore('user', () => {
   // --- GETTERS ---
   const judgeName = computed(() => userProfile.value?.judgeName || user.value?.displayName || '')
   
+const isBeta = computed(() => !!userProfile.value?.isBeta)
+
   const isPro = computed(() => {
     if (!userProfile.value) return false
     return ['pro', 'founder', 'club'].includes(userProfile.value.tier)
@@ -156,6 +158,7 @@ init()
     authError,
     justRegistered, // <--- EXPORT
     isPro,
+    isBeta,
     tier,
     judgeName,
     init,
