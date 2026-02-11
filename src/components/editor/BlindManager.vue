@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue' // Import computed
+import { computed } from 'vue' 
 import { useMapStore } from '@/stores/mapStore'
 import { useBlindManager } from './logic/useBlindManager'
 
@@ -14,7 +14,7 @@ const {
   handleCanvasClick, 
   copyFromPrevious,
   addNewBlind,
-  removeBlind // <--- Import here
+  removeBlind 
 } = useBlindManager(store)
 
 defineExpose({ currentDisplayHides, handleCanvasClick })
@@ -44,6 +44,12 @@ function updateNumber(num) {
 
   // Now safe to assign
   selectedHide.value.number = num
+}
+
+function toggleElevation() {
+  if (!selectedHide.value) return
+  // Toggle between 'under' (dashed) and 'regular_over' (solid)
+  selectedHide.value.elevation = selectedHide.value.elevation === 'under' ? 'regular_over' : 'under'
 }
 
 function deleteSelected() {
@@ -102,9 +108,19 @@ function handleCloseAttempt() {
         <div v-if="selectedHide" class="properties-panel">
           <div class="panel-header">
             <strong>Edit {{ selectedHide.type === 'rat' ? 'Rat' : 'Hide' }}</strong>
-            <button @click="store.clearSelection()">Done</button>
+            <button class="btn-done" @click="store.clearSelection()">Done</button>
           </div>
           
+          <div class="property-group">
+            <button 
+              class="btn-elevation" 
+              :class="{ 'is-under': selectedHide.elevation === 'under' }"
+              @click="toggleElevation"
+            >
+              {{ selectedHide.elevation === 'under' ? 'Position: Under (Dashed)' : 'Position: Floor (Solid)' }}
+            </button>
+          </div>
+
           <div class="number-grid">
             <button 
               v-for="n in 10" :key="n"
@@ -148,16 +164,13 @@ function handleCloseAttempt() {
 </template>
 
 <style scoped>
-/* (Keep existing styles) */
 .blind-manager-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; display: flex; }
 .blind-sidebar { width: 280px; background: white; pointer-events: auto; display: flex; flex-direction: column; border-right: 1px solid #ddd; box-shadow: 2px 0 10px rgba(0,0,0,0.1); height: 100%; }
 .sidebar-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; }
 .close-icon { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
 .blind-list { flex: 1; overflow-y: auto; padding: 10px; }
 
-/* [UPDATED] Add relative positioning to allow absolute placement of the X button */
-.blind-item { position: relative; padding: 10px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; padding-right: 25px; /* Make room for X */ }
-
+.blind-item { position: relative; padding: 10px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; padding-right: 25px; }
 .blind-item:hover { background: #f5f5f5; }
 .blind-item.active { background: #e3f2fd; border-color: #2196f3; }
 .blind-info { display: flex; flex-direction: column; }
@@ -178,7 +191,7 @@ function handleCloseAttempt() {
 .top-status { position: absolute; top: 20px; left: 300px; background: rgba(255,255,255,0.9); padding: 8px 16px; border-radius: 20px; border: 1px solid #ccc; font-size: 14px; color: #333; pointer-events: none; }
 
 .properties-panel { background: #f0f4f8; padding: 10px; border-radius: 6px; border: 1px solid #d1d9e6; }
-.panel-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; }
+.panel-header { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 12px; align-items: center; }
 .number-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; margin-bottom: 10px; }
 .number-grid button { padding: 6px; border: 1px solid #ccc; background: white; cursor: pointer; border-radius: 3px; font-weight: bold; font-size: 12px; }
 .number-grid button.active { background: #2196f3; color: white; border-color: #1976d2; }
@@ -203,7 +216,6 @@ function handleCloseAttempt() {
   color: #333;
 }
 
-/* [NEW STYLES FOR DELETE BLIND BUTTON] */
 .btn-remove-blind {
   position: absolute;
   top: 4px;
@@ -218,5 +230,45 @@ function handleCloseAttempt() {
 }
 .btn-remove-blind:hover {
   color: #f44336;
+}
+
+.property-group {
+  margin-bottom: 10px;
+}
+.btn-elevation {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+.btn-elevation:hover {
+  background: #f5f5f5;
+  border-color: #bbb;
+}
+.btn-elevation.is-under {
+  background: #e0f7fa;
+  color: #006064;
+  border-color: #00acc1;
+  border-style: dashed;
+}
+
+/* [NEW STYLES FOR DONE BUTTON] */
+.btn-done {
+  background: #2196f3;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+.btn-done:hover {
+  background: #1976d2;
 }
 </style>

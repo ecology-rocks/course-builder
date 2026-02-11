@@ -9,19 +9,29 @@ export function useBlindPrinter(store, userStore, stageRef, scale) {
       return;
     }
 
-    // 1. Snapshot current state to restore later
+    // 1. Snapshot current state
     const originalHides = JSON.parse(JSON.stringify(store.hides));
     const originalScale = scale.value;
     const originalStep = store.gridStep;
     const originalLayer = store.currentLayer;
     const originalShowHides = store.showHides;
+    
+    // Snapshot the Stage Position (Pan)
+    const stage = stageRef.value.getStage();
+    const originalStagePos = stage.position();
 
     // 2. Prepare Stage (High Res, No Grid)
     store.clearSelection();
     scale.value = 40; 
-    store.gridStep = 1; // Effectively hides grid
+    store.gridStep = 1; 
     store.currentLayer = 1; 
     store.showHides = true;
+
+    // Calculate the full pixel dimensions needed to capture the whole map
+    // We assume 30px offset (GRID_OFFSET) is consistent with MapEditor.vue
+    const GRID_OFFSET = 30;
+    const totalWidth = store.ringDimensions.width * scale.value + (GRID_OFFSET * 2);
+    const totalHeight = store.ringDimensions.height * scale.value + (GRID_OFFSET * 2);
 
     await nextTick();
     const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -31,14 +41,23 @@ export function useBlindPrinter(store, userStore, stageRef, scale) {
 
     // 3. Loop through Blinds
     for (const blind of blinds) {
-      // Inject this blind's hides into the store
       store.hides = blind.hides;
       
       await nextTick();
-      await wait(150); // Wait for render
+      await wait(150); 
 
-      // Capture Stage
-      const imgData = await stageRef.value.getStage().toDataURL({ pixelRatio: 2 });
+      // [FIX] Force Stage to (0,0) right before capture.
+      // This overrides any auto-panning Vue might have triggered during updates.
+      stage.position({ x: 0, y: 0 });
+
+      // Capture Stage with explicit bounds
+      const imgData = await stage.toDataURL({ 
+        pixelRatio: 2,
+        x: 0,
+        y: 0,
+        width: totalWidth,
+        height: totalHeight
+      });
       
       pages.push({
         name: blind.name,
@@ -53,6 +72,9 @@ export function useBlindPrinter(store, userStore, stageRef, scale) {
     store.gridStep = originalStep;
     store.currentLayer = originalLayer;
     store.showHides = originalShowHides;
+    
+    // [FIX] Restore user's pan position
+    stage.position(originalStagePos);
 
     // 5. Generate HTML
     const pagesHtml = pages.map(p => `
@@ -77,7 +99,6 @@ export function useBlindPrinter(store, userStore, stageRef, scale) {
       </div>
     `).join("");
 
-    // 6. Open Print Window
     const win = window.open("", "_blank");
     win.document.write(`
       <!DOCTYPE html>

@@ -244,7 +244,7 @@ async function handlePrint(options) {
 
       <HelpModal :show="showHelpModal" @close="showHelpModal = false" />
 
-      <SelectionBar />
+      <SelectionBar v-if="!isBlindMode" />
 
       <StageContextMenu 
         v-if="contextMenu.visible"
@@ -348,7 +348,7 @@ async function handlePrint(options) {
   position: relative;
 }
 
-/* [NEW] Anchor Mode Cursor Override */
+/* Anchor Mode Cursor Override */
 .canvas-wrapper.is-anchor-mode {
   cursor: crosshair !important;
 }
