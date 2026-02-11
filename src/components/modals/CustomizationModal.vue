@@ -50,29 +50,22 @@ function resetToDefault() {
 
 // --- UNIT CONVERSION HELPERS ---
 
-// Helper to Create a Writable Computed for a Dimension
 function useDimension(key) {
   return computed({
     get: () => {
       const val = selectedObject.value?.custom?.[key]
       if (val == null || val === '') return null
-      
-      // If Inches: Convert Feet -> Inches
       if (unit.value === 'inches') {
         return parseFloat((val * 12).toFixed(2))
       }
-      // If Feet: Return as is (rounded to 2 decimals for clean UI)
       return parseFloat(val.toFixed(2))
     },
     set: (val) => {
       if (!selectedObject.value?.custom) return
-      
       if (val === null || val === '') {
         selectedObject.value.custom[key] = null
         return
       }
-
-      // If Inches: Convert Input (Inches) -> Store (Feet)
       if (unit.value === 'inches') {
         selectedObject.value.custom[key] = val / 12
       } else {
@@ -82,14 +75,19 @@ function useDimension(key) {
   })
 }
 
-// Create Specific Computeds for Template
 const customLength = useDimension('length')
 const customWidth = useDimension('width')
 const customHeight = useDimension('height')
 
-// Dynamic Step for Inputs (0.1 for feet, 1 for inches)
 const inputStep = computed(() => unit.value === 'feet' ? 0.1 : 1)
 const unitLabel = computed(() => unit.value === 'feet' ? 'ft' : 'in')
+
+// [FIX] Helper to safely get hex colors for inputs
+// <input type="color"> throws warnings if value is "transparent" or null
+function safeColor(val, fallback = '#ffffff') {
+  if (!val || val === 'transparent') return fallback
+  return val
+}
 
 </script>
 
@@ -136,12 +134,31 @@ const unitLabel = computed(() => unit.value === 'feet' ? 'ft' : 'in')
 
           <div v-if="'fillColor' in selectedObject.custom" class="form-group">
             <label>Fill Color</label>
-            <input type="color" v-model="selectedObject.custom.fillColor" />
+            <div class="color-row">
+              <input 
+                type="color" 
+                :value="safeColor(selectedObject.custom.fillColor, '#ffffff')" 
+                @input="e => selectedObject.custom.fillColor = e.target.value"
+                :disabled="selectedObject.custom.fillColor === 'transparent'"
+              />
+              <label class="checkbox-label">
+                <input 
+                  type="checkbox" 
+                  :checked="selectedObject.custom.fillColor === 'transparent'"
+                  @change="e => selectedObject.custom.fillColor = e.target.checked ? 'transparent' : '#ffffff'"
+                >
+                Transparent
+              </label>
+            </div>
           </div>
 
           <div v-if="'strokeColor' in selectedObject.custom" class="form-group">
             <label>Border Color</label>
-            <input type="color" v-model="selectedObject.custom.strokeColor" />
+            <input 
+              type="color" 
+              :value="safeColor(selectedObject.custom.strokeColor, '#000000')" 
+              @input="e => selectedObject.custom.strokeColor = e.target.value" 
+            />
           </div>
 
           <div v-if="'borderStyle' in selectedObject.custom" class="form-group">
@@ -154,7 +171,11 @@ const unitLabel = computed(() => unit.value === 'feet' ? 'ft' : 'in')
 
           <div v-if="'textColor' in selectedObject.custom" class="form-group">
             <label>Text Color</label>
-            <input type="color" v-model="selectedObject.custom.textColor" />
+            <input 
+              type="color" 
+              :value="safeColor(selectedObject.custom.textColor, '#000000')"
+              @input="e => selectedObject.custom.textColor = e.target.value" 
+            />
           </div>
         </div>
       </div>
@@ -209,4 +230,10 @@ const unitLabel = computed(() => unit.value === 'feet' ? 'ft' : 'in')
 .btn-primary { background: #00a1ff; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
 .btn-secondary { background: #eee; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; }
 .form-group input[type="text"], .form-group input[type="number"], .form-group select { width: 100px; padding: 4px; border: 1px solid #ccc; border-radius: 4px; }
+
+/* [NEW STYLES] */
+.color-row { display: flex; align-items: center; gap: 10px; }
+.checkbox-label { display: flex; align-items: center; gap: 4px; font-size: 0.8rem; cursor: pointer; }
+input[type="color"] { border: none; width: 40px; height: 30px; padding: 0; cursor: pointer; background: none; }
+input[type="color"]:disabled { opacity: 0.3; cursor: not-allowed; }
 </style>

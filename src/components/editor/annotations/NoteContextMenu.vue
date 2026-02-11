@@ -1,7 +1,7 @@
 <script setup>
 import { useMapStore } from '@/stores/mapStore'
-import { computed, ref, onMounted, onUnmounted } from 'vue' // for menu style
-import { useMenuPosition } from '@/services/menuPositionService' //for menu style
+import { computed, ref, onMounted, onUnmounted } from 'vue' 
+import { useMenuPosition } from '@/services/menuPositionService' 
 import ClipboardRow from '../../common/ClipboardRow.vue'
 
 const props = defineProps({
@@ -15,16 +15,15 @@ const store = useMapStore()
 
 // menu options
 const menuRef = ref(null)
-const menuState = computed(() => store.activeNoteMenu) // change menu here
+const menuState = computed(() => store.activeNoteMenu) 
 const { style } = useMenuPosition(menuState, menuRef)
+
 function handleInteraction(e) {
-  // Handle Escape
   if (e.type === 'keydown' && e.key === 'Escape') {
     emit('close')
     return
   }
   
-  // Handle Click Outside
   if (e.type === 'click') {
     if (menuRef.value && !menuRef.value.contains(e.target)) {
       emit('close')
@@ -33,7 +32,6 @@ function handleInteraction(e) {
 }
 
 onMounted(() => {
-  // Use setTimeout to ensure we don't catch the initial click that opened the menu
   setTimeout(() => {
     window.addEventListener('click', handleInteraction)
     window.addEventListener('keydown', handleInteraction)
@@ -44,8 +42,6 @@ onUnmounted(() => {
   window.removeEventListener('click', handleInteraction)
   window.removeEventListener('keydown', handleInteraction)
 })
-
-// end menu edits
 
 function deleteNote() {
   store.removeNote(props.noteId)
@@ -70,7 +66,7 @@ function rotate() {
 <template>
   <div class="context-menu" :style="style" ref="menuRef">
     <div class="menu-header">Note Options</div>
-    <ClipboardRow :id="id" @close="emit('close')" />
+    <ClipboardRow :id="props.noteId" @close="emit('close')" />
     <div class="action-stack">
       <button @click="openCustomizer" class="action-btn customize">🎨 Customize & Edit</button>
       <button @click="rotate" class="action-btn rotate">🔄 Rotate 45°</button>
