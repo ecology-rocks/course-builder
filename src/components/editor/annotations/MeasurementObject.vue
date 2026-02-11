@@ -125,12 +125,13 @@ function dragBoundFunc(pos) {
     
     <template v-for="(seg, i) in segments" :key="'seg-'+i">
       <v-line :config="{
-        points: [seg.p1.x * scale, seg.p1.y * scale, seg.p2.x * scale, seg.p2.y * scale],
-        stroke: color, 
-        strokeWidth: 3, 
-        dash: [6, 4], 
-        hitStrokeWidth: 20 
-      }" />
+    // [FIX] Use seg.p1 and seg.p2 which are derived from the reactive localPoints
+    points: [seg.p1.x * scale, seg.p1.y * scale, seg.p2.x * scale, seg.p2.y * scale],
+    stroke: color, 
+    strokeWidth: 3, 
+    dash: [6, 4], 
+    hitStrokeWidth: 20 
+  }" />
       
       <v-label :config="{ x: seg.midX * scale, y: seg.midY * scale }">
         <v-tag :config="{ 

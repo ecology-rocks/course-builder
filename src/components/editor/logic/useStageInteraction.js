@@ -97,7 +97,9 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
 
     if (e.evt.button === 2) return;
 
-    store.closeAllMenus();
+    if (store.activeTool !== 'measure' && store.activeTool !== 'measurePath') {
+      store.closeAllMenus();
+    }
 
     if (e.target !== e.target.getStage()) {
       return;
@@ -115,12 +117,27 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
     const y = (pointer.y - GRID_OFFSET) / scale.value;
     dragStart.value = { x, y };
 
+    if (store.activeTool === "measure" || store.activeTool === "measurePath") {
+      const snapX = Math.round(x * 2) / 2;
+      const snapY = Math.round(y * 2) / 2;
+      store.addMeasurementPoint(snapX, snapY);
+      return; 
+    }
+
     if (store.activeTool === "gate") {
       placeGate(x, y);
       return;
     }
 
     if (x < 0 || y < 0) return;
+
+    if (store.activeTool === "measure" || store.activeTool === "measurePath") {
+      const snapX = Math.round(x * 2) / 2;
+      const snapY = Math.round(y * 2) / 2;
+      store.addMeasurementPoint(snapX, snapY);
+      if (e.evt) e.evt.cancelBubble = true;
+      return;
+    }
 
     if (store.activeTool === "select") {
       store.clearSelection();
@@ -152,12 +169,6 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
     }
 
     // [FIX] Handle Measurement Tool on Background
-    if (store.activeTool === "measure") {
-      const snapX = Math.round(x * 2) / 2;
-      const snapY = Math.round(y * 2) / 2;
-      store.addMeasurementPoint(snapX, snapY);
-      return;
-    }
 
     maybePlacing.value = true;
   }
@@ -168,6 +179,14 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
     const pointer = stage.getPointerPosition();
     const x = (pointer.x - GRID_OFFSET) / scale.value;
     const y = (pointer.y - GRID_OFFSET) / scale.value;
+
+    // [NEW] Temporary Line Logic (Visual Feedback)
+    if ((store.activeTool === 'measure' || store.activeTool === 'measurePath') && store.activeMeasurement) {
+      const points = store.activeMeasurement.points;
+      const lastPt = points[points.length - 1];
+      // You can store this in a temporary 'cursor' ref in the store if you want to draw it
+      // For now, this confirms the move logic is reaching here
+    }
 
     if (selectionRect.value && dragStart.value) {
       selectionRect.value.w = x - dragStart.value.x;
@@ -195,49 +214,65 @@ export function useStageInteraction(store, scale, GRID_OFFSET) {
   }
 
   // --- MOUSE UP ---
-  function handleStageMouseUp() {
-    if (selectionRect.value) {
-      store.selectArea(
-        selectionRect.value.x,
-        selectionRect.value.y,
-        selectionRect.value.w,
-        selectionRect.value.h,
-      );
-      selectionRect.value = null;
-      dragStart.value = null;
+ function handleStageMouseUp(e) {
+  // [DEBUG] Check tool state immediately
+  console.log("[Stage] MouseUp Start - Tool:", store.activeTool, "points:", store.activeMeasurement?.points?.length);
+
+if (store.activeTool === "measure" || store.activeTool === "measurePath") {
       maybePlacing.value = false;
+      dragStart.value = null;
       return;
     }
 
-    if (maybePlacing.value) {
-      const { x, y } = dragStart.value;
-      const t = store.activeTool;
-
-      // 1. Get size of the object we are about to place
-      const { w, h } = getToolSize(t);
-
-      // 2. Clamp coordinates so the object stays fully inside the ring
-      //    (Min: 0, Max: RingDimension - ObjectSize)
-      const finalX = Math.max(0, Math.min(x, store.ringDimensions.width - w));
-      const finalY = Math.max(0, Math.min(y, store.ringDimensions.height - h));
-
-      // 3. Place the object using clamped coordinates
-      if (t === "bale") store.addBale(finalX, finalY);
-      else if (t === "startbox") store.addStartBox(finalX, finalY);
-      else if (t === "dcmat") store.addDCMat(finalX, finalY);
-      else if (t === "hide") store.addHide(finalX, finalY);
-      else if (t === "step") store.addStep(finalX, finalY);
-      else if (t === "note") store.addNote(finalX, finalY);
-      else if (t === "tunnelboard") store.addTunnelBoard(finalX, finalY);
-      else if (t === "dead" || t === "obstruction")
-        store.addZone(finalX, finalY, t);
-
-      maybePlacing.value = false;
-      dragStart.value = null;
-    }
-
-    if (store.activeTool === "board") store.stopDrawingBoard();
+  if (selectionRect.value) {
+    store.selectArea(
+      selectionRect.value.x,
+      selectionRect.value.y,
+      selectionRect.value.w,
+      selectionRect.value.h,
+    );
+    selectionRect.value = null;
+    dragStart.value = null;
+    maybePlacing.value = false;
+    return;
   }
+
+  // [FIX] Explicit early return for measurements
+  if (store.activeTool === "measure" || store.activeTool === "measurePath") {
+    console.log("[Stage] Measurement Tool active. Clearing placement flags only.");
+    maybePlacing.value = false;
+    dragStart.value = null;
+    // We do NOT want to call stopDrawingBoard or any other cleanup here
+    return;
+  }
+
+  if (maybePlacing.value) {
+    const { x, y } = dragStart.value;
+    const t = store.activeTool;
+    const { w, h } = getToolSize(t);
+
+    const finalX = Math.max(0, Math.min(x, store.ringDimensions.width - w));
+    const finalY = Math.max(0, Math.min(y, store.ringDimensions.height - h));
+
+    if (t === "bale") store.addBale(finalX, finalY);
+    else if (t === "startbox") store.addStartBox(finalX, finalY);
+    else if (t === "dcmat") store.addDCMat(finalX, finalY);
+    else if (t === "hide") store.addHide(finalX, finalY);
+    else if (t === "step") store.addStep(finalX, finalY);
+    else if (t === "note") store.addNote(finalX, finalY);
+    else if (t === "tunnelboard") store.addTunnelBoard(finalX, finalY);
+    else if (t === "dead" || t === "obstruction")
+      store.addZone(finalX, finalY, t);
+
+    maybePlacing.value = false;
+    dragStart.value = null;
+  }
+
+  // Only stop board drawing if we are actually using the board tool
+  if (store.activeTool === "board") {
+    store.stopDrawingBoard();
+  }
+}
 
   function handleDragStart() {
     store.snapshot();

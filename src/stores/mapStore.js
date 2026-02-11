@@ -196,9 +196,13 @@ function initBlinds(count, generateRandoms = true) {
     showNotification("Realigned to grid");
   }
 
-  function setTool(tool) {
-    activeTool.value = tool;
+function setTool(tool) {
+  // [NEW] Finish any active measurement before switching tools
+  if (activeTool.value === 'measure' || activeTool.value === 'measurePath') {
+    domainModules.finishMeasurement();
   }
+  activeTool.value = tool;
+}
 
   // ==========================================
   // 3. MODULE INITIALIZATION (The Adapter Layer)
@@ -302,6 +306,9 @@ function initBlinds(count, generateRandoms = true) {
   });
 
   function closeAllMenus() {
+    if (activeMeasurement.value) {
+    domainModules.finishMeasurement();
+  }
     stateRefs.activeStepMenu.value = null;
     stateRefs.activeStartBoxMenu.value = null;
     stateRefs.activeTunnelBoxMenu.value = null;

@@ -3,29 +3,28 @@ import { ref } from 'vue'
 export function useMeasurements(state, snapshot) {
   
   function addMeasurementPoint(x, y) {
-    if (!state.activeMeasurement.value) {
-      // 1. Start New Measurement
-      state.activeMeasurement.value = {
-        id: crypto.randomUUID(),
-        points: [{ x, y }],
-        layer: state.currentLayer.value
-      }
-    } else {
-      // 2. Add to Existing
-      const points = state.activeMeasurement.value.points
-      const lastPt = points[points.length - 1]
+  // [DEBUG] check what we are receiving
+  console.log("Adding Point at:", x, y, "Existing:", !!state.activeMeasurement.value);
 
-      // [FIX] Check for "Click to Finish"
-      // Since inputs are already snapped, we can check exact equality.
-      // If the user clicks the last point again, finish the line.
-      if (lastPt && lastPt.x === x && lastPt.y === y) {
-        finishMeasurement()
-        return
-      }
+if (!state.activeMeasurement.value) {
+    state.activeMeasurement.value = {
+      id: crypto.randomUUID(),
+      points: [{ x, y }],
+      layer: state.currentLayer.value,
+      isPath: state.activeTool.value === 'measurePath'
+    };
+  } else {
+    // [FIX] Use a temporary array to ensure Vue detects the change
+    const newPoints = [...state.activeMeasurement.value.points, { x, y }];
+    state.activeMeasurement.value.points = newPoints;
 
-      state.activeMeasurement.value.points.push({ x, y })
+    // Check for "Line" tool auto-finish
+    if (!state.activeMeasurement.value.isPath && newPoints.length === 2) {
+      finishMeasurement();
+      state.activeTool.value = 'select';
     }
   }
+}
 
 function finishMeasurement() {
     if (state.activeMeasurement.value) {

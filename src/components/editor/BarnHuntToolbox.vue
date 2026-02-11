@@ -79,6 +79,18 @@ const hasBaleSelected = computed(() => {
     </div>
 
     <div class="tool-section">
+      <h3>Measurements</h3>
+      <div class="tool-grid">
+<button @click="store.setTool('measure')" :class="{ active: store.activeTool === 'measure' }">
+          📏 Measure
+        </button>
+        <button @click="store.setTool('measurePath')" :class="{ active: store.activeTool === 'measurePath' }">
+      🗺️ Measure Path
+    </button>
+      </div>
+    </div>
+
+    <div class="tool-section">
       <h3>Tools</h3>
       <div class="tool-grid">
         <button @click="store.setTool('select')" :class="{ active: store.activeTool === 'select' }">
@@ -87,10 +99,7 @@ const hasBaleSelected = computed(() => {
         <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">
           🔄 Rotate (R)
         </button>
-
-        <button @click="store.setTool('measure')" :class="{ active: store.activeTool === 'measure' }">
-          📏 Measure
-        </button>
+        
         <button @click="store.setTool('note')" :class="{ active: store.activeTool === 'note' }">
           📝 Note (N)
         </button>

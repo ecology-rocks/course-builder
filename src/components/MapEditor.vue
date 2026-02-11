@@ -78,11 +78,11 @@ function handleBlindSetupStart(config) {
   showBlindSetup.value = false
   isBlindMode.value = true
   store.closeAllMenus()
-  store.setTool('select') 
+  store.setTool('select')
 }
 
 async function handleBlindSave() {
-  await handleSaveMap() 
+  await handleSaveMap()
   isBlindMode.value = false
 }
 
@@ -101,15 +101,21 @@ function handleStageMenuClose() {
   store.setTool('select')
 }
 
-function handleGlobalClick() {
-  const isAnyItemMenuOpen = 
-    store.activeBaleMenu || 
-    store.activeDCMatMenu || 
-    store.activeHideMenu || 
-    store.activeStartBoxMenu || 
-    store.activeStepMenu || 
-    store.activeTunnelBoxMenu || 
-    store.activeZoneMenu || 
+function handleGlobalClick(e) {
+  if (store.activeTool === 'measure' || store.activeTool === 'measurePath') {
+    return
+  }
+
+if (e.target.closest('.toolbox')) return;
+
+  const isAnyItemMenuOpen =
+    store.activeBaleMenu ||
+    store.activeDCMatMenu ||
+    store.activeHideMenu ||
+    store.activeStartBoxMenu ||
+    store.activeStepMenu ||
+    store.activeTunnelBoxMenu ||
+    store.activeZoneMenu ||
     store.activeNoteMenu ||
     store.activeWallMenu
 
@@ -122,6 +128,11 @@ function handleGlobalClick() {
 
 // [UPDATED] Interceptor for Stage Clicks
 function onStageMouseDown(e) {
+
+  if (e.evt) {
+    e.evt.stopPropagation(); 
+  }
+
   // If in Blind Mode, divert click to BlindManager
   if (isBlindMode.value) {
     if (blindManagerRef.value) {
@@ -130,11 +141,18 @@ function onStageMouseDown(e) {
     return
   }
 
+  if (store.activeTool === 'measure' || store.activeTool === 'measurePath') {
+    // Prevent Konva from handling this as a potential drag/selection start
+    if (e.evt) e.evt.cancelBubble = true;
+    handleStageMouseDown(e);
+    return;
+  }
+
   // [UPDATED] Anchor Tool Creation with Angle Snap
   if (store.activeTool === 'anchor' && store.selection.length === 1) {
     const selectedId = store.selection[0]
     const bale = store.bales.find(b => b.id === selectedId)
-    
+
     // Only proceed if selected item is a bale and is an Anchor
     if (bale && bale.isAnchor) {
       const stage = e.target.getStage()
@@ -144,23 +162,23 @@ function onStageMouseDown(e) {
 
       const L = bale.custom?.length ?? store.baleConfig?.length ?? 3
       const W = bale.custom?.width ?? store.baleConfig?.width ?? 1.5
-      
+
       let w = L, h = W
       if (bale.orientation === 'tall') { w = L; h = store.baleConfig?.height ?? 1 }
       else if (bale.orientation === 'pillar') { w = W; h = store.baleConfig?.height ?? 1 }
-      
-      const cx = bale.x + w/2
-      const cy = bale.y + h/2
+
+      const cx = bale.x + w / 2
+      const cy = bale.y + h / 2
 
       // Use Angle Snapping Raycast
-      const snap = getAngleSnapPoint({x: cx, y: cy}, {x: gridX, y: gridY}, store.ringDimensions.width, store.ringDimensions.height)
-      
+      const snap = getAngleSnapPoint({ x: cx, y: cy }, { x: gridX, y: gridY }, store.ringDimensions.width, store.ringDimensions.height)
+
       if (snap) {
         const count = store.addAnchor(bale.id, snap)
-        
+
         // Switch to Select if limit reached
         if (count >= 2) {
-             store.setTool('select')
+          store.setTool('select')
         }
         return // Stop standard selection drag behavior
       }
@@ -211,19 +229,10 @@ async function handlePrint(options) {
 
 <template>
   <div class="editor-container" @click="handleGlobalClick">
-    <EditorSidebar 
-      v-if="!isBlindMode" 
-      @print="handlePrint" 
-      @save-map="handleSaveMap" 
-      @save-library="handleLibrarySave" 
-      @blind-setup="handleOpenBlindManager"
-    />
-    
-    <div 
-      class="canvas-wrapper" 
-      ref="wrapperRef" 
-      :class="{ 'is-anchor-mode': store.activeTool === 'anchor' }"
-    >
+    <EditorSidebar v-if="!isBlindMode" @print="handlePrint" @save-map="handleSaveMap" @save-library="handleLibrarySave"
+      @blind-setup="handleOpenBlindManager" />
+
+    <div class="canvas-wrapper" ref="wrapperRef" :class="{ 'is-anchor-mode': store.activeTool === 'anchor' }">
       <EditNoteModal v-if="store.editingNoteId" />
       <Transition name="fade">
         <div v-if="store.notification" class="toast-notification" :class="store.notification.type">
@@ -246,20 +255,11 @@ async function handlePrint(options) {
 
       <SelectionBar v-if="!isBlindMode" />
 
-      <StageContextMenu 
-        v-if="contextMenu.visible"
-        :x="contextMenu.x"
-        :y="contextMenu.y"
-        @close="handleStageMenuClose"
-        @fit-screen="fitToScreen"
-      />
+      <StageContextMenu v-if="contextMenu.visible" :x="contextMenu.x" :y="contextMenu.y" @close="handleStageMenuClose"
+        @fit-screen="fitToScreen" />
 
-      <v-stage ref="stageRef" :config="stageConfig" 
-        @mousedown="onStageMouseDown" 
-        @dragstart="handleDragStart"
-        @mousemove="handleStageMouseMove" 
-        @mouseup="handleStageMouseUp" 
-        @contextmenu="handleStageContextMenu">
+      <v-stage ref="stageRef" :config="stageConfig" @mousedown="onStageMouseDown" @dragstart="handleDragStart"
+        @mousemove="handleStageMouseMove" @mouseup="handleStageMouseUp" @contextmenu="handleStageContextMenu">
 
         <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
           <template v-for="n in store.ringDimensions.width + 1" :key="'v'+n">
@@ -289,19 +289,18 @@ async function handlePrint(options) {
           </template>
 
           <v-group>
-            <v-line :config="{ points: [0, 0, store.ringDimensions.width * scale, 0], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.top), y: -getWallStroke(store.wallTypes.top) / 2, listening: false }" />
-            <v-line :config="{ points: [0, store.ringDimensions.height * scale, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.bottom), y: getWallStroke(store.wallTypes.bottom) / 2, listening: false }" />
-            <v-line :config="{ points: [0, 0, 0, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.left), x: -getWallStroke(store.wallTypes.left) / 2, listening: false }" />
-            <v-line :config="{ points: [store.ringDimensions.width * scale, 0, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right), x: getWallStroke(store.wallTypes.right) / 2, listening: false }" />
+            <v-line
+              :config="{ points: [0, 0, store.ringDimensions.width * scale, 0], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.top), y: -getWallStroke(store.wallTypes.top) / 2, listening: false }" />
+            <v-line
+              :config="{ points: [0, store.ringDimensions.height * scale, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.bottom), y: getWallStroke(store.wallTypes.bottom) / 2, listening: false }" />
+            <v-line
+              :config="{ points: [0, 0, 0, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.left), x: -getWallStroke(store.wallTypes.left) / 2, listening: false }" />
+            <v-line
+              :config="{ points: [store.ringDimensions.width * scale, 0, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right), x: getWallStroke(store.wallTypes.right) / 2, listening: false }" />
           </v-group>
 
-          <BarnHuntLayer 
-            :scale="scale" 
-            :showHides="showHides" 
-            :hides="activeDisplayHides" 
-            :GRID_OFFSET="GRID_OFFSET" 
-            :locked="isBlindMode && !isPrinting"
-          />
+          <BarnHuntLayer :scale="scale" :showHides="showHides" :hides="activeDisplayHides" :GRID_OFFSET="GRID_OFFSET"
+            :locked="isBlindMode && !isPrinting" />
           <v-rect v-if="selectionRect"
             :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
 
@@ -310,19 +309,28 @@ async function handlePrint(options) {
       </v-stage>
     </div>
 
-    <HideContextMenu v-if="store.activeHideMenu" v-bind="store.activeHideMenu" :hideId="store.activeHideMenu.id" @close="store.activeHideMenu = null" />
-    <DCMatContextMenu v-if="store.activeDCMatMenu" v-bind="store.activeDCMatMenu" :matId="store.activeDCMatMenu.id" @close="store.activeDCMatMenu = null" />
-    <ZoneContextMenu v-if="store.activeZoneMenu" v-bind="store.activeZoneMenu" :zoneId="store.activeZoneMenu.id" @close="store.activeZoneMenu = null" />
-    <StepContextMenu v-if="store.activeStepMenu" v-bind="store.activeStepMenu" :stepId="store.activeStepMenu.id" @close="store.activeStepMenu = null" />
-    <StartBoxContextMenu v-if="store.activeStartBoxMenu" v-bind="store.activeStartBoxMenu" @close="store.activeStartBoxMenu = null" />
-    <TunnelBoxContextMenu v-if="store.activeTunnelBoxMenu" v-bind="store.activeTunnelBoxMenu" @close="store.activeTunnelBoxMenu = null" />
-    <BaleContextMenu v-if="store.activeBaleMenu" v-bind="store.activeBaleMenu" :id="store.activeBaleMenu.id" @close="store.activeBaleMenu = null" />
-    <NoteContextMenu v-if="store.activeNoteMenu" v-bind="store.activeNoteMenu" :noteId="store.activeNoteMenu.id" @close="store.activeNoteMenu = null" />
+    <HideContextMenu v-if="store.activeHideMenu" v-bind="store.activeHideMenu" :hideId="store.activeHideMenu.id"
+      @close="store.activeHideMenu = null" />
+    <DCMatContextMenu v-if="store.activeDCMatMenu" v-bind="store.activeDCMatMenu" :matId="store.activeDCMatMenu.id"
+      @close="store.activeDCMatMenu = null" />
+    <ZoneContextMenu v-if="store.activeZoneMenu" v-bind="store.activeZoneMenu" :zoneId="store.activeZoneMenu.id"
+      @close="store.activeZoneMenu = null" />
+    <StepContextMenu v-if="store.activeStepMenu" v-bind="store.activeStepMenu" :stepId="store.activeStepMenu.id"
+      @close="store.activeStepMenu = null" />
+    <StartBoxContextMenu v-if="store.activeStartBoxMenu" v-bind="store.activeStartBoxMenu"
+      @close="store.activeStartBoxMenu = null" />
+    <TunnelBoxContextMenu v-if="store.activeTunnelBoxMenu" v-bind="store.activeTunnelBoxMenu"
+      @close="store.activeTunnelBoxMenu = null" />
+    <BaleContextMenu v-if="store.activeBaleMenu" v-bind="store.activeBaleMenu" :id="store.activeBaleMenu.id"
+      @close="store.activeBaleMenu = null" />
+    <NoteContextMenu v-if="store.activeNoteMenu" v-bind="store.activeNoteMenu" :noteId="store.activeNoteMenu.id"
+      @close="store.activeNoteMenu = null" />
     <WallContextMenu v-if="store.activeWallMenu" />
 
     <CustomizationModal />
-    <TournamentSetupModal v-if="showBlindSetup" @close="showBlindSetup = false" @start="handleBlindSetupStart"/>
-    <BlindManager v-if="isBlindMode" ref="blindManagerRef" @close="isBlindMode = false" @print="handleBatchPrint" @save="handleBlindSave"/>
+    <TournamentSetupModal v-if="showBlindSetup" @close="showBlindSetup = false" @start="handleBlindSetupStart" />
+    <BlindManager v-if="isBlindMode" ref="blindManagerRef" @close="isBlindMode = false" @print="handleBatchPrint"
+      @save="handleBlindSave" />
   </div>
 </template>
 
