@@ -32,6 +32,55 @@ const dims = computed(() => {
   return { width: L, height: W } 
 })
 
+// --- COORDINATE TRANSFORMS ---
+// Because the Group is rotated, we must counter-rotate World points to draw them locally.
+
+function worldToLocal(worldPt) {
+  // 1. Get Vector from Bale Center to World Point
+  const cx = props.bale.x + dims.value.width / 2
+  const cy = props.bale.y + dims.value.height / 2
+  const dx = worldPt.x - cx
+  const dy = worldPt.y - cy
+
+  // 2. Rotate Vector by -BaleRotation (Counter-Rotate)
+  const angleRad = -props.bale.rotation * (Math.PI / 180)
+  const rdx = dx * Math.cos(angleRad) - dy * Math.sin(angleRad)
+  const rdy = dx * Math.sin(angleRad) + dy * Math.cos(angleRad)
+
+  // 3. Convert to Local Pixels (relative to Group Origin at Top-Left)
+  // Local Center is at (width/2, height/2) * scale
+  return {
+    x: (dims.value.width / 2 + rdx) * s.value,
+    y: (dims.value.height / 2 + rdy) * s.value
+  }
+}
+
+function localToWorld(localPx) {
+  // 1. Get Vector from Local Center (in pixels)
+  const centerPxX = (dims.value.width / 2) * s.value
+  const centerPxY = (dims.value.height / 2) * s.value
+  const vx_px = localPx.x - centerPxX
+  const vy_px = localPx.y - centerPxY
+
+  // 2. Unscale to Grid Units
+  const vx = vx_px / s.value
+  const vy = vy_px / s.value
+
+  // 3. Rotate Vector by +BaleRotation (Local -> World)
+  const angleRad = props.bale.rotation * (Math.PI / 180)
+  const rdx = vx * Math.cos(angleRad) - vy * Math.sin(angleRad)
+  const rdy = vx * Math.sin(angleRad) + vy * Math.cos(angleRad)
+
+  // 4. Add to World Center
+  const cx = props.bale.x + dims.value.width / 2
+  const cy = props.bale.y + dims.value.height / 2
+
+  return {
+    x: cx + rdx,
+    y: cy + rdy
+  }
+}
+
 // --- Anchor Line Logic ---
 const anchorLines = computed(() => {
   if (!props.bale.isAnchor) return []
@@ -43,7 +92,13 @@ const anchorLines = computed(() => {
   if (props.bale.customAnchors && props.bale.customAnchors.length > 0) {
     return props.bale.customAnchors.map(pt => {
       const dist = Math.sqrt((cx - pt.x) ** 2 + (cy - pt.y) ** 2)
-      return { x: pt.x, y: pt.y, dist: dist, isManual: true }
+      // Calculate Local Coordinates for rendering
+      const local = worldToLocal(pt)
+      return { 
+        x: pt.x, y: pt.y, // World (for data)
+        localX: local.x, localY: local.y, // Local (for render)
+        dist: dist, isManual: true 
+      }
     })
   }
 
@@ -58,7 +113,16 @@ const anchorLines = computed(() => {
     candidates.push({ x: 0, y: cy, dist: cx })
     candidates.push({ x: W, y: cy, dist: W - cx })
 
-    return candidates.sort((a, b) => a.dist - b.dist).slice(0, 2)
+    // Return best 2, marked as automatic
+    return candidates.sort((a, b) => a.dist - b.dist).slice(0, 2).map(c => {
+       const local = worldToLocal(c)
+       return {
+         ...c,
+         localX: local.x, 
+         localY: local.y,
+         isManual: false
+       }
+    })
   }
 
   return []
@@ -72,7 +136,6 @@ const fmtDist = (val) => {
 
 // --- Manual Anchor Drag Handlers ---
 
-// [NEW] Stop mousedown propagation to prevent "Add Anchor" on Stage
 function handleAnchorMouseDown(e) {
   e.cancelBubble = true
 }
@@ -97,7 +160,7 @@ function handleAnchorDrag(e, index) {
   const cx = props.bale.x + dims.value.width / 2
   const cy = props.bale.y + dims.value.height / 2
 
-  // 3. Find Snap Point
+  // 3. Find Snap Point (World Space)
   const snap = getAngleSnapPoint(
       {x: cx, y: cy}, 
       {x: gridX, y: gridY}, 
@@ -106,28 +169,28 @@ function handleAnchorDrag(e, index) {
   )
   
   if (snap) {
-    // 4. Calculate Local Coordinates (relative to Bale)
-    const localX = (snap.x - props.bale.x) * props.scale
-    const localY = (snap.y - props.bale.y) * props.scale
-    const centerX = dims.value.width * props.scale / 2
-    const centerY = dims.value.height * props.scale / 2
-
+    // 4. Convert World Snap -> Local Coordinates for the Node
+    const local = worldToLocal(snap)
+    
     // 5. Update the Drag Handle (Circle)
-    node.position({ x: localX, y: localY })
+    node.position({ x: local.x, y: local.y })
 
     // 6. Direct Node Manipulation: Update Line and Label
     const lineNode = group.findOne(`.anchor-line-${index}`)
     const labelGroup = group.findOne(`.anchor-label-${index}`)
     const textNode = group.findOne(`.anchor-text-${index}`)
+    
+    const centerX = dims.value.width * s.value / 2
+    const centerY = dims.value.height * s.value / 2
 
     if (lineNode) {
-      lineNode.points([centerX, centerY, localX, localY])
+      lineNode.points([centerX, centerY, local.x, local.y])
     }
 
     if (labelGroup) {
       labelGroup.position({
-        x: (centerX + localX) / 2,
-        y: (centerY + localY) / 2
+        x: (centerX + local.x) / 2,
+        y: (centerY + local.y) / 2
       })
     }
     
@@ -140,16 +203,22 @@ function handleAnchorDrag(e, index) {
 
 function handleAnchorDragEnd(e, index) {
   e.cancelBubble = true
-  
   const node = e.target
-  const localX = node.x()
-  const localY = node.y()
+  
+  // 1. Get final local position
+  const localPos = { x: node.x(), y: node.y() }
 
-  // Convert back to Global Grid Coordinates for storage
-  const finalX = (localX / props.scale) + props.bale.x
-  const finalY = (localY / props.scale) + props.bale.y
+  // 2. Convert to World Coordinates
+  const worldPos = localToWorld(localPos)
 
-  store.updateAnchor(props.bale.id, index, { x: finalX, y: finalY })
+  // 3. Materialize / Update
+  const currentLines = anchorLines.value 
+  const newAnchors = currentLines.map(l => ({ x: l.x, y: l.y }))
+  
+  // Update the specific one we moved
+  newAnchors[index] = { x: worldPos.x, y: worldPos.y }
+  
+  store.setCustomAnchors(props.bale.id, newAnchors)
 }
 
 // --- Standard Appearance Logic ---
@@ -268,8 +337,8 @@ function baleDragBoundFunc(pos) {
           points: [
             dims.width * s / 2,         
             dims.height * s / 2,        
-            (line.x - bale.x) * scale,  
-            (line.y - bale.y) * scale   
+            line.localX, // Use transformed local Coords
+            line.localY   
           ],
           stroke: '#d32f2f',
           strokeWidth: 3,
@@ -279,8 +348,8 @@ function baleDragBoundFunc(pos) {
         
         <v-label :config="{
           name: `anchor-label-${i}`,
-          x: ((dims.width * s / 2) + ((line.x - bale.x) * scale)) / 2,
-          y: ((dims.height * s / 2) + ((line.y - bale.y) * scale)) / 2,
+          x: ((dims.width * s / 2) + line.localX) / 2,
+          y: ((dims.height * s / 2) + line.localY) / 2,
           listening: false
         }">
           <v-tag :config="{ 
@@ -300,9 +369,9 @@ function baleDragBoundFunc(pos) {
           }" />
         </v-label>
 
-        <v-circle v-if="line.isManual && store.activeTool === 'anchor'" :config="{
-           x: (line.x - bale.x) * scale,
-           y: (line.y - bale.y) * scale,
+        <v-circle v-if="store.activeTool === 'anchor'" :config="{
+           x: line.localX,
+           y: line.localY,
            radius: 8,
            fill: '#d32f2f',
            stroke: 'white',

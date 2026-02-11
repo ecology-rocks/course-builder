@@ -179,21 +179,32 @@ function cycleLean(id) {
           notifications.show("Only FLAT/TALL bales can be anchors.", "error")
           return 
         }
-        const rot = Math.abs(b.rotation) % 90
-        if (!b.isAnchor && rot !== 0) {
-           notifications.show("Anchors must be aligned to the grid (0, 90, 180, 270).", "error")
-           return
-        }
+        
+        // Removed the strict rotation check here because users may want to create anchors
+        // on slightly rotated bales (though it's unusual). 
+        // We will trust the new visualization code to handle it.
+        
         b.isAnchor = !b.isAnchor
         if (b.isAnchor) {
           b.lean = null 
-          // Initialize array if missing
           if (!b.customAnchors) b.customAnchors = [] 
+        } else {
+          // [FIX] Reset custom anchors when toggling off
+          b.customAnchors = [] 
         }
         changeCount++
       }
     })
     if (changeCount > 0 && snapshot) snapshot()
+  }
+
+  // [NEW] Bulk update for converting Automatic to Manual
+  function setCustomAnchors(id, anchors) {
+    const bale = state.bales.value.find(b => b.id === id)
+    if (bale) {
+      bale.customAnchors = anchors
+      if (snapshot) snapshot()
+    }
   }
 
   // [NEW] Add a manual anchor point
@@ -240,7 +251,6 @@ function addAnchor(baleId, point) {
     state.bales.value.forEach((b) => {
       
       // [FIX] Guard Clause: Do not realign Anchors if they are already perfect
-      // (Or alternatively, FORCE them to snap perfectly to the grid lines)
       
       let w = L, h = W;
       if (b.orientation === "pillar") { w = W; h = H; } 
@@ -266,8 +276,6 @@ function addAnchor(baleId, point) {
         b.x = newMinX + effectiveW / 2 - w / 2;
         b.y = newMinY + effectiveH / 2 - h / 2;
       } else {
-        // [FIX] If it's an anchor but somehow not rectilinear, force it? 
-        // For now, we just snap position.
         b.x = snap(b.x);
         b.y = snap(b.y);
       }
@@ -275,8 +283,6 @@ function addAnchor(baleId, point) {
     
     if (snapshot) snapshot()
   }
-
-
 
 
   return {
@@ -294,5 +300,6 @@ function addAnchor(baleId, point) {
     setLean,
     addAnchor,
     updateAnchor,
+    setCustomAnchors
   }
 }
