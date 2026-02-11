@@ -12,6 +12,11 @@ export function useContextMenu(store) {
       return
     }
 
+    if (store.activeTool === 'wall' && store.activeWall) {
+      store.cancelWall()
+      return
+    }
+
     store.closeAllMenus()
 
     // Priority 2: Only show on background (Stage) clicks

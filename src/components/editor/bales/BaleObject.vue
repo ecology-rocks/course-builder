@@ -21,6 +21,9 @@ defineExpose({
   getNode: () => groupRef.value?.getNode()
 })
 
+// Safe scale access
+const s = computed(() => props.scale || 1)
+
 const dims = computed(() => {
   const L = props.bale.custom?.length ?? store.baleConfig?.length ?? 3
   const W = props.bale.custom?.width ?? store.baleConfig?.width ?? 1.5
@@ -32,23 +35,53 @@ const dims = computed(() => {
   return { width: L, height: W } 
 })
 
-// --- COORDINATE TRANSFORMS ---
-// Because the Group is rotated, we must counter-rotate World points to draw them locally.
+// --- HELPER: Get Intersection on Bale Edge ---
+function getEdgePoint(localX, localY, w, h) {
+  const cx = w / 2
+  const cy = h / 2
+  const dx = localX - cx
+  const dy = localY - cy
+
+  // If center or very close, return center to avoid div-by-zero
+  if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) return { x: cx, y: cy }
+
+  const halfW = w / 2
+  const halfH = h / 2
+
+  // Calculate the factor 't' needed to scale the vector (dx,dy) to hit the box edge
+  // tX = distance to vertical edge / dx
+  // tY = distance to horizontal edge / dy
+  const tX = dx !== 0 ? (dx > 0 ? halfW : -halfW) / dx : Infinity
+  const tY = dy !== 0 ? (dy > 0 ? halfH : -halfH) / dy : Infinity
+
+  // The smallest positive 't' is the first wall we hit
+  const t = Math.min(Math.abs(tX), Math.abs(tY))
+
+  return {
+    x: cx + dx * t,
+    y: cy + dy * t
+  }
+}
+
+// --- COORDINATE TRANSFORMS (Pure Math for Stability) ---
+// We use manual trig here because 'computed' props run before the Konva Node exists.
+// Using getAbsoluteTransform() here would cause crashes/NaNs on mount.
 
 function worldToLocal(worldPt) {
   // 1. Get Vector from Bale Center to World Point
-  const cx = props.bale.x + dims.value.width / 2
-  const cy = props.bale.y + dims.value.height / 2
-  const dx = worldPt.x - cx
-  const dy = worldPt.y - cy
+  const cx = (props.bale.x || 0) + dims.value.width / 2
+  const cy = (props.bale.y || 0) + dims.value.height / 2
+  const dx = (worldPt.x || 0) - cx
+  const dy = (worldPt.y || 0) - cy
 
   // 2. Rotate Vector by -BaleRotation (Counter-Rotate)
-  const angleRad = -props.bale.rotation * (Math.PI / 180)
+  const rot = props.bale.rotation || 0
+  const angleRad = -rot * (Math.PI / 180)
+  
   const rdx = dx * Math.cos(angleRad) - dy * Math.sin(angleRad)
   const rdy = dx * Math.sin(angleRad) + dy * Math.cos(angleRad)
 
   // 3. Convert to Local Pixels (relative to Group Origin at Top-Left)
-  // Local Center is at (width/2, height/2) * scale
   return {
     x: (dims.value.width / 2 + rdx) * s.value,
     y: (dims.value.height / 2 + rdy) * s.value
@@ -59,21 +92,24 @@ function localToWorld(localPx) {
   // 1. Get Vector from Local Center (in pixels)
   const centerPxX = (dims.value.width / 2) * s.value
   const centerPxY = (dims.value.height / 2) * s.value
-  const vx_px = localPx.x - centerPxX
-  const vy_px = localPx.y - centerPxY
+  const vx_px = (localPx.x || 0) - centerPxX
+  const vy_px = (localPx.y || 0) - centerPxY
 
   // 2. Unscale to Grid Units
-  const vx = vx_px / s.value
-  const vy = vy_px / s.value
+  const safeScale = s.value === 0 ? 1 : s.value
+  const vx = vx_px / safeScale
+  const vy = vy_px / safeScale
 
   // 3. Rotate Vector by +BaleRotation (Local -> World)
-  const angleRad = props.bale.rotation * (Math.PI / 180)
+  const rot = props.bale.rotation || 0
+  const angleRad = rot * (Math.PI / 180)
+
   const rdx = vx * Math.cos(angleRad) - vy * Math.sin(angleRad)
   const rdy = vx * Math.sin(angleRad) + vy * Math.cos(angleRad)
 
   // 4. Add to World Center
-  const cx = props.bale.x + dims.value.width / 2
-  const cy = props.bale.y + dims.value.height / 2
+  const cx = (props.bale.x || 0) + dims.value.width / 2
+  const cy = (props.bale.y || 0) + dims.value.height / 2
 
   return {
     x: cx + rdx,
@@ -85,21 +121,36 @@ function localToWorld(localPx) {
 const anchorLines = computed(() => {
   if (!props.bale.isAnchor) return []
 
-  const cx = props.bale.x + dims.value.width / 2
-  const cy = props.bale.y + dims.value.height / 2
+  // Safe checks
+  const baleX = props.bale.x || 0
+  const baleY = props.bale.y || 0
+  const cx = baleX + dims.value.width / 2
+  const cy = baleY + dims.value.height / 2
   
+  // Helper to process a world point into a display line
+  const processPoint = (pt, isManual) => {
+    // 1. Get Local Point (Center of the anchor circle)
+    const local = worldToLocal(pt)
+    
+    // 2. Get Edge Intersection (Where line connects to bale)
+    const edge = getEdgePoint(local.x, local.y, dims.value.width * s.value, dims.value.height * s.value)
+    
+    // 3. Calculate Distance: World Point <-> World Edge
+    // We must convert Edge back to world to get accurate "feet" distance
+    const edgeWorld = localToWorld(edge)
+    const dist = Math.sqrt(((pt.x || 0) - edgeWorld.x) ** 2 + ((pt.y || 0) - edgeWorld.y) ** 2)
+
+    return { 
+      x: pt.x, y: pt.y, 
+      localX: local.x, localY: local.y,
+      edgeX: edge.x, edgeY: edge.y,
+      dist, isManual 
+    }
+  }
+
   // 1. MANUAL ANCHORS (Priority)
   if (props.bale.customAnchors && props.bale.customAnchors.length > 0) {
-    return props.bale.customAnchors.map(pt => {
-      const dist = Math.sqrt((cx - pt.x) ** 2 + (cy - pt.y) ** 2)
-      // Calculate Local Coordinates for rendering
-      const local = worldToLocal(pt)
-      return { 
-        x: pt.x, y: pt.y, // World (for data)
-        localX: local.x, localY: local.y, // Local (for render)
-        dist: dist, isManual: true 
-      }
-    })
+    return props.bale.customAnchors.map(pt => processPoint(pt, true))
   }
 
   // 2. AUTOMATIC FALLBACK
@@ -107,28 +158,24 @@ const anchorLines = computed(() => {
     const W = store.ringDimensions.width
     const H = store.ringDimensions.height
     
+    // Simple Candidates (Center to Wall)
     let candidates = []
     candidates.push({ x: cx, y: 0, dist: cy }) 
     candidates.push({ x: cx, y: H, dist: H - cy })
     candidates.push({ x: 0, y: cy, dist: cx })
     candidates.push({ x: W, y: cy, dist: W - cx })
 
-    // Return best 2, marked as automatic
-    return candidates.sort((a, b) => a.dist - b.dist).slice(0, 2).map(c => {
-       const local = worldToLocal(c)
-       return {
-         ...c,
-         localX: local.x, 
-         localY: local.y,
-         isManual: false
-       }
-    })
+    return candidates
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, 2)
+      .map(c => processPoint(c, false))
   }
 
   return []
 })
 
 const fmtDist = (val) => {
+  if (isNaN(val)) return "0'"
   const ft = Math.floor(val)
   const inc = Math.round((val - ft) * 12)
   return inc === 0 ? `${ft}'` : `${ft}' ${inc}"`
@@ -147,18 +194,18 @@ function handleAnchorDragStart(e) {
 function handleAnchorDrag(e, index) {
   e.cancelBubble = true
   
-  const node = e.target // The Circle
-  const group = node.getParent() // The Bale Group
+  const node = e.target
+  const group = node.getParent()
   const stage = node.getStage()
   
   // 1. Calculate Grid Coordinates from Pointer
-  const pointerPos = stage.getPointerPosition()
-  const gridX = (pointerPos.x - store.gridOffset) / props.scale
-  const gridY = (pointerPos.y - store.gridOffset) / props.scale
+  const pointerPos = stage.getPointerPosition() || { x: 0, y: 0 }
+  const gridX = (pointerPos.x - store.gridOffset) / s.value
+  const gridY = (pointerPos.y - store.gridOffset) / s.value
 
-  // 2. Calculate Bale Center (Origin)
-  const cx = props.bale.x + dims.value.width / 2
-  const cy = props.bale.y + dims.value.height / 2
+  // 2. Calculate Bale Center
+  const cx = (props.bale.x || 0) + dims.value.width / 2
+  const cy = (props.bale.y || 0) + dims.value.height / 2
 
   // 3. Find Snap Point (World Space)
   const snap = getAngleSnapPoint(
@@ -169,7 +216,7 @@ function handleAnchorDrag(e, index) {
   )
   
   if (snap) {
-    // 4. Convert World Snap -> Local Coordinates for the Node
+    // 4. Convert World Snap -> Local Coordinates
     const local = worldToLocal(snap)
     
     // 5. Update the Drag Handle (Circle)
@@ -179,23 +226,26 @@ function handleAnchorDrag(e, index) {
     const lineNode = group.findOne(`.anchor-line-${index}`)
     const labelGroup = group.findOne(`.anchor-label-${index}`)
     const textNode = group.findOne(`.anchor-text-${index}`)
-    
-    const centerX = dims.value.width * s.value / 2
-    const centerY = dims.value.height * s.value / 2
+
+    // [NEW] Calculate Edge point for the visual line
+    const edge = getEdgePoint(local.x, local.y, dims.value.width * s.value, dims.value.height * s.value)
 
     if (lineNode) {
-      lineNode.points([centerX, centerY, local.x, local.y])
+      // Draw from Edge -> Anchor Point
+      lineNode.points([edge.x, edge.y, local.x, local.y])
     }
 
     if (labelGroup) {
       labelGroup.position({
-        x: (centerX + local.x) / 2,
-        y: (centerY + local.y) / 2
+        x: (edge.x + local.x) / 2,
+        y: (edge.y + local.y) / 2
       })
     }
     
     if (textNode) {
-      const newDist = Math.sqrt((cx - snap.x) ** 2 + (cy - snap.y) ** 2)
+      // Calculate dist from edge for text
+      const edgeWorld = localToWorld(edge)
+      const newDist = Math.sqrt(((snap.x||0) - edgeWorld.x) ** 2 + ((snap.y||0) - edgeWorld.y) ** 2)
       textNode.text(fmtDist(newDist))
     }
   }
@@ -205,24 +255,18 @@ function handleAnchorDragEnd(e, index) {
   e.cancelBubble = true
   const node = e.target
   
-  // 1. Get final local position
   const localPos = { x: node.x(), y: node.y() }
-
-  // 2. Convert to World Coordinates
   const worldPos = localToWorld(localPos)
 
-  // 3. Materialize / Update
   const currentLines = anchorLines.value 
   const newAnchors = currentLines.map(l => ({ x: l.x, y: l.y }))
   
-  // Update the specific one we moved
   newAnchors[index] = { x: worldPos.x, y: worldPos.y }
   
   store.setCustomAnchors(props.bale.id, newAnchors)
 }
 
 // --- Standard Appearance Logic ---
-const s = computed(() => props.scale || 1)
 const halfW = computed(() => (dims.value.width || 0) / 2)
 const halfH = computed(() => (dims.value.height || 0) / 2)
 
@@ -267,20 +311,23 @@ function getArrowPoints(w, h, direction) {
 }
 
 function baleDragBoundFunc(pos) {
+  // Use safe access here just in case
   const node = this
-  const visualW = dims.value.width * props.scale
-  const visualH = dims.value.height * props.scale
-  const rad = (props.bale.rotation * Math.PI) / 180
+  const visualW = dims.value.width * s.value
+  const visualH = dims.value.height * s.value
+  const rad = ((props.bale.rotation || 0) * Math.PI) / 180
   const absCos = Math.abs(Math.cos(rad))
   const absSin = Math.abs(Math.sin(rad))
   const bboxW = (visualW * absCos) + (visualH * absSin)
   const bboxH = (visualW * absSin) + (visualH * absCos)
+  
   const minX = bboxW / 2
-  const maxX = (store.ringDimensions.width * props.scale) - (bboxW / 2)
+  const maxX = (store.ringDimensions.width * s.value) - (bboxW / 2)
   const minY = bboxH / 2
-  const maxY = (store.ringDimensions.height * props.scale) - (bboxH / 2)
-  const layerAbs = node.getLayer().getAbsolutePosition()
-  const step = props.scale / 6 
+  const maxY = (store.ringDimensions.height * s.value) - (bboxH / 2)
+  
+  const layerAbs = node.getLayer() ? node.getLayer().getAbsolutePosition() : {x:0, y:0}
+  const step = s.value / 6 
   let relX = pos.x - layerAbs.x
   let relY = pos.y - layerAbs.y
   const halfW = bboxW / 2
@@ -307,7 +354,7 @@ function baleDragBoundFunc(pos) {
       listening: (bale.layer === store.currentLayer || store.selection.includes(bale.id)) && store.activeTool !== 'board' && store.activeTool !== 'hide',
       x: ((bale.x || 0) * s) + (halfW * s),
       y: ((bale.y || 0) * s) + (halfH * s),
-      rotation: bale.rotation,
+      rotation: bale.rotation || 0,
       opacity: props.opacity,
       offsetX: halfW * s,
       offsetY: halfH * s
@@ -335,9 +382,9 @@ function baleDragBoundFunc(pos) {
         <v-line :config="{
           name: `anchor-line-${i}`, 
           points: [
-            dims.width * s / 2,         
-            dims.height * s / 2,        
-            line.localX, // Use transformed local Coords
+            line.edgeX, 
+            line.edgeY,        
+            line.localX, 
             line.localY   
           ],
           stroke: '#d32f2f',
@@ -348,8 +395,9 @@ function baleDragBoundFunc(pos) {
         
         <v-label :config="{
           name: `anchor-label-${i}`,
-          x: ((dims.width * s / 2) + line.localX) / 2,
-          y: ((dims.height * s / 2) + line.localY) / 2,
+          x: (line.edgeX + line.localX) / 2,
+          y: (line.edgeY + line.localY) / 2,
+          rotation: -(bale.rotation || 0),
           listening: false
         }">
           <v-tag :config="{ 
@@ -387,15 +435,15 @@ function baleDragBoundFunc(pos) {
       </template>
     </v-group>
 
-    <v-line v-if="bale.orientation === 'tall'" :config="{ points: [0, 0, dims.width * scale, dims.height * scale], stroke: 'black', strokeWidth: 2, opacity: 0.4, listening: false }" />
+    <v-line v-if="bale.orientation === 'tall'" :config="{ points: [0, 0, dims.width * s, dims.height * s], stroke: 'black', strokeWidth: 2, opacity: 0.4, listening: false }" />
 
     <v-group v-if="bale.orientation === 'pillar'">
-      <v-line :config="{ points: [0, 0, dims.width * scale, dims.height * scale], stroke: 'black', strokeWidth: 2, opacity: 0.4, listening: false }" />
-      <v-line :config="{ points: [dims.width * scale, 0, 0, dims.height * scale], stroke: 'black', strokeWidth: 2, opacity: 0.4, listening: false }" />
+      <v-line :config="{ points: [0, 0, dims.width * s, dims.height * s], stroke: 'black', strokeWidth: 2, opacity: 0.4, listening: false }" />
+      <v-line :config="{ points: [dims.width * s, 0, 0, dims.height * s], stroke: 'black', strokeWidth: 2, opacity: 0.4, listening: false }" />
     </v-group>
 
-    <v-text v-if="bale.isAnchor" :config="{ text: '⚓', fontSize: 20, align: 'center', width: dims.width * scale, y: (dims.height * scale) / 2 - 10, listening: false }" />
+    <v-text v-if="bale.isAnchor" :config="{ text: '⚓', fontSize: 20, align: 'center', width: dims.width * s, y: (dims.height * s) / 2 - 10, listening: false }" />
 
-    <v-arrow v-if="bale.lean" :config="{ points: getArrowPoints(dims.width * scale, dims.height * scale, bale.lean), pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4, listening: false }" />
+    <v-arrow v-if="bale.lean" :config="{ points: getArrowPoints(dims.width * s, dims.height * s, bale.lean), pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4, listening: false }" />
   </v-group>
 </template>

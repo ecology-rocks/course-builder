@@ -201,6 +201,10 @@ function setTool(tool) {
   if (activeTool.value === 'measure' || activeTool.value === 'measurePath') {
     domainModules.finishMeasurement();
   }
+
+  if (activeTool.value === 'wall' && stateRefs.activeWall.value) {
+    domainModules.cancelWall();
+  }
   activeTool.value = tool;
 }
 

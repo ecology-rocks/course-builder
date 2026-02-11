@@ -156,6 +156,15 @@ export function useCustomWalls(state, snapshot) {
     return bestPoint
   }
 
+function cancelWall() {
+    if (state.activeWall && typeof state.activeWall === 'object' && 'value' in state.activeWall) {
+      state.activeWall.value = null
+    } else {
+      state.activeWall = null
+    }
+    // No snapshot needed as we are reverting to state before drawing began
+  }
+
   // Keep existing helpers for legacy support if needed
   function projectPointToSegment(px, py, x1, y1, x2, y2) { /* ... same as before ... */ 
     const A = px - x1; const B = py - y1
@@ -216,6 +225,6 @@ export function useCustomWalls(state, snapshot) {
   return { 
       addWallPoint, finishWall, removeWall, toggleSegmentType, 
       getNearestWallPoint, setSegmentType, updateWallPoint, 
-      getNearestSnapPoint, getAngleSnapPoint // [NEW Export]
+      getNearestSnapPoint, getAngleSnapPoint, cancelWall // [NEW Export]
   }
 }

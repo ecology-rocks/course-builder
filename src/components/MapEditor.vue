@@ -148,43 +148,6 @@ function onStageMouseDown(e) {
     return;
   }
 
-  // [UPDATED] Anchor Tool Creation with Angle Snap
-  if (store.activeTool === 'anchor' && store.selection.length === 1) {
-    const selectedId = store.selection[0]
-    const bale = store.bales.find(b => b.id === selectedId)
-
-    // Only proceed if selected item is a bale and is an Anchor
-    if (bale && bale.isAnchor) {
-      const stage = e.target.getStage()
-      const pos = stage.getPointerPosition()
-      const gridX = (pos.x - GRID_OFFSET) / scale.value
-      const gridY = (pos.y - GRID_OFFSET) / scale.value
-
-      const L = bale.custom?.length ?? store.baleConfig?.length ?? 3
-      const W = bale.custom?.width ?? store.baleConfig?.width ?? 1.5
-
-      let w = L, h = W
-      if (bale.orientation === 'tall') { w = L; h = store.baleConfig?.height ?? 1 }
-      else if (bale.orientation === 'pillar') { w = W; h = store.baleConfig?.height ?? 1 }
-
-      const cx = bale.x + w / 2
-      const cy = bale.y + h / 2
-
-      // Use Angle Snapping Raycast
-      const snap = getAngleSnapPoint({ x: cx, y: cy }, { x: gridX, y: gridY }, store.ringDimensions.width, store.ringDimensions.height)
-
-      if (snap) {
-        const count = store.addAnchor(bale.id, snap)
-
-        // Switch to Select if limit reached
-        if (count >= 2) {
-          store.setTool('select')
-        }
-        return // Stop standard selection drag behavior
-      }
-    }
-  }
-
   // Otherwise, normal editor behavior
   handleStageMouseDown(e)
 }

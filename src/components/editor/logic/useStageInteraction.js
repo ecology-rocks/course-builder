@@ -237,15 +237,6 @@ if (store.activeTool === "measure" || store.activeTool === "measurePath") {
     return;
   }
 
-  // [FIX] Explicit early return for measurements
-  if (store.activeTool === "measure" || store.activeTool === "measurePath") {
-    console.log("[Stage] Measurement Tool active. Clearing placement flags only.");
-    maybePlacing.value = false;
-    dragStart.value = null;
-    // We do NOT want to call stopDrawingBoard or any other cleanup here
-    return;
-  }
-
   if (maybePlacing.value) {
     const { x, y } = dragStart.value;
     const t = store.activeTool;
