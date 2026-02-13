@@ -85,6 +85,33 @@ export function useSelectionLogic(state, snapshot, notifications) {
     const isInside = (ox, oy) => ox >= rect.x && ox <= rect.x + rect.w && oy >= rect.y && oy <= rect.y + rect.h
     const overlaps = (r1, r2) => !(r2.x > r1.x + r1.w || r2.x + r2.w < r1.x || r2.y > r1.y + r1.h || r2.y + r2.h < r1.y)
 
+    const lineIntersectsLine = (x1, y1, x2, y2, x3, y3, x4, y4) => {
+        const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+        if (denom === 0) return false;
+        const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+        const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+        return ua >= 0 && ua <= 1 && ub >= 0 && ub <= 1;
+    }
+
+
+    const segmentHitsRect = (p1, p2, r) => {
+        // 1. If start or end is inside, it's a hit (Corner capture)
+        if (isInside(p1.x, p1.y) || isInside(p2.x, p2.y)) return true;
+        
+        // 2. Check intersection with 4 edges of the rect
+        const rx = r.x, ry = r.y, rw = r.w, rh = r.h;
+        const right = rx + rw;
+        const bottom = ry + rh;
+        
+        if (lineIntersectsLine(p1.x, p1.y, p2.x, p2.y, rx, ry, right, ry)) return true; // Top
+        if (lineIntersectsLine(p1.x, p1.y, p2.x, p2.y, rx, bottom, right, bottom)) return true; // Bottom
+        if (lineIntersectsLine(p1.x, p1.y, p2.x, p2.y, rx, ry, rx, bottom)) return true; // Left
+        if (lineIntersectsLine(p1.x, p1.y, p2.x, p2.y, right, ry, right, bottom)) return true; // Right
+        
+        return false;
+    }
+
+
     const checkItem = (item, key) => {
         if (item.x1 !== undefined && item.y1 !== undefined) {
            const minX = Math.min(item.x1, item.x2); const maxX = Math.max(item.x1, item.x2)
@@ -92,11 +119,19 @@ export function useSelectionLogic(state, snapshot, notifications) {
            if (overlaps(rect, { x: minX, y: minY, w: maxX - minX, h: maxY - minY })) newSelection.push(item.id)
         } 
         else if (item.points && Array.isArray(item.points)) {
-           const xs = item.points.map(p => p.x)
-           const ys = item.points.map(p => p.y)
-           const minX = Math.min(...xs); const maxX = Math.max(...xs)
-           const minY = Math.min(...ys); const maxY = Math.max(...ys)
-           if (overlaps(rect, { x: minX, y: minY, w: maxX - minX, h: maxY - minY })) newSelection.push(item.id)
+           // [UPDATED] Check individual segments instead of the bounding box
+           // This prevents selecting the wall when dragging INSIDE the ring
+           let hit = false;
+           for (let i = 0; i < item.points.length; i++) {
+             const p1 = item.points[i];
+             const p2 = item.points[(i + 1) % item.points.length]; // Closed loop
+             
+             if (segmentHitsRect(p1, p2, rect)) {
+               hit = true;
+               break;
+             }
+           }
+           if (hit) newSelection.push(item.id)
         }
         else {
            let cx = item.x; let cy = item.y

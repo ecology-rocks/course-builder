@@ -50,9 +50,10 @@ const hasBaleSelected = computed(() => {
         <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">
           ↗️ Lean
         </button>
-        <button @click="store.toggleAnchor()" :disabled="!hasBaleSelected" :style="{ opacity: hasBaleSelected ? 1 : 0.5 }">
-            ⚓ Mark Bale
-          </button>
+        <button @click="store.toggleAnchor()" :disabled="!hasBaleSelected"
+          :style="{ opacity: hasBaleSelected ? 1 : 0.5 }">
+          ⚓ Mark Bale
+        </button>
         <button @click="store.setTool('anchor')" :class="{ active: store.activeTool === 'anchor' }">
           ⚓ Mark Lines
         </button>
@@ -73,7 +74,7 @@ const hasBaleSelected = computed(() => {
       <h3>Blinds & Hides</h3>
       <div class="tool-grid">
         <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Quick Hide</button>
-        <button v-if="isBeta" class="tool-btn action-btn" @click="$emit('blind-setup')" title="Blind Manager">🏆 Full
+        <button class="tool-btn action-btn" @click="$emit('blind-setup')" title="Blind Manager">🏆 Full
           Blinds</button>
       </div>
     </div>
@@ -81,12 +82,12 @@ const hasBaleSelected = computed(() => {
     <div class="tool-section">
       <h3>Measurements</h3>
       <div class="tool-grid">
-<button @click="store.setTool('measure')" :class="{ active: store.activeTool === 'measure' }">
-          📏 Measure
+        <button @click="store.setTool('measure')" :class="{ active: store.activeTool === 'measure' }">
+          📏 Measure Line
         </button>
         <button @click="store.setTool('measurePath')" :class="{ active: store.activeTool === 'measurePath' }">
-      🗺️ Measure Path
-    </button>
+          🗺️ Measure Path
+        </button>
       </div>
     </div>
 
@@ -99,7 +100,7 @@ const hasBaleSelected = computed(() => {
         <button @click="store.setTool('rotate')" :class="{ active: store.activeTool === 'rotate' }">
           🔄 Rotate (R)
         </button>
-        
+
         <button @click="store.setTool('note')" :class="{ active: store.activeTool === 'note' }">
           📝 Note (N)
         </button>

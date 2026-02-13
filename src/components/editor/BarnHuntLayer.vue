@@ -75,15 +75,22 @@ const visibleBales = computed(() => {
 
 const visibleMeasurements = computed(() => {
   if (!store.measurements) return []
+  
   return store.measurements.filter(m => {
-    if (m.layer === undefined) return true
+    // 1. Resolve Effective Layer
+    // If 'layer' is undefined (legacy item), we treat it as Layer 1.
+    const itemLayer = m.layer !== undefined ? m.layer : 1
+
+    // 2. Handle Multi-Layer View (User Preference)
     if (store.multiLayerView) {
       if (typeof store.multiLayerView === 'number') {
-        return m.layer <= store.multiLayerView
+        return itemLayer <= store.multiLayerView
       }
-      return true 
+      return true // Show all if multiLayerView is boolean true
     }
-    return m.layer === store.currentLayer
+
+    // 3. Standard View: Strict Match
+    return itemLayer === store.currentLayer
   })
 })
 
@@ -366,9 +373,7 @@ function getAnchorLines(bale) {
 
   <v-group>
     <MeasurementObject v-for="m in visibleMeasurements" :key="m.id" :measurement="m" :scale="scale"
-    v-if="shouldShowMeasurement(measure)"
-      :opacity="store.multiLayerView && m.layer !== store.currentLayer ? store.layerOpacity : 1" />
-
+      :opacity="store.multiLayerView && (m.layer ?? 1) !== store.currentLayer ? store.layerOpacity : 1" />
     <MeasurementObject v-if="store.activeMeasurement" :measurement="store.activeMeasurement" :scale="scale" />
   </v-group>
 
