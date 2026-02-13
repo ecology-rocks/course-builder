@@ -4,6 +4,7 @@ import AppFooter from '@/components/AppFooter.vue'
 
 // --- MANAGE YOUR ROADMAP HERE ---
 const released = ref([
+  { version: 'v1.1', date: '2026-02-13', desc: 'Redid the blind print flow (beta) so that users do not get timed out by their browsers. '},
   { version: 'v1.0', date: '2026-02-07', desc: 'Adding right click menus and appropriate bottom bar / floating menus. Added individual object customization. ' },
   { version: 'v0.9', date: '2026-01-31', desc: 'Fully legal Barn Hunt maps thanks to beta testers.' },
   { version: 'v0.5', date: '2026-12-01', desc: 'Alpha version for testers to work out bugs.' }

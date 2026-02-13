@@ -101,6 +101,17 @@ function handleSelect(id, isMulti = false) {
 
 // --- HANDLERS ---
 
+function shouldShowMeasurement(measure) {
+  // 1. If the measurement has a layer property, match it to the current view
+  if (measure.layer !== undefined) {
+    return measure.layer === store.currentLayer
+  }
+  
+  // 2. Legacy Support: If 'layer' is missing (old maps), 
+  //    only show it on Layer 1 (Base Layer) so it doesn't float everywhere.
+  return store.currentLayer === 1
+}
+
 function handleStepContextMenu({ e, id }) {
   if (props.locked) return // [FIX] Block menu
   store.activeStepMenu = { id, x: e.clientX, y: e.clientY }
@@ -355,6 +366,7 @@ function getAnchorLines(bale) {
 
   <v-group>
     <MeasurementObject v-for="m in visibleMeasurements" :key="m.id" :measurement="m" :scale="scale"
+    v-if="shouldShowMeasurement(measure)"
       :opacity="store.multiLayerView && m.layer !== store.currentLayer ? store.layerOpacity : 1" />
 
     <MeasurementObject v-if="store.activeMeasurement" :measurement="store.activeMeasurement" :scale="scale" />

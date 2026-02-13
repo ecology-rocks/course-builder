@@ -348,7 +348,7 @@ function setTool(tool) {
     await persistence.saveToCloud(isAutoSave, thumbnail);
   };
 
-  const multiLayerView = ref(false);
+  const multiLayerView = ref(true);
   const layerOpacity = ref(0.4);
 
   // ==========================================
