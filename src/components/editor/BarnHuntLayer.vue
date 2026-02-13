@@ -52,6 +52,21 @@ const displayedHides = computed(() => {
   return store.hides
 })
 
+// [NEW] Helper to check if we are in a measuring state
+const isMeasuring = computed(() => {
+  return store.activeTool === 'measure' || store.activeTool === 'measurePath'
+})
+
+// [NEW] Get the last point of the active measurement for the "Obnoxious" tooltip
+const activeMeasurementTip = computed(() => {
+  if (!isMeasuring.value || !store.activeMeasurement) return null
+  const points = store.activeMeasurement.points
+  if (!points || points.length === 0) return null
+  
+  // Return the last placed point
+  return points[points.length - 1]
+})
+
 const visibleBales = computed(() => {
   let filtered;
   if (store.multiLayerView) {
@@ -78,12 +93,6 @@ const visibleMeasurements = computed(() => {
   
   return store.measurements.filter(m => {
     const itemLayer = m.layer !== undefined ? m.layer : 1
-    if (store.multiLayerView) {
-      if (typeof store.multiLayerView === 'number') {
-        return itemLayer <= store.multiLayerView
-      }
-      return true
-    }
     return itemLayer === store.currentLayer
   })
 })
@@ -93,6 +102,9 @@ const setRef = (el, id) => {
 }
 
 function handleSelect(id, isMulti = false) {
+  // [LOCK] Prevent selection changes while measuring
+  if (isMeasuring.value) return 
+
   if (store.activeTool === 'delete') {
     store.removeObject(id)
   } else {
@@ -103,41 +115,43 @@ function handleSelect(id, isMulti = false) {
 // --- HANDLERS ---
 
 function handleStepContextMenu({ e, id }) {
-  if (props.locked) return
+  if (props.locked || isMeasuring.value) return 
   store.activeStepMenu = { id, x: e.clientX, y: e.clientY }
 }
 
 function handleZoneContextMenu({ e, id }) {
-  if (props.locked) return
+  if (props.locked || isMeasuring.value) return 
   store.activeZoneMenu = { id, x: e.clientX, y: e.clientY }
 }
 
 function handleStartBoxContextMenu({ e, id }) {
-  if (props.locked) return 
+  if (props.locked || isMeasuring.value) return 
   store.activeStartBoxMenu = { id, x: e.clientX, y: e.clientY }
 }
 
 function handleTunnelBoxContextMenu({ e, id }) {
-  if (props.locked) return 
+  if (props.locked || isMeasuring.value) return 
   store.activeTunnelBoxMenu = { id, x: e.clientX, y: e.clientY }
 }
 
 function handleNoteContextMenu(e, id) {
   e.evt.preventDefault()
   e.cancelBubble = true
-  if (props.locked) return 
+  if (props.locked || isMeasuring.value) return 
   store.activeNoteMenu = { id, x: e.evt.clientX, y: e.evt.clientY }
 }
 
 function handleRightClick(e, id) {
   e.evt.preventDefault()
   e.cancelBubble = true
-  if (props.locked) return 
+
+  if (props.locked || isMeasuring.value) return 
 
   if (store.activeTool === 'lean') return
   if (e.evt.ctrlKey || e.evt.altKey) return
 
-  if (store.activeTool === 'measure' && store.activeMeasurement) {
+  // Only finish measurement on right-click if we are actively measuring
+  if (isMeasuring.value && store.activeMeasurement) {
     store.finishMeasurement()
     return
   }
@@ -148,6 +162,18 @@ function handleRightClick(e, id) {
 function handleLeftClick(e, id) {
   if (e.evt.button !== 0) return
   const evt = e.evt
+
+  // [LOCK] If measuring, capture the click location and Do Nothing Else.
+  if (isMeasuring.value) {
+    const stage = e.target.getStage()
+    const p = stage.getPointerPosition()
+    const rawX = (p.x - props.GRID_OFFSET) / props.scale
+    const rawY = (p.y - props.GRID_OFFSET) / props.scale
+    const snapX = Math.round(rawX * 2) / 2
+    const snapY = Math.round(rawY * 2) / 2
+    store.addMeasurementPoint(snapX, snapY)
+    return
+  }
   
   if (evt.altKey) { store.cycleOrientation(id); return }
   if (evt.ctrlKey) { store.cycleLean(id); return }
@@ -159,17 +185,6 @@ function handleLeftClick(e, id) {
     const rawY = (p.y - props.GRID_OFFSET) / props.scale
     if (!store.isDrawingBoard) store.startDrawingBoard(rawX, rawY)
     else store.stopDrawingBoard()
-    return
-  }
-
-  if (store.activeTool === 'measure') {
-    const stage = e.target.getStage()
-    const p = stage.getPointerPosition()
-    const rawX = (p.x - props.GRID_OFFSET) / props.scale
-    const rawY = (p.y - props.GRID_OFFSET) / props.scale
-    const snapX = Math.round(rawX * 2) / 2
-    const snapY = Math.round(rawY * 2) / 2
-    store.addMeasurementPoint(snapX, snapY)
     return
   }
 
@@ -211,6 +226,12 @@ function handleLeftClick(e, id) {
 }
 
 function handleDragStart(e, id) {
+  // [LOCK] IDIOT CHECK: Stop dragging immediately if we are measuring
+  if (isMeasuring.value) {
+    e.target.stopDrag()
+    return
+  }
+
   if (!store.selection.includes(id)) store.selectObject(id, false)
   dragStartPos.value = {}
   store.selection.forEach(selId => {
@@ -221,6 +242,9 @@ function handleDragStart(e, id) {
 }
 
 function handleDragMove(e, id) {
+  // [LOCK] Double check to prevent ghost drags
+  if (isMeasuring.value) return 
+
   const node = e.target
   const start = dragStartPos.value[id]
   if (!start) return
@@ -238,6 +262,8 @@ function handleDragMove(e, id) {
 }
 
 function handleDragEnd(e, id) {
+  if (isMeasuring.value) return 
+
   const start = dragStartPos.value[id]
   if (!start) return
   const totalDx = e.target.x() - start.x
@@ -245,11 +271,8 @@ function handleDragEnd(e, id) {
   const gridDx = totalDx / props.scale
   const gridDy = totalDy / props.scale
   
-  // 1. Commit the move
   store.moveSelection(gridDx, gridDy)
 
-  // 2. Trigger anchor updates for any selected bales
-  // Since moveSelection is generic, we must explicitly ask the store to refresh anchors 
   if (store.refreshAnchors) {
     store.selection.forEach(selId => {
        store.refreshAnchors(selId)
@@ -359,6 +382,31 @@ function handleDragEnd(e, id) {
       :opacity="store.multiLayerView && (m.layer ?? 1) !== store.currentLayer ? store.layerOpacity : 1" />
     <MeasurementObject v-if="store.activeMeasurement" :measurement="store.activeMeasurement" :scale="scale" />
   </v-group>
+
+  <v-label v-if="activeMeasurementTip" :config="{
+     x: activeMeasurementTip.x * scale,
+     y: activeMeasurementTip.y * scale,
+     offsetY: 40 // Push it up a bit so it doesn't block the next click
+  }">
+    <v-tag :config="{
+      fill: '#D32F2F',
+      pointerDirection: 'down',
+      pointerWidth: 15,
+      pointerHeight: 15,
+      cornerRadius: 5,
+      shadowColor: 'black',
+      shadowBlur: 10,
+      shadowOpacity: 0.5
+    }" />
+    <v-text :config="{
+      text: 'RIGHT CLICK \nLAST POINT \nTO FINISH',
+      fontFamily: 'sans-serif',
+      fontSize: 16,
+      padding: 10,
+      fill: 'white',
+      fontStyle: 'bold'
+    }" />
+  </v-label>
 
   </v-group>
 </template>
