@@ -13,6 +13,7 @@ const inProgress = ref([
   'Allowing custom objects in the print legend',
   'Blind/Hide Management/Printing Flow',
   'Fence tool for irregular rings',
+  'Fix hitbox for custom ring so selecting a group of bales doesnt select custom ring'
 ])
 
 const planned = ref([
@@ -20,7 +21,9 @@ const planned = ref([
   'Mobile View Optimization',
   'Highlighting changed bales w/ comparison tools',
   'Print all or print group for trial sets of maps',
-  '3d view - research to see if implementation is possible'
+  '3d view - research to see if implementation is possible',
+  'Add measurements (e.g., tunnel path) to statistics with a right click add to menu',
+  'anchor measurements to object vertices'
 ])
 // -------------------------------
 

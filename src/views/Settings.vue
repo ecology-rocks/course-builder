@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { useUserStore } from 'stores/userStore'
 import { useRouter } from 'vue-router'
 import { functions, auth } from '@/firebase'
@@ -7,6 +7,7 @@ import { httpsCallable } from 'firebase/functions'
 
 const userStore = useUserStore()
 const router = useRouter()
+const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
 
 const newName = ref('')
 const newJudgeEmail = ref('') // Input for the email to add
@@ -76,6 +77,7 @@ async function handleManageBilling() {
     <nav class="navbar">
       <div class="logo" @click="router.push('/dashboard')">🐾 K9CourseBuilder</div>
       <button @click="router.push('/dashboard')" class="btn-text">← Back</button>
+      <div v-if="isAdmin"><span> | </span><button @click="router.push('/admin')" class="btn-text">Admin</button></div>
     </nav>
 
     <div class="container">

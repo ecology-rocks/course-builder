@@ -8,6 +8,7 @@ import Terms from 'views/Terms.vue'
 import Privacy from 'views/Privacy.vue'
 import About from 'views/About.vue'
 import Roadmap from 'views/Roadmap.vue'
+import Admin from 'views/Admin.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,6 +26,7 @@ const router = createRouter({
     { path: '/privacy', name: 'privacy', component: Privacy }, // <--- NEW
     { path: '/about', name: 'about', component: About },
     { path: '/roadmap', name: 'roadmap', component: Roadmap },
+    { path: '/admin', name: 'admin', component: Admin },
   ]
 })
 

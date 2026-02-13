@@ -2,101 +2,158 @@
 import { computed } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
-const props = defineProps(['scale', 'GRID_OFFSET'])
 const store = useMapStore()
-
-// Default position (Top Right corner relative to ring)
-const x = computed(() => (store.ringDimensions.width * props.scale) + props.GRID_OFFSET + 20)
-const y = computed(() => props.GRID_OFFSET)
 
 const inventory = computed(() => store.inventory)
 const diffs = computed(() => store.differentials)
-
-// --- NEW LOGIC START ---
 const comparisonName = computed(() => store.comparisonMapName)
-const nameIsLong = computed(() => comparisonName.value && comparisonName.value.length > 18)
-const dynamicOffset = computed(() => nameIsLong.value ? 14 : 0)
-
-// If we have a comparison name, we push everything down by 20 pixels
-const offset = computed(() => comparisonName.value ? 20 : 0)
-
-// Calculate total height dynamically based on both Diffs and Comparison Label
-const totalHeight = computed(() => diffs.value ? (215 + dynamicOffset.value) : 110)
-
-const dragBoundFunc = (pos) => {
-  const boxWidth = 140
-  const boxHeight = totalHeight.value 
-  
-  const minX = props.GRID_OFFSET
-  const minY = props.GRID_OFFSET
-  const maxX = minX + (store.ringDimensions.width * props.scale) - boxWidth
-  const maxY = minY + (store.ringDimensions.height * props.scale) - boxHeight
-
-  return {
-    x: Math.max(minX, Math.min(pos.x, maxX)),
-    y: Math.max(minY, Math.min(maxY, pos.y))
-  }
-}
-// --- NEW LOGIC END ---
-
 </script>
 
 <template>
-  <v-group :config="{ draggable: true, x: 20, y: 20, dragBoundFunc: dragBoundFunc }">
+  <div class="map-stats-card">
+    <div class="card-header">
+      <h3>Map Statistics</h3>
+    </div>
+    
+    <div class="card-body">
+      <div class="stat-row">
+        <span class="label">Total Bales:</span>
+        <span class="value">{{ inventory.total }}</span>
+      </div>
+      <div class="stat-row layer-1">
+        <span class="label">Layer 1:</span>
+        <span class="value">{{ inventory.base }}</span>
+      </div>
+      <div class="stat-row layer-2">
+        <span class="label">Layer 2:</span>
+        <span class="value">{{ inventory.layer2 }}</span>
+      </div>
+      <div class="stat-row layer-3">
+        <span class="label">Layer 3:</span>
+        <span class="value">{{ inventory.layer3 }}</span>
+      </div>
 
-    <v-rect :config="{
-      width: 150,
-      height: totalHeight,
-      fill: 'white',
-      stroke: 'black',
-      strokeWidth: 2,
-      shadowColor: 'black',
-      shadowBlur: 5,
-      shadowOpacity: 0.2
-    }" />
+      <div v-if="diffs" class="diff-section">
+        <div class="divider"></div>
+        <div class="diff-header">
+          <span>Changes vs.</span>
+          <span class="comp-name" :title="comparisonName">{{ comparisonName || 'Unknown' }}</span>
+        </div>
 
-    <v-text :config="{ text: 'Map Statistics', x: 10, y: 10, fontSize: 14, fontStyle: 'bold', fill: 'black' }" />
+        <div class="stat-row">
+          <span class="label">L1:</span>
+          <span class="value">{{ diffs[1].net > 0 ? '+' : ''}}{{ diffs[1].net }} <small v-if="diffs[1].moved">({{ diffs[1].moved }} moved)</small></span>
+        </div>
+        <div class="stat-row">
+          <span class="label">L2:</span>
+          <span class="value">{{ diffs[2].net > 0 ? '+' : ''}}{{ diffs[2].net }} <small v-if="diffs[2].moved">({{ diffs[2].moved }} moved)</small></span>
+        </div>
+        <div class="stat-row">
+          <span class="label">L3:</span>
+          <span class="value">{{ diffs[3].net > 0 ? '+' : ''}}{{ diffs[3].net }} <small v-if="diffs[3].moved">({{ diffs[3].moved }} moved)</small></span>
+        </div>
 
-    <v-text :config="{ text: `Total Bales: ${inventory.total}`, x: 10, y: 35, fontSize: 12, fill: '#333' }" />
-    <v-text :config="{ text: `Layer 1: ${inventory.base}`, x: 10, y: 52, fontSize: 12, fill: '#f57c00' }" />
-    <v-text :config="{ text: `Layer 2: ${inventory.layer2}`, x: 10, y: 69, fontSize: 12, fill: '#2e7d32' }" />
-    <v-text :config="{ text: `Layer 3: ${inventory.layer3}`, x: 10, y: 86, fontSize: 12, fill: '#1565c0' }" />
-
-    <v-group v-if="diffs">
-      <v-line :config="{ points: [10, 102, 130, 102], stroke: '#ccc', strokeWidth: 1 }" />
-
-      <v-text :config="{ text: 'Changes vs.', x: 10, y: 108, fontSize: 11, fontStyle: 'bold', fill: '#666' }" />
-      
-      <v-text :config="{ 
-        text: comparisonName || 'Unknown', 
-        x: 10, 
-        y: 123, 
-        width: 125,
-        wrap: 'char',
-        fontSize: 11, 
-        fontStyle: 'italic', 
-        fill: '#d32f2f' 
-      }" />
-
-      <v-text :config="{
-        text: `L1: ${diffs[1].net > 0 ? '+' : ''}${diffs[1].net} bales${diffs[1].moved > 0 ? `, ${diffs[1].moved} moved` : ''}`,
-        x: 10, y: 143 + dynamicOffset, fontSize: 11, fill: '#333'
-      }" />
-      <v-text :config="{
-        text: `L2: ${diffs[2].net > 0 ? '+' : ''}${diffs[2].net} bales${diffs[2].moved > 0 ? `, ${diffs[2].moved} moved` : ''}`,
-        x: 10, y: 158 + dynamicOffset, fontSize: 11, fill: '#333'
-      }" />
-      <v-text :config="{
-        text: `L3: ${diffs[3].net > 0 ? '+' : ''}${diffs[3].net} bales${diffs[3].moved > 0 ? `, ${diffs[3].moved} moved` : ''}`,
-        x: 10, y: 173 + dynamicOffset, fontSize: 11, fill: '#333'
-      }" />
-      
-      <v-line :config="{ points: [10, 188 + dynamicOffset, 130, 188 + dynamicOffset], stroke: '#eee', strokeWidth: 1 }" />
-      
-      <v-text :config="{
-        text: `TOTAL: ${diffs.totalNet > 0 ? '+' : ''}${diffs.totalNet} Bales`,
-        x: 10, y: 195 + dynamicOffset, fontSize: 12, fontStyle: 'bold', fill: 'black'
-      }" />
-    </v-group>
-  </v-group>
+        <div class="divider"></div>
+        <div class="stat-row total-diff">
+          <span class="label">TOTAL:</span>
+          <span class="value">{{ diffs.totalNet > 0 ? '+' : ''}}{{ diffs.totalNet }} Bales</span>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.map-stats-card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  width: 200px;
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 13px;
+  color: #333;
+  overflow: hidden;
+  border: 1px solid #e0e0e0;
+}
+
+.card-header {
+  background: #f8f9fa;
+  padding: 10px 15px;
+  border-bottom: 1px solid #eee;
+}
+
+h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+.card-body {
+  padding: 12px 15px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.label {
+  color: #666;
+  font-weight: 500;
+}
+
+.value {
+  font-weight: 600;
+}
+
+.layer-1 .value { color: #f57c00; }
+.layer-2 .value { color: #2e7d32; }
+.layer-3 .value { color: #1565c0; }
+
+/* Comparison Section */
+.diff-section {
+  margin-top: 8px;
+}
+
+.divider {
+  height: 1px;
+  background: #eee;
+  margin: 8px 0;
+}
+
+.diff-header {
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: #888;
+  display: flex;
+  flex-direction: column;
+}
+
+.comp-name {
+  font-style: italic;
+  color: #d32f2f;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.total-diff {
+  margin-top: 2px;
+  font-size: 13px;
+}
+
+.total-diff .value {
+  color: #000;
+  font-weight: 800;
+}
+
+small {
+  font-size: 0.85em;
+  color: #999;
+  font-weight: normal;
+}
+</style>

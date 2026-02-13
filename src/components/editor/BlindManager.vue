@@ -152,7 +152,7 @@ function handleCloseAttempt() {
 
         <div class="actions">
           <button class="btn-save" @click="emit('save')">💾 Save & Return</button>
-          <button class="btn-print" @click="emit('print')">🖨️ Print Batch</button>
+          <button type="button" class="btn-print" @click.prevent="emit('print')">🖨️ Print Batch</button>
         </div>
       </div>
     </div>

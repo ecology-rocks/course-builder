@@ -213,7 +213,7 @@ async function handlePrint(options) {
       <button class="help-fab" @click.stop="showHelpModal = true" title="Keyboard Shortcuts & Help">
         ?
       </button>
-
+<MapLegend v-if="store.showMapStats && !isPrinting" class="stats-overlay" />
       <HelpModal :show="showHelpModal" @close="showHelpModal = false" />
 
       <SelectionBar v-if="!isBlindMode" />
@@ -267,7 +267,6 @@ async function handlePrint(options) {
           <v-rect v-if="selectionRect"
             :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
 
-          <MapLegend v-if="store.showMapStats && !isPrinting" :scale="scale" :GRID_OFFSET="GRID_OFFSET" />
         </v-layer>
       </v-stage>
     </div>
@@ -396,5 +395,14 @@ async function handlePrint(options) {
 .help-fab:hover {
   background-color: #2196f3;
   transform: scale(1.1);
+}
+
+.stats-overlay {
+  position: fixed;
+  top: 80px; /* Below the Help FAB (20px + 50px + 10px margin) */
+  right: 20px;
+  z-index: 90;
+  /* Ensure it doesn't get wider than screen on mobile */
+  max-width: 220px; 
 }
 </style>
