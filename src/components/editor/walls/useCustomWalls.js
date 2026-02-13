@@ -1,7 +1,13 @@
 import { ref, unref } from 'vue'
 
+import { useMapStore } from 'stores/mapStore'
+
+
+
 export function useCustomWalls(state, snapshot) {
   // ... [Keep existing addWallPoint, finishWall, removeWall, updateWallPoint, setSegmentType, toggleSegmentType] ...
+const store = useMapStore()
+
   function addWallPoint(x, y) {
     const currentActive = unref(state.activeWall)
     if (!currentActive) {
@@ -45,6 +51,7 @@ export function useCustomWalls(state, snapshot) {
       state.activeWall = null
     }
     if (snapshot) snapshot()
+      store.setTool('select')
   }
 
   function removeWall(id) {

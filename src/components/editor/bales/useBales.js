@@ -2,96 +2,147 @@ import { unref } from 'vue'
 
 export function useBales(state, snapshot, notifications) {
 
-  // --- MATH HELPERS (New) ---
+  // --- MATH HELPERS ---
 
   function snapToGrid(val) {
     return Math.round(val * 6) / 6
   }
 
-  function getRayIntersection(rayOrigin, rayDir, p1, p2) {
-    const v1 = { x: rayOrigin.x - p1.x, y: rayOrigin.y - p1.y }
-    const v2 = { x: p2.x - p1.x, y: p2.y - p1.y }
-    const v3 = { x: -rayDir.y, y: rayDir.x }
-
-    const dot = v2.x * v3.x + v2.y * v3.y
-    if (Math.abs(dot) < 0.000001) return null
-
-    const t1 = (v2.x * v1.y - v2.y * v1.x) / dot
-    const t2 = (v1.x * v3.x + v1.y * v3.y) / dot
-
-    if (t1 >= 0 && (t2 >= 0 && t2 <= 1)) {
-      return {
-        x: rayOrigin.x + rayDir.x * t1,
-        y: rayOrigin.y + rayDir.y * t1,
-        dist: t1
-      }
+  // Rotates a point (px, py) around a center (cx, cy) by angleDeg
+  function rotatePoint(px, py, cx, cy, angleDeg) {
+    const rad = angleDeg * (Math.PI / 180)
+    const cos = Math.cos(rad)
+    const sin = Math.sin(rad)
+    const dx = px - cx
+    const dy = py - cy
+    return {
+      x: cx + (dx * cos - dy * sin),
+      y: cy + (dx * sin + dy * cos)
     }
-    return null
   }
 
-  function findBestAnchorOnAxis(origin, axisVector, walls, gridW, gridH) {
+  // --- CORE ANCHOR CALCULATION (Helper) ---
+  // This logic is now shared between toggle, rotate, and move actions
+  function recalculateAnchors(bale) {
+    // Only calculate if it's actually an anchor
+    if (!bale.isAnchor) {
+        bale.customAnchors = []
+        return
+    }
+
+    // 1. Gather all Wall Segments (Grid + Custom)
     const segments = []
+    const GW = state.ringDimensions.value.width
+    const GH = state.ringDimensions.value.height
+    const customWalls = unref(state.customWalls) || []
 
-    // 1. Grid Edges
-    segments.push({ p1: {x:0, y:0}, p2: {x:gridW, y:0} }) // Top
-    segments.push({ p1: {x:0, y:gridH}, p2: {x:gridW, y:gridH} }) // Bottom
-    segments.push({ p1: {x:0, y:0}, p2: {x:0, y:gridH} }) // Left
-    segments.push({ p1: {x:gridW, y:0}, p2: {x:gridW, y:gridH} }) // Right
+    // Standard Ring Edges
+    segments.push({ p1: {x:0, y:0}, p2: {x:GW, y:0} }) // Top
+    segments.push({ p1: {x:GW, y:0}, p2: {x:GW, y:GH} }) // Right
+    segments.push({ p1: {x:GW, y:GH}, p2: {x:0, y:GH} }) // Bottom
+    segments.push({ p1: {x:0, y:GH}, p2: {x:0, y:0} }) // Left
 
-    // 2. Custom Walls
-    walls.forEach(w => {
+    // Custom Interior Walls
+    customWalls.forEach(w => {
+      if (!w.points || w.points.length < 2) return
       for(let i=0; i < w.points.length; i++) {
-        segments.push({
-          p1: w.points[i],
-          p2: w.points[(i+1) % w.points.length]
-        })
+          segments.push({
+              p1: w.points[i],
+              p2: w.points[(i+1) % w.points.length]
+          })
       }
     })
 
-    // 3. Cast rays in BOTH directions (e.g. Left and Right) to find nearest wall
-    const directions = [
-        { x: axisVector.x, y: axisVector.y },
-        { x: -axisVector.x, y: -axisVector.y }
+    // 2. Determine Bale Dimensions & Center
+    const config = state.baleConfig.value
+    let w = bale.custom?.length ?? config.length ?? 3
+    let h = bale.custom?.width ?? config.width ?? 1.5
+    if (bale.orientation === 'tall') { w = config.length; h = config.width }
+    else if (bale.orientation === 'pillar') { w = config.width; h = config.width }
+
+    const cx = bale.x + w / 2
+    const cy = bale.y + h / 2
+
+    // 3. Calculate 4 Corners in World Space (Rotated)
+    const hw = w / 2
+    const hh = h / 2
+    const localCorners = [
+      { x: cx - hw, y: cy - hh }, // Top-Left
+      { x: cx + hw, y: cy - hh }, // Top-Right
+      { x: cx + hw, y: cy + hh }, // Bottom-Right
+      { x: cx - hw, y: cy + hh }  // Bottom-Left
     ]
 
-    let bestPoint = null
-    let minDist = Infinity
+    const worldCorners = localCorners.map(p => rotatePoint(p.x, p.y, cx, cy, bale.rotation || 0))
 
-    directions.forEach(dir => {
-        segments.forEach(seg => {
-            const hit = getRayIntersection(origin, dir, seg.p1, seg.p2)
-            if (hit && hit.dist < minDist) {
-                minDist = hit.dist
-                bestPoint = { x: hit.x, y: hit.y }
+    // 4. Find Best Corner
+    // We want the corner that minimizes the total distance to a vertical wall AND a horizontal wall
+    let best = null
+    let minScore = Infinity
+
+    worldCorners.forEach(corner => {
+      let bestH = null // Intersection along y = corner.y (Horizontal Ray)
+      let minH = Infinity
+      let bestV = null // Intersection along x = corner.x (Vertical Ray)
+      let minV = Infinity
+
+      segments.forEach(seg => {
+        // -- CHECK HORIZONTAL RAY (y = corner.y) --
+        const yMin = Math.min(seg.p1.y, seg.p2.y)
+        const yMax = Math.max(seg.p1.y, seg.p2.y)
+        
+        // Does the wall span across our Y level?
+        if (corner.y >= yMin - 0.01 && corner.y <= yMax + 0.01) {
+            // Ensure the wall isn't flat horizontal (avoid divide by zero)
+            if (Math.abs(seg.p2.y - seg.p1.y) > 0.001) {
+                // Solve X for Y = corner.y
+                const t = (corner.y - seg.p1.y) / (seg.p2.y - seg.p1.y)
+                const ix = seg.p1.x + t * (seg.p2.x - seg.p1.x)
+                const dist = Math.abs(ix - corner.x)
+                if (dist < minH) {
+                    minH = dist
+                    bestH = { x: ix, y: corner.y } // Point on wall
+                }
             }
-        })
+        }
+
+        // -- CHECK VERTICAL RAY (x = corner.x) --
+        const xMin = Math.min(seg.p1.x, seg.p2.x)
+        const xMax = Math.max(seg.p1.x, seg.p2.x)
+
+        // Does the wall span across our X level?
+        if (corner.x >= xMin - 0.01 && corner.x <= xMax + 0.01) {
+            // Ensure the wall isn't flat vertical
+            if (Math.abs(seg.p2.x - seg.p1.x) > 0.001) {
+                // Solve Y for X = corner.x
+                const t = (corner.x - seg.p1.x) / (seg.p2.x - seg.p1.x)
+                const iy = seg.p1.y + t * (seg.p2.y - seg.p1.y)
+                const dist = Math.abs(iy - corner.y)
+                if (dist < minV) {
+                    minV = dist
+                    bestV = { x: corner.x, y: iy } // Point on wall
+                }
+            }
+        }
+      })
+
+      // Score = Sum of distances. Missing walls are heavily penalized (1000).
+      const score = (bestH ? minH : 1000) + (bestV ? minV : 1000)
+
+      if (score < minScore) {
+        minScore = score
+        best = { corner, hPoint: bestH, vPoint: bestV }
+      }
     })
 
-    return bestPoint
-  }
-
-  // --- PHYSICS & VALIDATION (DISABLED) ---
-  function getBaleRect(bale) {
-    const L = state.baleConfig.value.length
-    const W = state.baleConfig.value.width
-    const H = state.baleConfig.value.height
-
-    let uw, uh
-    if (bale.orientation === 'tall') { uw = L; uh = H } 
-    else if (bale.orientation === 'pillar') { uw = W; uh = H } 
-    else { uw = L; uh = W }
-
-    const cx = bale.x + (uw / 2)
-    const cy = bale.y + (uh / 2)
-    const rad = (bale.rotation * Math.PI) / 180
-    const absCos = Math.abs(Math.cos(rad))
-    const absSin = Math.abs(Math.sin(rad))
-
-    return {
-      x: cx - ((uw * absCos) + (uh * absSin)) / 2,
-      y: cy - ((uw * absSin) + (uh * absCos)) / 2,
-      w: (uw * absCos) + (uh * absSin),
-      h: (uw * absSin) + (uh * absCos)
+    // 5. Apply Results
+    if (best) {
+      const anchors = []
+      if (best.hPoint) anchors.push(best.hPoint)
+      if (best.vPoint) anchors.push(best.vPoint)
+      bale.customAnchors = anchors
+    } else {
+      bale.customAnchors = []
     }
   }
 
@@ -108,14 +159,7 @@ export function useBales(state, snapshot, notifications) {
       lean: null,
       supported: true,
       customAnchors: [],
-      custom: {
-          fillColor: null,
-          strokeColor: null,
-          borderStyle: null,
-          length: null, 
-          width: null, 
-          height: null
-        }
+      custom: { fillColor: null, strokeColor: null, borderStyle: null, length: null, width: null, height: null }
     }
     state.bales.value.push(newBale)
     if (snapshot) snapshot()
@@ -124,15 +168,8 @@ export function useBales(state, snapshot, notifications) {
   function setLean(id, direction) {
     const bale = state.bales.value.find(b => b.id === id)
     if (bale) {
-      if (bale.isAnchor) {
-         notifications.show("Anchor bales cannot have a lean.", "error")
-         return
-      }
-      
-      if (bale.orientation !== 'flat') {
-        notifications.show("Only FLAT bales can have a lean.", 'error')
-        return
-      }
+      if (bale.isAnchor) { notifications.show("Anchor bales cannot have a lean.", "error"); return }
+      if (bale.orientation !== 'flat') { notifications.show("Only FLAT bales can have a lean.", 'error'); return }
       bale.lean = direction
       if (snapshot) snapshot()
     }
@@ -149,21 +186,28 @@ export function useBales(state, snapshot, notifications) {
     if (bale) {
       bale.x = snapToGrid(newX)
       bale.y = snapToGrid(newY)
+      // [UPDATE] Auto-recalculate if it is an anchor
+      if (bale.isAnchor) recalculateAnchors(bale)
+    }
+  }
+
+  // [NEW] Exposed action to manually force a recalculation
+  // Useful when moved by generic tools (like drag selection) that bypass updateBalePosition
+  function refreshAnchors(id) {
+    const bale = state.bales.value.find(b => b.id === id)
+    if (bale && bale.isAnchor) {
+        recalculateAnchors(bale)
     }
   }
 
   function setBaleOrientation(id, orientation) {
     const targets = state.selection.value.includes(id) ? state.selection.value : [id]
-    
-    // Filter out anchors before applying changes
     const validTargets = targets.filter(tid => {
       const b = state.bales.value.find(item => item.id === tid);
       return b && !b.isAnchor; 
     });
 
-    if (validTargets.length < targets.length) {
-       notifications.show("Cannot change orientation of Anchor bales.", "error");
-    }
+    if (validTargets.length < targets.length) notifications.show("Cannot change orientation of Anchor bales.", "error");
 
     state.bales.value.forEach(b => {
       if (validTargets.includes(b.id)) {
@@ -171,7 +215,6 @@ export function useBales(state, snapshot, notifications) {
         if (orientation !== 'flat') b.lean = null
       }
     })
-    
     if (snapshot) snapshot();
   }
 
@@ -180,6 +223,8 @@ export function useBales(state, snapshot, notifications) {
     state.bales.value.forEach(b => {
       if (targets.includes(b.id)) {
         b.rotation = (b.rotation + amount) % 360
+        // [UPDATE] Auto-recalculate if it is an anchor
+        if (b.isAnchor) recalculateAnchors(b)
       }
     })
     if (snapshot) snapshot()
@@ -188,15 +233,10 @@ export function useBales(state, snapshot, notifications) {
   function cycleOrientation(id) {
     const bale = state.bales.value.find(b => b.id === id)
     if (bale) {
-      if (bale.isAnchor) {
-        notifications.show("Cannot change orientation of Anchor bales.", "error")
-        return
-      }
-
+      if (bale.isAnchor) { notifications.show("Cannot change orientation of Anchor bales.", "error"); return }
       if (bale.orientation === 'flat') { bale.orientation = 'tall'; bale.lean = null }
       else if (bale.orientation === 'tall') { bale.orientation = 'pillar'; bale.lean = null }
       else { bale.orientation = 'flat' }
-      
       if (snapshot) snapshot();
     }
   }
@@ -204,24 +244,14 @@ export function useBales(state, snapshot, notifications) {
   function cycleLean(id) {
     const bale = state.bales.value.find(b => b.id === id)
     if (bale) {
-      if (bale.isAnchor) {
-         notifications.show("Anchor bales cannot have a lean.", "error")
-         return
-      }
-
-      if (bale.orientation !== 'flat') {
-        notifications.show("Only FLAT bales can have a lean.", 'error')
-        return
-      }
+      if (bale.isAnchor) { notifications.show("Anchor bales cannot have a lean.", "error"); return }
+      if (bale.orientation !== 'flat') { notifications.show("Only FLAT bales can have a lean.", 'error'); return }
       if (bale.lean === null) bale.lean = 'right'
       else if (bale.lean === 'right') bale.lean = 'left'
       else bale.lean = null
-      
       if (snapshot) snapshot();
     }
   }
-
-  // --- ANCHOR LOGIC (UPDATED) ---
 
   function toggleAnchor(targetId = null) {
     const targets = targetId 
@@ -243,40 +273,11 @@ export function useBales(state, snapshot, notifications) {
         }
         
         b.isAnchor = !b.isAnchor
-        
         if (b.isAnchor) {
-          b.lean = null 
-          
-          // [NEW] Auto-calculate 2 starter points (Closest X and Closest Y)
-          const config = state.baleConfig.value
-          
-          let w = b.custom?.length ?? config.length ?? 3
-          let h = b.custom?.width ?? config.width ?? 1.5
-          
-          // Adjust for visual dimensions based on orientation
-          if (b.orientation === 'tall') { w = config.length; h = config.width } // Usually same as flat but vertical
-          else if (b.orientation === 'pillar') { w = config.width; h = config.width }
-
-          // Center of the bale
-          const cx = b.x + w / 2
-          const cy = b.y + h / 2
-          const center = { x: cx, y: cy }
-
-          const walls = unref(state.customWalls) || []
-          const GW = state.ringDimensions.value.width
-          const GH = state.ringDimensions.value.height
-
-          // 1. Find best Horizontal Anchor (Left or Right)
-          const p1 = findBestAnchorOnAxis(center, {x: 1, y: 0}, walls, GW, GH)
-
-          // 2. Find best Vertical Anchor (Top or Bottom)
-          const p2 = findBestAnchorOnAxis(center, {x: 0, y: 1}, walls, GW, GH)
-
-          b.customAnchors = [p1, p2].filter(p => p !== null)
-
+            b.lean = null 
+            recalculateAnchors(b) // [UPDATE] Initial calculation
         } else {
-          // Reset custom anchors when toggling off
-          b.customAnchors = [] 
+            b.customAnchors = []
         }
         changeCount++
       }
@@ -284,7 +285,6 @@ export function useBales(state, snapshot, notifications) {
     if (changeCount > 0 && snapshot) snapshot()
   }
 
-  // Bulk update for dragging anchors
   function setCustomAnchors(id, anchors) {
     const bale = state.bales.value.find(b => b.id === id)
     if (bale) {
@@ -293,25 +293,19 @@ export function useBales(state, snapshot, notifications) {
     }
   }
 
-  // [LEGACY] Kept for compatibility, but likely unused in new workflow
+  // [LEGACY SUPPORT]
   function addAnchor(baleId, point) {
     const bale = state.bales.value.find(b => b.id === baleId)
     if (bale) {
       if (!bale.customAnchors) bale.customAnchors = []
-      
-      if (bale.customAnchors.length >= 2) {
-        bale.customAnchors.shift()
-      }
-      
+      if (bale.customAnchors.length >= 2) bale.customAnchors.shift()
       bale.customAnchors.push(point)
       if (snapshot) snapshot()
-      
       return bale.customAnchors.length
     }
     return 0
   }
   
-  // Update single manual anchor point (used during drag)
   function updateAnchor(baleId, index, point) {
     const bale = state.bales.value.find(b => b.id === baleId)
     if (bale && bale.customAnchors && bale.customAnchors[index]) {
@@ -329,10 +323,6 @@ export function useBales(state, snapshot, notifications) {
     const snap = (val) => Math.round(val * 6) / 6;
 
     state.bales.value.forEach((b) => {
-      
-      // Do not realign Anchors if they are already perfect
-      if (b.isAnchor) return
-      
       let w = L, h = W;
       if (b.orientation === "pillar") { w = W; h = H; } 
       else if (b.orientation === "tall") { w = L; h = H; }
@@ -344,25 +334,46 @@ export function useBales(state, snapshot, notifications) {
         const isVertical = Math.abs(rot - 90) < 1;
         const effectiveW = isVertical ? h : w;
         const effectiveH = isVertical ? w : h;
-
         const pivotX = b.x + w / 2;
         const pivotY = b.y + h / 2;
-
         const currentMinX = pivotX - effectiveW / 2;
         const currentMinY = pivotY - effectiveH / 2;
-
         const newMinX = snap(currentMinX);
         const newMinY = snap(currentMinY);
-
         b.x = newMinX + effectiveW / 2 - w / 2;
         b.y = newMinY + effectiveH / 2 - h / 2;
       } else {
         b.x = snap(b.x);
         b.y = snap(b.y);
       }
+
+      // [UPDATE] Fix alignment for anchors too
+      if (b.isAnchor) recalculateAnchors(b)
     });
     
     if (snapshot) snapshot()
+  }
+
+  function getBaleRect(bale) {
+    // ... existing logic ...
+    const L = state.baleConfig.value.length
+    const W = state.baleConfig.value.width
+    const H = state.baleConfig.value.height
+    let uw, uh
+    if (bale.orientation === 'tall') { uw = L; uh = H } 
+    else if (bale.orientation === 'pillar') { uw = W; uh = H } 
+    else { uw = L; uh = W }
+    const cx = bale.x + (uw / 2)
+    const cy = bale.y + (uh / 2)
+    const rad = (bale.rotation * Math.PI) / 180
+    const absCos = Math.abs(Math.cos(rad))
+    const absSin = Math.abs(Math.sin(rad))
+    return {
+      x: cx - ((uw * absCos) + (uh * absSin)) / 2,
+      y: cy - ((uw * absSin) + (uh * absCos)) / 2,
+      w: (uw * absCos) + (uh * absSin),
+      h: (uw * absSin) + (uh * absCos)
+    }
   }
 
   return {
@@ -380,6 +391,7 @@ export function useBales(state, snapshot, notifications) {
     setLean,
     addAnchor,
     updateAnchor,
-    setCustomAnchors
+    setCustomAnchors,
+    refreshAnchors // Exported for BarnHuntLayer
   }
 }

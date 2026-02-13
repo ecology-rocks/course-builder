@@ -54,9 +54,9 @@ const hasBaleSelected = computed(() => {
           :style="{ opacity: hasBaleSelected ? 1 : 0.5 }">
           ⚓ Mark Bale
         </button>
-        <button @click="store.setTool('anchor')" :class="{ active: store.activeTool === 'anchor' }">
+        <!--button @click="store.setTool('anchor')" :class="{ active: store.activeTool === 'anchor' }">
           ⚓ Mark Lines
-        </button>
+        </button-->
       </div>
     </div>
 

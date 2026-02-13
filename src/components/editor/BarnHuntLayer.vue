@@ -77,19 +77,13 @@ const visibleMeasurements = computed(() => {
   if (!store.measurements) return []
   
   return store.measurements.filter(m => {
-    // 1. Resolve Effective Layer
-    // If 'layer' is undefined (legacy item), we treat it as Layer 1.
     const itemLayer = m.layer !== undefined ? m.layer : 1
-
-    // 2. Handle Multi-Layer View (User Preference)
     if (store.multiLayerView) {
       if (typeof store.multiLayerView === 'number') {
         return itemLayer <= store.multiLayerView
       }
-      return true // Show all if multiLayerView is boolean true
+      return true
     }
-
-    // 3. Standard View: Strict Match
     return itemLayer === store.currentLayer
   })
 })
@@ -108,49 +102,36 @@ function handleSelect(id, isMulti = false) {
 
 // --- HANDLERS ---
 
-function shouldShowMeasurement(measure) {
-  // 1. If the measurement has a layer property, match it to the current view
-  if (measure.layer !== undefined) {
-    return measure.layer === store.currentLayer
-  }
-  
-  // 2. Legacy Support: If 'layer' is missing (old maps), 
-  //    only show it on Layer 1 (Base Layer) so it doesn't float everywhere.
-  return store.currentLayer === 1
-}
-
 function handleStepContextMenu({ e, id }) {
-  if (props.locked) return // [FIX] Block menu
+  if (props.locked) return
   store.activeStepMenu = { id, x: e.clientX, y: e.clientY }
 }
 
 function handleZoneContextMenu({ e, id }) {
-  if (props.locked) return // [FIX] Block menu
+  if (props.locked) return
   store.activeZoneMenu = { id, x: e.clientX, y: e.clientY }
 }
 
 function handleStartBoxContextMenu({ e, id }) {
-  if (props.locked) return // [FIX] Block menu
+  if (props.locked) return 
   store.activeStartBoxMenu = { id, x: e.clientX, y: e.clientY }
 }
 
 function handleTunnelBoxContextMenu({ e, id }) {
-  if (props.locked) return // [FIX] Block menu
+  if (props.locked) return 
   store.activeTunnelBoxMenu = { id, x: e.clientX, y: e.clientY }
 }
 
 function handleNoteContextMenu(e, id) {
   e.evt.preventDefault()
   e.cancelBubble = true
-  if (props.locked) return // [FIX] Block menu
+  if (props.locked) return 
   store.activeNoteMenu = { id, x: e.evt.clientX, y: e.evt.clientY }
 }
 
 function handleRightClick(e, id) {
   e.evt.preventDefault()
   e.cancelBubble = true
-
-  // [FIX] Block Bale Context Menu if Locked
   if (props.locked) return 
 
   if (store.activeTool === 'lean') return
@@ -167,9 +148,6 @@ function handleRightClick(e, id) {
 function handleLeftClick(e, id) {
   if (e.evt.button !== 0) return
   const evt = e.evt
-
-  // [FIX] Optional: Prevent modifications like rotation/leaning if locked?
-  // Currently we only block context menus per your request, assuming 'select' still works.
   
   if (evt.altKey) { store.cycleOrientation(id); return }
   if (evt.ctrlKey) { store.cycleLean(id); return }
@@ -266,12 +244,17 @@ function handleDragEnd(e, id) {
   const totalDy = e.target.y() - start.y
   const gridDx = totalDx / props.scale
   const gridDy = totalDy / props.scale
+  
+  // 1. Commit the move
   store.moveSelection(gridDx, gridDy)
-}
 
-function getAnchorLines(bale) {
-  // ... (Lines logic unchanged, omitting for brevity as it is unused in snippet but preserves file integrity)
-  return [] 
+  // 2. Trigger anchor updates for any selected bales
+  // Since moveSelection is generic, we must explicitly ask the store to refresh anchors 
+  if (store.refreshAnchors) {
+    store.selection.forEach(selId => {
+       store.refreshAnchors(selId)
+    })
+  }
 }
 </script>
 
