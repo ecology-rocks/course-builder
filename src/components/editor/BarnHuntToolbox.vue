@@ -70,7 +70,7 @@ function handleLean() {
       </div>
     </div>
     <div class="tool-section">
-      <h3>Objects</h3>
+      <h3>Other Objects</h3>
       <div class="tool-grid">
         <button @click="store.setTool('step')" :class="{ active: store.activeTool === 'step' }">🪜 Step</button>
         <button @click="store.setTool('note')" :class="{ active: store.activeTool === 'note' }">📝 Note (N) </button>
@@ -85,7 +85,7 @@ function handleLean() {
     
 
     <div class="tool-section">
-      <h3>Tunnels</h3>
+      <h3>Tunnel Boards</h3>
       <div class="tool-grid">
         <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Board Line</button>
         <button @click="store.setTool('tunnelboard')" :class="{ active: store.activeTool === 'tunnelboard' }">🟥 Board
