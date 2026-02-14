@@ -1,6 +1,9 @@
 <script setup>
 import { computed } from 'vue'
 import { useMapStore } from 'stores/mapStore'
+import IconLine from '@/assets/icons/measure-line.svg?component'
+import IconPath from '@/assets/icons/measure-path.svg?component' 
+import IconBale from '@/assets/icons/bale-icon.svg?component'
 const store = useMapStore()
 const emit = defineEmits(['tool-select', 'blind-setup'])
 
@@ -41,25 +44,16 @@ function handleLean() {
         <button @click="store.setTool('dead')" :class="{ active: store.activeTool === 'dead' }">🚫 Dead Zone</button>
         <button @click="store.setTool('obstruction')" :class="{ active: store.activeTool === 'obstruction' }">🧱
           Obstruction</button>
+          
       </div>
-    </div>
-    <div class="tool-section">
-      <h3>Objects</h3>
-      <div class="tool-grid">
-        <button @click="store.setTool('bale')" :class="{ active: store.activeTool === 'bale' }">📦 Bale</button>
-        <button @click="store.setTool('step')" :class="{ active: store.activeTool === 'step' }">🪜 Step</button>
-      </div>
-      <div class="tool-grid" v-if="store.currentLayer === 1">
-        <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🏁
-          Start</button>
-        <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟨 DC Mat</button>
-      </div>
-
+      
     </div>
 
+
     <div class="tool-section">
-      <h3>Bale Modifiers</h3>
+      <h3>Bales & Modifiers</h3>
       <div class="tool-grid">
+        <button @click="store.setTool('bale')" :class="{ active: store.activeTool === 'bale' }"><IconBale class="tool-icon" /> Bale</button>
         <button @click="handleOrient" :class="{ active: store.activeTool === 'type' }">
           📐 Orient
         </button>
@@ -75,6 +69,20 @@ function handleLean() {
         </button-->
       </div>
     </div>
+    <div class="tool-section">
+      <h3>Objects</h3>
+      <div class="tool-grid">
+        <button @click="store.setTool('step')" :class="{ active: store.activeTool === 'step' }">🪜 Step</button>
+        <button @click="store.setTool('note')" :class="{ active: store.activeTool === 'note' }">📝 Note (N) </button>
+      </div>
+      <div class="tool-grid" v-if="store.currentLayer === 1">
+        <button @click="store.setTool('startbox')" :class="{ active: store.activeTool === 'startbox' }">🏁Start</button>
+        <button @click="store.setTool('dcmat')" :class="{ active: store.activeTool === 'dcmat' }">🟨 DC Mat</button>
+      </div>
+
+    </div>
+
+    
 
     <div class="tool-section">
       <h3>Tunnels</h3>
@@ -99,10 +107,10 @@ function handleLean() {
       <h3>Measurements</h3>
       <div class="tool-grid">
         <button @click="store.setTool('measure')" :class="{ active: store.activeTool === 'measure' }">
-          📏 Measure Line
+          <IconLine class="tool-icon" /> Line
         </button>
         <button @click="store.setTool('measurePath')" :class="{ active: store.activeTool === 'measurePath' }">
-          🗺️ Measure Path
+          <IconPath class="tool-icon" /> Path
         </button>
       </div>
     </div>
@@ -117,9 +125,7 @@ function handleLean() {
           🔄 Rotate (R)
         </button>
 
-        <button @click="store.setTool('note')" :class="{ active: store.activeTool === 'note' }">
-          📝 Note (N)
-        </button>
+        
 
         <button @click="store.copySelection()">
           📋 Copy
@@ -194,5 +200,14 @@ button.active {
   color: #1565c0;
   font-weight: bold;
   box-shadow: inset 0 0 0 1px #2196f3;
+}
+.tool-icon {
+  /* 1em makes it exactly the same height as the text */
+  width: 18px; 
+  height: 18px;
+  
+  /* Optional: Push it down slightly if it feels "high" compared to text */
+  /* vertical-align: -0.125em; */
+
 }
 </style>

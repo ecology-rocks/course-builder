@@ -1,0 +1,21 @@
+<svg 
+  xmlns="http://www.w3.org/2000/svg" 
+  viewBox="0 0 24 24" 
+  fill="none"
+>
+  <g style="fill: #ffe082;">
+    <path d="M2 10h16v10H2z" />       <path d="M2 10l4-4h16l-4 4z" />   <path d="M18 10l4-4v10l-4 4z" />  </g>
+
+  <g style="stroke: #333333; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round;">
+    <path d="M2 10h16v10H2z" /> 
+    <path d="M2 10l4-4h16l-4 4" />
+    <path d="M18 10l4-4v10l-4 4" />
+
+    <g style="stroke-opacity: 0.6;">
+      <line x1="2" y1="13" x2="18" y2="13" />
+      <line x1="2" y1="17" x2="18" y2="17" />
+      <line x1="18" y1="13" x2="22" y2="9" />
+      <line x1="18" y1="17" x2="22" y2="13" />
+    </g>
+  </g>
+</svg>
