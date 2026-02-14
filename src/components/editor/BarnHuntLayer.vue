@@ -52,18 +52,16 @@ const displayedHides = computed(() => {
   return store.hides
 })
 
-// [NEW] Helper to check if we are in a measuring state
+// Helper to check if we are in a measuring state
 const isMeasuring = computed(() => {
   return store.activeTool === 'measure' || store.activeTool === 'measurePath'
 })
 
-// [NEW] Get the last point of the active measurement for the "Obnoxious" tooltip
+// Get the last point of the active measurement for the "Obnoxious" tooltip
 const activeMeasurementTip = computed(() => {
   if (!isMeasuring.value || !store.activeMeasurement) return null
   const points = store.activeMeasurement.points
   if (!points || points.length === 0) return null
-  
-  // Return the last placed point
   return points[points.length - 1]
 })
 
@@ -242,7 +240,6 @@ function handleDragStart(e, id) {
 }
 
 function handleDragMove(e, id) {
-  // [LOCK] Double check to prevent ghost drags
   if (isMeasuring.value) return 
 
   const node = e.target
@@ -340,12 +337,15 @@ function handleDragEnd(e, id) {
 
     <TunnelBoxObject v-for="board in store.tunnelBoards" :key="board.id" :board="board" :scale="scale"
       :isSelected="store.selection.includes(board.id)" :ref="(el) => setRef(el, board.id)" @select="handleSelect"
+      @click="handleLeftClick($event, board.id)"
       @update="(attrs) => store.updateTunnelBoard(attrs.id, attrs)" @dragstart="handleDragStart($event, board.id)"
       @dragmove="handleDragMove($event, board.id)" @dragend="handleDragEnd($event, board.id)"
       @contextmenu="handleTunnelBoxContextMenu" />
 
     <BoardObject v-for="board in store.boardEdges" :key="board.id" :board="board" :scale="scale"
       :ref="(el) => setRef(el, board.id)" @dragstart="handleDragStart($event, board.id)"
+      @click="handleLeftClick($event, board.id)"
+      :hitStrokeWidth="20"
       :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragmove="handleDragMove($event, board.id)"
       @dragend="handleDragEnd($event, board.id)" />
   </v-group>
@@ -386,7 +386,7 @@ function handleDragEnd(e, id) {
   <v-label v-if="activeMeasurementTip" :config="{
      x: activeMeasurementTip.x * scale,
      y: activeMeasurementTip.y * scale,
-     offsetY: 40 // Push it up a bit so it doesn't block the next click
+     offsetY: 40 
   }">
     <v-tag :config="{
       fill: '#D32F2F',
@@ -399,12 +399,13 @@ function handleDragEnd(e, id) {
       shadowOpacity: 0.5
     }" />
     <v-text :config="{
-      text: 'RIGHT CLICK \nLAST POINT \nTO FINISH',
+      text: 'RIGHT CLICK\n LAST POINT\n TO FINISH',
       fontFamily: 'sans-serif',
       fontSize: 16,
       padding: 10,
       fill: 'white',
-      fontStyle: 'bold'
+      fontStyle: 'bold',
+      textAlign: 'center',
     }" />
   </v-label>
 

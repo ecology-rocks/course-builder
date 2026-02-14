@@ -3,7 +3,8 @@ import { ref, computed} from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
 const props = defineProps(['board', 'isSelected', 'scale'])
-const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend', 'contextmenu'])
+// [FIX] Added 'click' to emits
+const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend', 'contextmenu', 'click'])
 
 const store = useMapStore()
 const groupRef = ref(null)
@@ -22,7 +23,7 @@ const finalHeight = computed(() => {
 })
 
 const finalFill = computed(() => {
-  return props.board.custom?.fillColor || '#8B4513' // Original Brown
+  return props.board.custom?.fillColor || '#8B4513' 
 })
 
 const finalStroke = computed(() => {
@@ -31,7 +32,7 @@ const finalStroke = computed(() => {
 })
 
 const finalTextColor = computed(() => {
-  return props.board.custom?.textColor || '#3e2723' // Original Dark Brown Text
+  return props.board.custom?.textColor || '#3e2723' 
 })
 
 // --- HANDLERS ---
@@ -44,15 +45,18 @@ function handleContextMenu(e) {
 
 function handleClick(e) {
   e.cancelBubble = true
-  emit('select', props.board.id)
+  // [FIX] Emit the raw click event so parent can use it for measuring
+  emit('click', e)
+  
+  // Selection logic
+  if (store.activeTool !== 'measure' && store.activeTool !== 'measurePath') {
+     emit('select', props.board.id)
+  }
 }
 
 function handleDragEnd(e) {
   emit('dragend', e)
 }
-
-// [RESTORED] Your original dragBoundFunc
-// src/components/editor/boards/TunnelBoxObject.vue
 
 function dragBoundFunc(pos) {
   const node = this
@@ -62,15 +66,9 @@ function dragBoundFunc(pos) {
   let relX = pos.x - layerAbs.x
   let relY = pos.y - layerAbs.y
   
-  // Snap Position to Grid
   relX = Math.round(relX / step) * step
   relY = Math.round(relY / step) * step
 
-  // [FIX] Calculate Max Bounds based on Object Size
-  // Since TunnelBoxes use Top-Left anchors (x,y is top-left),
-  // we must ensure x + width <= mapWidth.
-  
-  // Get current dimensions (accounting for scale)
   const currentW = finalWidth.value * props.scale
   const currentH = finalHeight.value * props.scale
 
@@ -78,21 +76,17 @@ function dragBoundFunc(pos) {
   const mapH = store.ringDimensions.height * props.scale
   
   const minX = 0
-  const maxX = mapW - currentW // Subtract width
+  const maxX = mapW - currentW 
   const minY = 0
-  const maxY = mapH - currentH // Subtract height
+  const maxY = mapH - currentH 
 
-  // Apply Constraints
   relX = Math.max(minX, Math.min(relX, maxX))
   relY = Math.max(minY, Math.min(relY, maxY))
 
   return { x: relX + layerAbs.x, y: relY + layerAbs.y }
 }
 
-// [RESTORED] Handle Transform Logic
 function handleTransform() {
-  // We keep this to satisfy the @transform event, 
-  // but we do the heavy lifting in transformEnd to avoid visual glitches
 }
 
 function handleTransformEnd() {
@@ -101,16 +95,13 @@ function handleTransformEnd() {
   const scaleX = group.scaleX()
   const scaleY = group.scaleY()
   
-  // 1. Calculate new dimensions
   const newW = finalWidth.value * scaleX
   const newH = finalHeight.value * scaleY
 
-  // 2. Reset Scale to 1 (Standard Konva Pattern)
   group.scaleX(1)
   group.scaleY(1)
   group.rotation(group.rotation())
 
-  // 3. Update Store
   const updates = {
     id: props.board.id,
     x: group.x() / props.scale,
@@ -118,7 +109,6 @@ function handleTransformEnd() {
     rotation: group.rotation()
   }
 
-  // Update Custom Width/Height if they exist, otherwise standard
   if (props.board.custom?.width != null) {
     updates.custom = { ...props.board.custom, width: newW }
   } else {

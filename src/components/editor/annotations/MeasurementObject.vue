@@ -30,25 +30,23 @@ const fmt = (val) => {
 }
 
 // Compute segments from LOCAL points (Real-time updates)
-// Compute segments from LOCAL points (Real-time updates)
 const segments = computed(() => {
   const pts = localPoints.value
   const results = []
   if (!pts || pts.length < 2) return []
 
-  let runningTotal = 0 // [NEW] Accumulator
+  let runningTotal = 0 
 
   for (let i = 0; i < pts.length - 1; i++) {
     const p1 = pts[i]; const p2 = pts[i+1]
     const dx = p2.x - p1.x; const dy = p2.y - p1.y
     const dist = Math.sqrt(dx*dx + dy*dy)
     
-    // [FIX] Add to running total
+    // Accumulate distance for path measurements
     runningTotal += dist
 
     const midX = (p1.x + p2.x) / 2; const midY = (p1.y + p2.y) / 2
     
-    // [FIX] Use runningTotal for the label
     results.push({ p1, p2, dist, midX, midY, label: fmt(runningTotal) })
   }
   return results
@@ -57,6 +55,9 @@ const segments = computed(() => {
 // --- HANDLERS ---
 
 function handleClick(e) {
+  // [LOCK] Do not allow selecting the measurement while drawing it
+  if (store.activeMeasurement && store.activeMeasurement.id === props.measurement.id) return
+
   if (store.activeTool === 'delete') {
     store.removeMeasurement(props.measurement.id)
     return
@@ -67,6 +68,15 @@ function handleClick(e) {
 }
 
 function handlePointDragStart(e) {
+  // [LOCK] STRICT IDIOT CHECK: 
+  // If this is the measurement currently being drawn, stop the drag immediately.
+  // Users must finish the line (Right Click) before they can edit points.
+  if (store.activeMeasurement && store.activeMeasurement.id === props.measurement.id) {
+    e.target.stopDrag()
+    e.cancelBubble = true
+    return
+  }
+
   e.cancelBubble = true
   // Lock the local state so incoming store updates don't interrupt the drag
   isDragging.value = true
@@ -81,7 +91,6 @@ function handlePointDragMove(e, index) {
   const currentY = node.y() / props.scale
 
   // 2. Update LOCAL state directly
-  // This triggers 'segments' to recalculate, updating the lines instantly
   if (localPoints.value[index]) {
     localPoints.value[index] = { x: currentX, y: currentY }
   }
@@ -95,7 +104,7 @@ function handlePointDragEnd(e, index) {
   const finalX = node.x() / props.scale
   const finalY = node.y() / props.scale
 
-  // 2. Update Local State one last time (just in case)
+  // 2. Update Local State one last time
   if (localPoints.value[index]) {
     localPoints.value[index] = { x: finalX, y: finalY }
   }
@@ -125,13 +134,13 @@ function dragBoundFunc(pos) {
     
     <template v-for="(seg, i) in segments" :key="'seg-'+i">
       <v-line :config="{
-    // [FIX] Use seg.p1 and seg.p2 which are derived from the reactive localPoints
-    points: [seg.p1.x * scale, seg.p1.y * scale, seg.p2.x * scale, seg.p2.y * scale],
-    stroke: color, 
-    strokeWidth: 3, 
-    dash: [6, 4], 
-    hitStrokeWidth: 20 
-  }" />
+        points: [seg.p1.x * scale, seg.p1.y * scale, seg.p2.x * scale, seg.p2.y * scale],
+        stroke: color, 
+        strokeWidth: 3, 
+        dash: [6, 4], 
+        hitStrokeWidth: 20,
+        listening: false 
+      }" />
       
       <v-label :config="{ x: seg.midX * scale, y: seg.midY * scale }">
         <v-tag :config="{ 
@@ -142,7 +151,8 @@ function dragBoundFunc(pos) {
           cornerRadius: 4,
           pointerDirection: 'down',
           pointerWidth: 8,
-          pointerHeight: 6
+          pointerHeight: 6,
+          listening: false
         }" />
         <v-text :config="{ 
           text: seg.label, 
@@ -150,7 +160,8 @@ function dragBoundFunc(pos) {
           fontStyle: 'bold', 
           fill: color, 
           padding: 4, 
-          align: 'center' 
+          align: 'center',
+          listening: false
         }" />
       </v-label>
     </template>
