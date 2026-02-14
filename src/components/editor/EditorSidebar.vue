@@ -14,13 +14,16 @@ import CourseSettingsModal from 'modals/CourseSettingsModal.vue'
 import BugReportModal from 'common/BugReportModal.vue'
 import DeleteMapModal from 'modals/DeleteMapModal.vue'
 import LibraryModal from 'modals/LibraryModal.vue'
-import UpgradeModal from 'modals/UpgradeModal.vue' // [NEW]
-import PrintModal from 'modals/PrintModal.vue' // [NEW]
+import UpgradeModal from 'modals/UpgradeModal.vue'
+// [KEEP] Old Print Modal
+import PrintModal from 'modals/PrintModal.vue'
+// [NEW] Advanced Print Modal
+import AdvancedPrintModal from '@/components/modals/AdvancedPrintModal.vue'
 
 const store = useMapStore()
 const userStore = useUserStore()
 const router = useRouter()
-const emit = defineEmits(['print', 'save-map', 'save-library', 'blind-setup'])
+const emit = defineEmits(['print', 'advanced-print', 'save-map', 'save-library', 'blind-setup'])
 
 // State for Modals & Menus
 const showShareModal = ref(false)
@@ -29,15 +32,23 @@ const showSettingsModal = ref(false)
 const showBugReportModal = ref(false)
 const showDeleteModal = ref(false)
 const showLibraryModal = ref(false)
-const showPrintModal = ref(false) // [NEW]
+const showPrintModal = ref(false) // Old Modal
+const showAdvancedPrintModal = ref(false) // New Modal
 const showMoreMenu = ref(false)
 const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
 const isPro = computed(() => ['pro', 'club'].includes(userStore.tier))
-const showUpgradeModal = ref(false) // [NEW]
+const showUpgradeModal = ref(false)
 
+// [OLD] Legacy Handler
 function onPrintConfirm(config) {
-  // Config contains: { layers: [], withHides: bool, layout: string }
   emit('print', config)
+  showPrintModal.value = false
+}
+
+// [NEW] Advanced Handler
+function onAdvancedPrintConfirm(config) {
+  emit('advanced-print', config)
+  showAdvancedPrintModal.value = false
 }
 
 // --- FILE IMPORT LOGIC ---
@@ -111,20 +122,20 @@ function handleSave() {
       </div>
     </div>
 
-<div class="sidebar-section">
-  <label class="checkbox-row">
-    <input type="checkbox" v-model="store.multiLayerView" />
-    <span>Overlay All Layers</span>
-  </label>
+    <div class="sidebar-section">
+      <label class="checkbox-row">
+        <input type="checkbox" v-model="store.multiLayerView" />
+        <span>Overlay All Layers</span>
+      </label>
 
-  <div v-if="store.multiLayerView" class="opacity-control">
-    <div class="opacity-header">
-      <span>Layer Opacity</span>
-      <span>{{ Math.round(store.layerOpacity * 100) }}%</span>
+      <div v-if="store.multiLayerView" class="opacity-control">
+        <div class="opacity-header">
+          <span>Layer Opacity</span>
+          <span>{{ Math.round(store.layerOpacity * 100) }}%</span>
+        </div>
+        <input type="range" v-model.number="store.layerOpacity" min="0.1" max="1" step="0.1" />
+      </div>
     </div>
-    <input type="range" v-model.number="store.layerOpacity" min="0.1" max="1" step="0.1" />
-  </div>
-</div>
     <div class="zone-middle">
       <component :is="toolboxComponent" @blind-setup="emit('blind-setup')"/>
     </div>
@@ -134,7 +145,14 @@ function handleSave() {
         <button @click="handleSave" class="btn-primary">
           <span v-if="!userStore.isPro">🔒</span> 💾 Save
         </button>
+        
         <button @click="showPrintModal = true" class="btn-secondary">🖨️ Print</button>
+      </div>
+      
+      <div v-if="userStore.isBeta" style="margin-top: 5px;">
+        <button @click="showAdvancedPrintModal = true" class="btn-beta">
+          🚀 Advanced Print (Beta)
+        </button>
       </div>
 
       <div class="secondary-actions">
@@ -149,13 +167,9 @@ function handleSave() {
 
       <div v-if="showMoreMenu" class="more-menu">
         <button v-if="isAdmin" @click="emit('save-library')">📚 Save to Library</button>
-
         <button @click="triggerFileUpload">⬆ Import JSON</button>
-
         <button @click="store.exportMapToJSON()">⬇ Export JSON</button>
-
         <button @click="store.realignGrid()">📏 Realign All to Grid</button>
-
         <button @click="showBugReportModal = true">🐞 Feedback & Bugs</button>
         <button v-if="store.currentMapId" @click="showDeleteModal = true" class="text-danger">
           🗑️ Delete Map
@@ -172,7 +186,9 @@ function handleSave() {
     <DeleteMapModal v-if="showDeleteModal" @close="showDeleteModal = false" />
     <LibraryModal v-if="showLibraryModal" @close="showLibraryModal = false" />
     <UpgradeModal v-if="showUpgradeModal" @close="showUpgradeModal = false" />
+    
     <PrintModal v-if="showPrintModal" @close="showPrintModal = false" @confirm="onPrintConfirm" />
+    <AdvancedPrintModal v-if="showAdvancedPrintModal" @close="showAdvancedPrintModal = false" @confirm="onAdvancedPrintConfirm" />
   </div>
 </template>
 
@@ -302,6 +318,23 @@ function handleSave() {
 
 .btn-secondary:hover {
   background: #3949ab;
+}
+
+/* Beta Button Style */
+.btn-beta {
+  width: 100%;
+  background: linear-gradient(45deg, #673ab7, #9c27b0);
+  color: white;
+  border: none;
+  padding: 8px;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 0.85rem;
+  cursor: pointer;
+  box-shadow: 0 2px 5px rgba(103, 58, 183, 0.3);
+}
+.btn-beta:hover {
+  opacity: 0.9;
 }
 
 .secondary-actions {

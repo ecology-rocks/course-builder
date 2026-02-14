@@ -3,8 +3,13 @@ import { ref, watch, nextTick, computed } from 'vue'
 import { useMapStore } from 'stores/mapStore'
 import { useUserStore } from '@/stores/userStore'
 import { useAutosave } from 'services/autosaveService'
+
+// [KEEP] Legacy Printers
 import { usePrinter } from 'services/printerService'
 import { useBlindPrinter } from '@/services/blindPrinterService'
+// [NEW] Unified Printer
+import { useUnifiedPrinter } from '@/services/unifiedPrintService'
+
 // --- COMPOSABLES ---
 import { useKeyboardShortcuts } from '@/components/editor/logic/useKeyboardShortcuts'
 import { useCanvasControls } from '@/components/editor/logic/useCanvasControls'
@@ -59,12 +64,15 @@ const { getWallStroke, getGridLabelX, getGridLabelY, getXAxisY, getYAxisX, getYA
 const { handleSaveMap, handleLibrarySave } = useExportTools(store, stageRef, scale, GRID_OFFSET)
 const { selectionRect, handleStageMouseDown, handleStageMouseMove, handleStageMouseUp, handleDragStart } = useStageInteraction(store, scale, GRID_OFFSET)
 const { contextMenu, handleStageContextMenu, closeContextMenu } = useContextMenu(store)
+
+// [KEEP] Legacy Hooks
 const { handlePrint: printLogic } = usePrinter(store, userStore, stageRef, scale)
 const { printBlinds } = useBlindPrinter(store, userStore, stageRef, scale)
 
-useKeyboardShortcuts(store, handleSaveMap)
+// [NEW] Unified Hook
+const { generatePrintJob } = useUnifiedPrinter(store, userStore, stageRef, scale, showHides)
 
-//watch(() => [store.sport, store.ringDimensions.width], () => { nextTick(fitToScreen) }, { immediate: true })
+useKeyboardShortcuts(store, handleSaveMap)
 
 const activeDisplayHides = computed(() => {
   if (isBlindMode.value && blindManagerRef.value) {
@@ -106,7 +114,7 @@ function handleGlobalClick(e) {
     return
   }
 
-if (e.target.closest('.toolbox')) return;
+  if (e.target.closest('.toolbox')) return;
 
   const isAnyItemMenuOpen =
     store.activeBaleMenu ||
@@ -126,9 +134,7 @@ if (e.target.closest('.toolbox')) return;
   store.closeAllMenus()
 }
 
-// [UPDATED] Interceptor for Stage Clicks
 function onStageMouseDown(e) {
-
   if (e.evt) {
     e.evt.stopPropagation(); 
   }
@@ -142,13 +148,11 @@ function onStageMouseDown(e) {
   }
 
   if (store.activeTool === 'measure' || store.activeTool === 'measurePath') {
-    // Prevent Konva from handling this as a potential drag/selection start
     if (e.evt) e.evt.cancelBubble = true;
     handleStageMouseDown(e);
     return;
   }
 
-  // Otherwise, normal editor behavior
   handleStageMouseDown(e)
 }
 
@@ -171,6 +175,7 @@ watch(
 )
 
 async function handleBatchPrint() {
+  // [KEEP] Legacy Blind Printing for now
   isPrinting.value = true
   try {
     await printBlinds()
@@ -179,6 +184,7 @@ async function handleBatchPrint() {
   }
 }
 
+// [KEEP] Legacy Print Handler
 async function handlePrint(options) {
   isPrinting.value = true
   const orientation = options.orientation || 'landscape'
@@ -188,12 +194,28 @@ async function handlePrint(options) {
   isPrinting.value = false
   setTimeout(() => { showHides.value = true }, 2000)
 }
+
+// [NEW] Advanced Print Handler
+async function handleAdvancedPrint(config) {
+  isPrinting.value = true
+  try {
+    await generatePrintJob(config)
+  } finally {
+    isPrinting.value = false
+  }
+}
 </script>
 
 <template>
   <div class="editor-container" @click="handleGlobalClick">
-    <EditorSidebar v-if="!isBlindMode" @print="handlePrint" @save-map="handleSaveMap" @save-library="handleLibrarySave"
-      @blind-setup="handleOpenBlindManager" />
+    <EditorSidebar 
+      v-if="!isBlindMode" 
+      @print="handlePrint" 
+      @advanced-print="handleAdvancedPrint"
+      @save-map="handleSaveMap" 
+      @save-library="handleLibrarySave"
+      @blind-setup="handleOpenBlindManager" 
+    />
 
     <div class="canvas-wrapper" ref="wrapperRef" :class="{ 'is-anchor-mode': store.activeTool === 'anchor' }">
       <EditNoteModal v-if="store.editingNoteId" />
@@ -213,7 +235,7 @@ async function handlePrint(options) {
       <button class="help-fab" @click.stop="showHelpModal = true" title="Keyboard Shortcuts & Help">
         ?
       </button>
-<MapLegend v-if="store.showMapStats && !isPrinting" class="stats-overlay" />
+      <MapLegend v-if="store.showMapStats && !isPrinting" class="stats-overlay" />
       <HelpModal :show="showHelpModal" @close="showHelpModal = false" />
 
       <SelectionBar v-if="!isBlindMode" />
@@ -297,7 +319,7 @@ async function handlePrint(options) {
 </template>
 
 <style scoped>
-/* (Existing Styles) */
+/* (Existing Styles Unchanged) */
 .editor-container {
   display: flex;
   height: 100vh;
@@ -399,10 +421,9 @@ async function handlePrint(options) {
 
 .stats-overlay {
   position: fixed;
-  top: 80px; /* Below the Help FAB (20px + 50px + 10px margin) */
+  top: 80px; 
   right: 20px;
   z-index: 90;
-  /* Ensure it doesn't get wider than screen on mobile */
   max-width: 220px; 
 }
 </style>
