@@ -75,8 +75,11 @@ export function useBlindPrinter(store, userStore, stageRef, scale) {
 
       // Calculate dimensions
       const GRID_OFFSET = 30;
-      const totalWidth = store.ringDimensions.width * scale.value + (GRID_OFFSET * 2);
-      const totalHeight = store.ringDimensions.height * scale.value + (GRID_OFFSET * 2);
+      const cleanW = Number(store.ringDimensions.width) || 24;
+      const cleanH = Number(store.ringDimensions.height) || 24;
+      
+      const totalWidth = cleanW * scale.value + (GRID_OFFSET * 2);
+      const totalHeight = cleanH * scale.value + (GRID_OFFSET * 2);
 
       await nextTick();
       const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));

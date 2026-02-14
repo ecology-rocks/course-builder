@@ -32,8 +32,8 @@ export function useBales(state, snapshot, notifications) {
 
     // 1. Gather all Wall Segments (Grid + Custom)
     const segments = []
-    const GW = state.ringDimensions.value.width
-    const GH = state.ringDimensions.value.height
+    const GW = Number(state.ringDimensions.value.width) || 24
+    const GH = Number(state.ringDimensions.value.height) || 24
     const customWalls = unref(state.customWalls) || []
 
     // Standard Ring Edges
@@ -54,7 +54,7 @@ export function useBales(state, snapshot, notifications) {
     })
 
     // 2. Determine Bale Dimensions & Center
-    const config = state.baleConfig.value
+    const config = state.baleConfig.value || {}
     let w = bale.custom?.length ?? config.length ?? 3
     let h = bale.custom?.width ?? config.width ?? 1.5
     if (bale.orientation === 'tall') { w = config.length; h = config.width }
@@ -319,7 +319,11 @@ export function useBales(state, snapshot, notifications) {
   }
 
   function realignBales() {
-    const { length: L, width: W, height: H } = state.baleConfig.value;
+    const config = state.baleConfig.value || {}
+    const L = Number(config.length) || 3
+    const W = Number(config.width) || 1.5
+    const H = Number(config.height) || 1
+    
     const snap = (val) => Math.round(val * 6) / 6;
 
     state.bales.value.forEach((b) => {

@@ -15,11 +15,13 @@ defineExpose({ getNode: () => groupRef.value?.getNode() })
 // --- CUSTOM STYLES ---
 
 const finalWidth = computed(() => {
-  return props.board.custom?.width != null ? props.board.custom.width : props.board.width
+  const val = props.board.custom?.width != null ? props.board.custom.width : props.board.width
+  return Number(val) || 2 // Default to 2ft if invalid
 })
 
 const finalHeight = computed(() => {
-  return props.board.custom?.height != null ? props.board.custom.height : props.board.height
+  const val = props.board.custom?.height != null ? props.board.custom.height : props.board.height
+  return Number(val) || 2 // Default to 2ft if invalid
 })
 
 const finalFill = computed(() => {

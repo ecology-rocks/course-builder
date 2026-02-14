@@ -1,5 +1,5 @@
 import { defineStore } from "pinia";
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { useUserStore } from "./userStore";
 // IMPORT MODULES
 import { useMapPersistence } from "services/persistenceService";
@@ -55,7 +55,33 @@ export const useMapStore = defineStore("map", () => {
   const mapData = ref(JSON.parse(JSON.stringify(DEFAULT_MAP_DATA)));
 
   // B. Settings & Metadata
-  const ringDimensions = ref({ width: 24, height: 24 });
+  const _ringDimensions = ref({ width: 24, height: 24 });
+
+  // [FIX] Computed property to intercept and sanitize writes
+  const ringDimensions = computed({
+    get: () => _ringDimensions.value,
+    set: (newVal) => {
+      if (!newVal || typeof newVal !== 'object') {
+        console.warn("⚠️ [MapStore] Attempted to set invalid ringDimensions:", newVal);
+        return;
+      }
+      let w = Number(newVal.width);
+      let h = Number(newVal.height);
+
+      if (isNaN(w) || w <= 0) {
+        console.warn(`⚠️ [MapStore] Invalid Width detected: ${newVal.width}. Resetting to 24.`);
+        w = 24;
+      }
+      if (isNaN(h) || h <= 0) {
+        console.warn(`⚠️ [MapStore] Invalid Height detected: ${newVal.height}. Resetting to 24.`);
+        h = 24;
+      }
+      
+      console.log(`📏 [MapStore] Dimensions set to: ${w}x${h}`);
+      _ringDimensions.value = { width: w, height: h };
+    }
+  });
+
   const gridSize = ref(20);
   const currentMapId = ref(null);
   const mapName = ref("Untitled Map");
@@ -127,39 +153,48 @@ export const useMapStore = defineStore("map", () => {
   }
 
   function reset() {
-    mapData.value = JSON.parse(JSON.stringify(DEFAULT_MAP_DATA));
+    console.group("🛑 [MapStore] RESET STARTED");
+    console.time("Reset Duration");
 
-    currentMapId.value = null;
-    mapName.value = "Untitled Map";
-    classLevel.value = "Novice";
-    sport.value = "barnhunt";
-    ringDimensions.value = { width: 24, height: 24 };
-    currentLayer.value = 1;
-    activeTool.value = "bale";
-    nextNumber.value = 1;
-    selection.value = [];
-    previousBales.value = [];
-    comparisonMapName.value = null;
-    wallTypes.value = {
-      top: "fence",
-      right: "fence",
-      bottom: "fence",
-      left: "fence",
-    };
-    baleColors.value = {
-      1: "#e6c200",
-      2: "#4caf50",
-      3: "#2196f3",
-    };
-    gridStartCorner.value = "top-left";
-    trialLocation.value = "";
-    trialDay.value = "";
-    trialNumber.value = "";
-    baleConfig.value = { length: 3, width: 1.5, height: 1 };
-    dcMatConfig.value = { width: 2, height: 3 };
-    activeMeasurement.value = null;
-    if (domainModules && domainModules.closeNoteEditor) {
-      domainModules.closeNoteEditor();
+    try {
+      // 1. Reset Data
+      mapData.value = JSON.parse(JSON.stringify(DEFAULT_MAP_DATA));
+      console.log("✅ mapData cleared");
+
+      // 2. Reset Metadata
+      currentMapId.value = null;
+      mapName.value = "Untitled Map";
+      classLevel.value = "Novice";
+      sport.value = "barnhunt";
+      
+      // 3. Reset Dimensions (Triggers setter logging)
+      ringDimensions.value = { width: 24, height: 24 };
+      
+      currentLayer.value = 1;
+      activeTool.value = "bale";
+      nextNumber.value = 1;
+      selection.value = [];
+      previousBales.value = [];
+      comparisonMapName.value = null;
+
+      // 4. Reset Configs
+      gridStartCorner.value = "top-left";
+      baleConfig.value = { length: 3, width: 1.5, height: 1 };
+      console.log("✅ baleConfig reset to default (3 x 1.5 x 1)");
+
+      dcMatConfig.value = { width: 2, height: 3 };
+      activeMeasurement.value = null;
+
+      // 5. Close Editors
+      if (domainModules && domainModules.closeNoteEditor) {
+        domainModules.closeNoteEditor();
+      }
+      
+    } catch (e) {
+      console.error("🔥 [MapStore] Error during RESET:", e);
+    } finally {
+      console.timeEnd("Reset Duration");
+      console.groupEnd();
     }
   }
 
@@ -274,6 +309,30 @@ function setTool(tool) {
     activeWallMenu,
     reset,
   };
+
+
+watch(baleConfig, (newVal) => {
+    if (isNaN(newVal.width) || isNaN(newVal.height) || isNaN(newVal.length)) {
+      console.error("🚨 [MapStore] CRITICAL: baleConfig became NaN!", newVal);
+      console.trace("Who set this?"); // This prints the exact function call stack
+    }
+  }, { deep: true });
+
+  watch(() => mapData.value, (newData) => {
+    // Check Dimensions
+    const w = ringDimensions.value.width
+    const h = ringDimensions.value.height
+    
+    if (isNaN(w) || isNaN(h)) {
+      console.error("🚨 STORE CORRUPTION DETECTED: Ring Dimensions are NaN", ringDimensions.value)
+    }
+
+    // Check Bale Config (Common source of width errors)
+    const bc = baleConfig.value
+    if (isNaN(bc.length) || isNaN(bc.width)) {
+      console.error("🚨 STORE CORRUPTION DETECTED: Bale Config is NaN", bc)
+    }
+  }, { deep: true, immediate: true })
 
   const historyModule = useHistory(stateRefs, () => {});
   const gridLogic = useGridLogic(stateRefs);

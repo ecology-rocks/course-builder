@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
 const props = defineProps(['board', 'scale'])
@@ -17,30 +17,40 @@ watch(() => props.board, () => {
   }
 }, { deep: true })
 
+const coords = computed(() => {
+  return {
+    x1: Number(props.board.x1) || 0,
+    y1: Number(props.board.y1) || 0,
+    x2: Number(props.board.x2) || 0,
+    y2: Number(props.board.y2) || 0
+  }
+})
+
 // --- 1. Handle Endpoint Dragging ---
 function handleHandleDragStart(e) {
-  e.cancelBubble = true 
+  e.cancelBubble = true
 }
 
 function handleHandleDragMove(e) {
-  e.cancelBubble = true 
+  e.cancelBubble = true
 }
+
 
 function handleHandleDragEnd(e, whichPoint) {
   e.cancelBubble = true
   const node = e.target
   const layerAbs = node.getLayer().getAbsolutePosition()
   const absPos = node.getAbsolutePosition()
-  
+
   const rawX = (absPos.x - layerAbs.x) / props.scale
   const rawY = (absPos.y - layerAbs.y) / props.scale
-  
+
   let snappedX = Math.round(rawX * 6) / 6
   let snappedY = Math.round(rawY * 6) / 6
 
   const W = store.ringDimensions.width
   const H = store.ringDimensions.height
-  
+
   snappedX = Math.max(0, Math.min(snappedX, W))
   snappedY = Math.max(0, Math.min(snappedY, H))
 
@@ -58,8 +68,8 @@ function handleGroupDragEnd(e) {
 function dragBoundFunc(pos) {
   const node = this
   const layerAbs = node.getLayer().getAbsolutePosition()
-  const step = props.scale / 6 
-  
+  const step = props.scale / 6
+
   let relX = Math.round((pos.x - layerAbs.x) / step) * step
   let relY = Math.round((pos.y - layerAbs.y) / step) * step
 
@@ -74,7 +84,7 @@ function dragBoundFunc(pos) {
     const bx2 = props.board.x2 * props.scale
     const by1 = props.board.y1 * props.scale
     const by2 = props.board.y2 * props.scale
-    
+
     const minBoardX = Math.min(bx1, bx2)
     const maxBoardX = Math.max(bx1, bx2)
     const minBoardY = Math.min(by1, by2)
@@ -101,7 +111,7 @@ function handleClick(e) {
   // If we are NOT measuring, handle selection logic here
   // (Note: BarnHuntLayer has a lock, but redundancy is safe)
   if (store.activeTool !== 'measure' && store.activeTool !== 'measurePath') {
-    if (e.evt.button !== 0) return 
+    if (e.evt.button !== 0) return
 
     if (['select', 'bale', 'board'].includes(store.activeTool)) {
       store.selectObject(props.board.id, e.evt.shiftKey || e.evt.ctrlKey)
@@ -115,54 +125,38 @@ function handleClick(e) {
 </script>
 
 <template>
-  <v-group
-    ref="groupRef"
-    :config="{
-      id: board.id,
+  <v-group ref="groupRef" :config="{
+    id: board.id,
+    draggable: true,
+    dragBoundFunc: dragBoundFunc
+  }" @click="handleClick" @dragstart="emit('dragstart', $event)" @dragmove="emit('dragmove', $event)"
+    @dragend="handleGroupDragEnd">
+    <v-line :config="{
+      points: [coords.x1 * scale, coords.y1 * scale, coords.x2 * scale, coords.y2 * scale],
+      stroke: store.selection.includes(board.id) ? '#2196f3' : '#2e7d32',
+      strokeWidth: 6,
+      lineCap: 'round',
+      hitStrokeWidth: 20
+    }" />
+
+    <v-circle :config="{
+      x: coords.x1 * scale,   // [FIX] Use coords
+        y: coords.y1 * scale,   // [FIX] Use coords
+      radius: 6,
+      fill: '#1b5e20',
       draggable: true,
       dragBoundFunc: dragBoundFunc
-    }"
-    @click="handleClick"
-    @dragstart="emit('dragstart', $event)"
-    @dragmove="emit('dragmove', $event)"
-    @dragend="handleGroupDragEnd"
-  >
-    <v-line 
-      :config="{
-        points: [board.x1 * scale, board.y1 * scale, board.x2 * scale, board.y2 * scale],
-        stroke: store.selection.includes(board.id) ? '#2196f3' : '#2e7d32',
-        strokeWidth: 6,
-        lineCap: 'round',
-        hitStrokeWidth: 20 
-      }" 
-    />
-    
-    <v-circle
-      :config="{
-        x: board.x1 * scale,
-        y: board.y1 * scale,
-        radius: 6,
-        fill: '#1b5e20',
-        draggable: true,
-        dragBoundFunc: dragBoundFunc
-      }"
-      @dragstart="handleHandleDragStart"
-      @dragmove="handleHandleDragMove" 
-      @dragend="handleHandleDragEnd($event, 'start')"
-    />
-    
-    <v-circle
-      :config="{
-        x: board.x2 * scale,
-        y: board.y2 * scale,
-        radius: 6,
-        fill: '#1b5e20',
-        draggable: true,
-        dragBoundFunc: dragBoundFunc
-      }"
-      @dragstart="handleHandleDragStart"
-      @dragmove="handleHandleDragMove"
-      @dragend="handleHandleDragEnd($event, 'end')"
-    />
+    }" @dragstart="handleHandleDragStart" @dragmove="handleHandleDragMove"
+      @dragend="handleHandleDragEnd($event, 'start')" />
+
+    <v-circle :config="{
+      x: coords.x2 * scale,   // [FIX] Use coords
+        y: coords.y2 * scale,   // [FIX] Use coords
+      radius: 6,
+      fill: '#1b5e20',
+      draggable: true,
+      dragBoundFunc: dragBoundFunc
+    }" @dragstart="handleHandleDragStart" @dragmove="handleHandleDragMove"
+      @dragend="handleHandleDragEnd($event, 'end')" />
   </v-group>
 </template>

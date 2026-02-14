@@ -15,11 +15,15 @@ defineExpose({ getNode: () => groupRef.value?.getNode() })
 const isCtrlPressed = ref(false)
 
 const finalWidth = computed(() => {
-  return props.step.custom?.width != null ? props.step.custom.width : props.step.width
+  // [FIX] Harden against undefined/NaN. Default to 2ft.
+  const val = props.step.custom?.width != null ? props.step.custom.width : props.step.width
+  return Number(val) || 2
 })
 
 const finalHeight = computed(() => {
-  return props.step.custom?.height != null ? props.step.custom.height : props.step.height
+  // [FIX] Harden against undefined/NaN. Default to 1ft.
+  const val = props.step.custom?.height != null ? props.step.custom.height : props.step.height
+  return Number(val) || 1
 })
 
 const fillColor = computed(() => {

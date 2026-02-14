@@ -30,8 +30,16 @@ const textColor = computed(() => props.mat.custom?.textColor || 'black')
 const displayLabel = computed(() => props.mat.custom?.textValue || 'DC')
 
 const dimensions = computed(() => {
-  const w = props.mat.custom?.width || props.mat.width || store.dcMatConfig.width
-  const h = props.mat.custom?.height || props.mat.height || store.dcMatConfig.height
+  // [FIX] Ensure defaults exist if config is missing
+  const config = store.dcMatConfig || { width: 2, height: 3 }
+  
+  // [FIX] Force Number() casting and provide fallbacks
+  const rawW = props.mat.custom?.width ?? props.mat.width ?? config.width
+  const rawH = props.mat.custom?.height ?? props.mat.height ?? config.height
+
+  const w = Number(rawW) || 2
+  const h = Number(rawH) || 3
+
   return {
     width: w * props.scale,
     height: h * props.scale,

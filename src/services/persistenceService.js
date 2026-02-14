@@ -162,71 +162,94 @@ export function useMapPersistence(state, userStore, notifications) {
 
   // --- IMPORT DATA (CORE) ---
   function importMapFromData(data) {
-    state.reset()
+    console.group("🗺️ Importing Map Data (Debug)");
+    console.log("Raw Source Data:", data);
 
-    state.mapName.value = data.name || "Imported Map"
-    state.classLevel.value = data.level || 'Novice'
-    state.sport.value = data.sport || 'barnhunt'
+    state.reset(); // This is likely your mapStore.js:152 trigger
 
-    const source = data.data || data
+    state.mapName.value = data.name || "Imported Map";
+    state.classLevel.value = data.level || 'Novice';
+    state.sport.value = data.sport || 'barnhunt';
 
-    state.ringDimensions.value = source.dimensions || { width: 24, height: 24 }
+    const source = data.data || data;
 
+    state.ringDimensions.value = source.dimensions || { width: 24, height: 24 };
+
+    // [DEBUG & FIX] Helper to sanitize numbers and Log bad data
+    const safeNum = (val, fallback, context) => {
+      if (val === undefined || val === null) return undefined;
+      
+      const num = Number(val);
+      
+      // If it's NaN, or if it was a String that we had to cast
+      if (isNaN(num)) {
+        console.warn(`⚠️ Fixed NaN in ${context}:`, val, "->", fallback);
+        return fallback;
+      }
+      if (typeof val === 'string') {
+        console.debug(`🔧 Fixed String in ${context}:`, `"${val}"`, "->", num);
+      }
+      return num;
+    };
+
+    const cleanItem = (item, type) => {
+      if (!item || typeof item !== 'object') return item;
+      
+      // Sanitize core coordinates
+      if (item.x !== undefined) item.x = safeNum(item.x, 0, `${type}.x`);
+      if (item.y !== undefined) item.y = safeNum(item.y, 0, `${type}.y`);
+      if (item.width !== undefined) item.width = safeNum(item.width, 1, `${type}.width`);
+      if (item.height !== undefined) item.height = safeNum(item.height, 1, `${type}.height`);
+      if (item.rotation !== undefined) item.rotation = safeNum(item.rotation, 0, `${type}.rotation`);
+
+      // Sanitize custom object
+      if (item.custom && typeof item.custom === 'object') {
+        if (item.custom.width) item.custom.width = safeNum(item.custom.width, 1, `${type}.custom.width`);
+        if (item.custom.height) item.custom.height = safeNum(item.custom.height, 1, `${type}.custom.height`);
+        if (item.custom.length) item.custom.length = safeNum(item.custom.length, 1, `${type}.custom.length`);
+      }
+      return item;
+    };
+
+    // Apply cleaning to all arrays in mapData
     Object.keys(state.mapData.value).forEach(key => {
       if (source[key] !== undefined) {
-        state.mapData.value[key] = source[key]
+        if (Array.isArray(source[key])) {
+          state.mapData.value[key] = source[key].map((item, idx) => cleanItem(item, `${key}[${idx}]`));
+        } else if (typeof source[key] === 'object') {
+          state.mapData.value[key] = cleanItem(source[key], key);
+        } else {
+          state.mapData.value[key] = source[key];
+        }
       }
-    })
+    });
 
-    // Fix 1: "Deadzones" often change names (zones vs deadZones)
+    // --- APPLY LEGACY MIGRATIONS ---
     if (source.deadZones && Array.isArray(source.deadZones)) {
-      state.mapData.value.zones = source.deadZones
+      state.mapData.value.zones = source.deadZones.map((item, i) => cleanItem(item, `deadZones[${i}]`));
     }
-
-    // Fix 2: "Steps" (verify if old maps used singular 'step')
     if (source.step && Array.isArray(source.step)) {
-      state.mapData.value.steps = source.step
+      state.mapData.value.steps = source.step.map((item, i) => cleanItem(item, `step[${i}]`));
     }
 
-    // Fix 3: Ensure they are initialized as arrays if missing
-    if (!state.mapData.value.zones) state.mapData.value.zones = []
-    if (!state.mapData.value.steps) state.mapData.value.steps = []
+    // Ensure defaults
+    if (!state.mapData.value.zones) state.mapData.value.zones = [];
+    if (!state.mapData.value.steps) state.mapData.value.steps = [];
+    if (!state.mapData.value.measurements) state.mapData.value.measurements = [];
 
-    if (!state.mapData.value.measurements) {
-      state.mapData.value.measurements = []
+    // [FIX] Sanitize Bale Config specifically (This was likely your mapStore.js:152 issue)
+    if (source.baleConfig) {
+       console.log("Checking Bale Config:", source.baleConfig);
+       state.baleConfig.value = {
+         length: safeNum(source.baleConfig.length, 3, 'baleConfig.length'),
+         width: safeNum(source.baleConfig.width, 1.5, 'baleConfig.width'),
+         height: safeNum(source.baleConfig.height, 1, 'baleConfig.height')
+       };
+    } else if (state.baleConfig) {
+       state.baleConfig.value = { length: 3, width: 1.5, height: 1 };
     }
 
-    if (source.previousBales && Array.isArray(source.previousBales)) {
-      state.previousBales.value = source.previousBales
-    } else {
-      state.previousBales.value = [] // Reset if none exists
-    }
-
-    if (source.comparisonMapName) {
-      state.comparisonMapName.value = source.comparisonMapName
-    } else {
-      state.comparisonMapName.value = null
-    }
-
-    // [FIX] Ensure Singletons have IDs (StartBox, Gate)
-    if (state.mapData.value.startBox && !state.mapData.value.startBox.id) {
-      state.mapData.value.startBox.id = crypto.randomUUID()
-    }
-    if (state.mapData.value.gate && !state.mapData.value.gate.id) {
-      state.mapData.value.gate.id = crypto.randomUUID()
-    }
-
-    if (state.wallTypes && source.wallTypes) state.wallTypes.value = source.wallTypes
-    if (state.gridStartCorner) state.gridStartCorner.value = source.gridStartCorner || 'top-left'
-    if (state.trialLocation) state.trialLocation.value = source.trialLocation || ''
-    if (state.trialDay) state.trialDay.value = source.trialDay || ''
-    if (state.trialNumber) state.trialNumber.value = source.trialNumber || ''
-    if (state.previousClassCount) state.previousClassCount.value = source.previousClassCount || 0
-
-    if (state.baleConfig) {
-      const def = { length: 3, width: 1.5, height: 1 }
-      state.baleConfig.value = source.baleConfig || def
-    }
+    console.groupEnd();
   }
 
   // --- LOAD FROM CLOUD DATA ---

@@ -37,11 +37,19 @@ onUnmounted(() => {
 
 
 const finalWidth = computed(() => {
-  return props.zone.custom?.width != null ? props.zone.custom.width : (props.zone.width || 0)
+  // [FIX] Force Number casting to prevent NaN from 'custom' prop
+  const val = props.zone.custom?.width != null 
+    ? props.zone.custom.width 
+    : props.zone.width
+  return Number(val) || 0
 })
 
 const finalHeight = computed(() => {
-  return props.zone.custom?.height != null ? props.zone.custom.height : (props.zone.height || 0)
+  // [FIX] Force Number casting
+  const val = props.zone.custom?.height != null 
+    ? props.zone.custom.height 
+    : props.zone.height
+  return Number(val) || 0
 })
 
 const labelText = computed(() => {

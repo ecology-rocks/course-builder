@@ -26,9 +26,16 @@ const s = computed(() => props.scale || 1)
 
 // --- DIMENSIONS & CENTER ---
 const dims = computed(() => {
-  const L = props.bale.custom?.length ?? store.baleConfig?.length ?? 3
-  const W = props.bale.custom?.width ?? store.baleConfig?.width ?? 1.5
-  const H = props.bale.custom?.height ?? store.baleConfig?.height ?? 1
+  // [FIX] Harden against NaN using Number() + OR syntax
+  const config = store.baleConfig || {}
+  
+  const rawL = props.bale.custom?.length ?? config.length ?? 3
+  const rawW = props.bale.custom?.width ?? config.width ?? 1.5
+  const rawH = props.bale.custom?.height ?? config.height ?? 1
+
+  const L = Number(rawL) || 3
+  const W = Number(rawW) || 1.5
+  const H = Number(rawH) || 1
 
   const orientation = props.bale?.orientation || 'flat'
   if (orientation === 'pillar') return { width: W, height: H }

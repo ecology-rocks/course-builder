@@ -64,7 +64,7 @@ const { printBlinds } = useBlindPrinter(store, userStore, stageRef, scale)
 
 useKeyboardShortcuts(store, handleSaveMap)
 
-watch(() => [store.sport, store.ringDimensions.width], () => { nextTick(fitToScreen) }, { immediate: true })
+//watch(() => [store.sport, store.ringDimensions.width], () => { nextTick(fitToScreen) }, { immediate: true })
 
 const activeDisplayHides = computed(() => {
   if (isBlindMode.value && blindManagerRef.value) {
