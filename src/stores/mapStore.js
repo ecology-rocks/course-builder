@@ -352,7 +352,7 @@ watch(baleConfig, (newVal) => {
     ...useDCMats(stateRefs, deps.snapshot),
     ...useGates(stateRefs, deps.snapshot),
     ...useHides(stateRefs, deps.snapshot),
-    ...useMeasurements(stateRefs, deps.snapshot),
+    ...useMeasurements(stateRefs, deps.snapshot, deps),
     ...useNotes(stateRefs, deps.snapshot),
     ...useStartBox(stateRefs, deps.snapshot),
     ...useSteps(stateRefs, deps.snapshot),

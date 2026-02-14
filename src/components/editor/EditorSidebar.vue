@@ -149,7 +149,7 @@ function handleSave() {
         <button @click="showPrintModal = true" class="btn-secondary">🖨️ Print</button>
       </div>
       
-      <div v-if="userStore.isBeta" style="margin-top: 5px;">
+      <div style="margin-top: 5px;">
         <button @click="showAdvancedPrintModal = true" class="btn-beta">
           🚀 Advanced Print (Beta)
         </button>

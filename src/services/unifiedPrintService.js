@@ -275,8 +275,12 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
         }
         if (blinds.length === 0) throw new Error("No blinds selected.");
 
-        store.currentLayer = 1;
-        store.multiLayerView = 1; 
+        // [FIX] Detect highest populated layer (3 -> 2 -> 1)
+        // This ensures we print the "Top" view looking down through all layers
+        const topLayer = [3, 2].find(l => store.bales.some(b => b.layer === l)) || 1;
+
+        store.currentLayer = topLayer;
+        store.multiLayerView = topLayer; // Enable ghosting for layers below the top
         setVisibility(true); // Force hides ON for blinds
 
         for (const blind of blinds) {

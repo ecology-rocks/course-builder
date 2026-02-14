@@ -399,7 +399,7 @@ function handleDragEnd(e, id) {
       shadowOpacity: 0.5
     }" />
     <v-text :config="{
-      text: 'RIGHT CLICK\n LAST POINT\n TO FINISH',
+      text: 'RIGHT CLICK\n LAST POINT\n TO FINISH\n A PATH',
       fontFamily: 'sans-serif',
       fontSize: 16,
       padding: 10,

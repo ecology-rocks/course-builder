@@ -18,7 +18,7 @@ const config = reactive({
   layout: 'full', 
   orientation: 'landscape',
   overlayAll: true, 
-  copies: 1, // [NEW] Default to 1 copy
+  copies: 1, 
   
   layers: { 1: true, 2: false, 3: false },
   hides: { mode: 'none' },
@@ -52,7 +52,14 @@ const printButtonLabel = computed(() => {
   return config.mode === 'blinds' ? 'Print Blinds' : 'Print Layers'
 })
 
-// Custom Item Scanning
+// [NEW] Dynamic Button Class based on Mode
+const printButtonClass = computed(() => {
+  if (activeTab.value === 'blinds' || config.mode === 'blinds') {
+    return 'btn-purple'
+  }
+  return 'btn-primary'
+})
+
 const detectedCustoms = computed(() => {
   const customs = []
   const seen = new Set()
@@ -102,7 +109,6 @@ watch(activeTab, (newTab) => {
   if (newTab === 'blinds') config.mode = 'blinds'
 })
 
-// Profile Logic
 const savedProfiles = ref([])
 const newProfileName = ref('')
 function loadProfiles() {
@@ -137,7 +143,7 @@ function handlePrint() {
     layout: config.layout,
     orientation: config.orientation,
     overlayAll: config.overlayAll,
-    copies: config.copies, // [NEW]
+    copies: config.copies,
     hides: { mode: config.hides.mode },
     legend: { ...config.legend, customDefinitions: detectedCustoms.value },
     selectedBlindIds: selectedBlindIds.value
@@ -165,14 +171,26 @@ function handlePrint() {
       <div class="tabs">
         <button :class="{ active: activeTab === 'general' }" @click="activeTab = 'general'">General</button>
         <button :class="{ active: activeTab === 'legend' }" @click="activeTab = 'legend'">Legend</button>
-        <button :class="{ active: activeTab === 'layers' }" @click="activeTab = 'layers'">Print Layers</button>
-        <button :class="{ active: activeTab === 'blinds' }" @click="activeTab = 'blinds'">Print Blinds</button>
+        
+        <button 
+          class="tab-action layers-mode"
+          :class="{ active: activeTab === 'layers' }" 
+          @click="activeTab = 'layers'"
+        >Print Layers</button>
+        
+        <button 
+          class="tab-action blinds-mode"
+          :class="{ active: activeTab === 'blinds' }" 
+          @click="activeTab = 'blinds'"
+        >Print Blinds</button>
+        
         <!--button :class="{ active: activeTab === 'profiles' }" @click="activeTab = 'profiles'">Profiles</button-->
       </div>
 
       <div class="modal-body">
         
         <div v-if="activeTab === 'general'" class="tab-pane">
+            <div class="info-box"><span class="icon">ℹ️</span>These settings apply to both the Print Layers and Print Blinds workflows. </div>
           <div class="control-group">
             <label>Orientation</label>
             <div class="radio-cards">
@@ -207,10 +225,11 @@ function handlePrint() {
           <div class="split-row">
             <div class="control-group half">
               <label>Copies per Item</label>
+              
               <div class="input-wrapper">
                 <input type="number" v-model.number="config.copies" min="1" max="50">
               </div>
-              <small class="hint">Useful for grid layouts</small>
+              <small class="hint">Useful for half- and quarter- page layouts. Each layer or blind will duplicate itself by this number of copies. E.g., Layer 1 four times, then Layer 2 four times, to facilitate double sided course maps for course builders or other needs. Use your printer's "Copies" feature to print sequentially (Layer 1 then Layer 2, repeat).</small>
             </div>
             <div class="control-group half">
               <label class="checkbox-row" style="margin-top: 25px;">
@@ -222,6 +241,7 @@ function handlePrint() {
         </div>
 
         <div v-if="activeTab === 'layers'" class="tab-pane">
+            <div class="info-box"><span class="icon">ℹ️</span>This print button prints your layers individually for course builders. It ignores your blinds settings.</div>
           <div class="sub-group">
             <label class="sub-label">Select Layers</label>
             <div class="checkbox-list">
@@ -233,7 +253,7 @@ function handlePrint() {
                 <input type="checkbox" v-model="config.layers[3]" :disabled="!hasLayer3"> Layer 3
               </label>
             </div>
-            <label class="sub-label" style="margin-top:15px">Include (Legacy/Quick) Hides?</label>
+            <label class="sub-label" style="margin-top:15px">Include Quick Hides?</label>
             <div class="radio-row">
               <label><input type="radio" v-model="config.hides.mode" value="none"> No</label>
               <label><input type="radio" v-model="config.hides.mode" value="quick"> Yes (Icons)</label>
@@ -242,9 +262,10 @@ function handlePrint() {
         </div>
 
         <div v-if="activeTab === 'blinds'" class="tab-pane">
+            <div class="info-box"><span class="icon">ℹ️</span>Print your blinds on an overlaid map (all 2 or 3 layers). This print button ignores any settings on the "Print Layers" tab. </div>
            <div class="toolbar">
               <button @click="toggleAllBlinds" class="btn-xs">
-                {{ selectedBlindIds.length === availableBlinds.length ? 'None' : 'All' }}
+                {{ selectedBlindIds.length === availableBlinds.length ? 'Select None' : 'Select All' }}
               </button>
               <span class="count">{{ selectedBlindIds.length }} / {{ availableBlinds.length }}</span>
             </div>
@@ -255,12 +276,10 @@ function handlePrint() {
                 <span class="blind-info">{{ blind.randoms.join('-') }}</span>
               </label>
             </div>
-            <div v-if="availableBlinds.length === 0">
-                <p>Sorry, you haven't set up blinds yet!</p> <p> Hit the <b>🏆 Full Blinds</b> button on the Editor Sidebar to get started. </p>
-            </div>
         </div>
 
         <div v-if="activeTab === 'legend'" class="tab-pane">
+            <div class="info-box"><span class="icon">ℹ️</span>These settings apply to both the Print Layers and Print Blinds workflows. </div>
           <p class="help-text">Select items to display in the key:</p>
           <div class="checkbox-grid">
             <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showStats"> Stats</label>
@@ -313,7 +332,11 @@ function handlePrint() {
 
       <div class="modal-footer">
         <button class="btn-secondary" @click="emit('close')">Cancel</button>
-        <button class="btn-primary" @click="handlePrint" :disabled="activeTab === 'blinds' && selectedBlindIds.length === 0">
+        <button 
+          :class="printButtonClass" 
+          @click="handlePrint" 
+          :disabled="activeTab === 'blinds' && selectedBlindIds.length === 0"
+        >
           {{ printButtonLabel }}
         </button>
       </div>
@@ -323,23 +346,29 @@ function handlePrint() {
 </template>
 
 <style scoped>
-/* Previous Styles + New Input Styles */
-.split-row { display: flex; gap: 15px; }
-.half { flex: 1; }
-.input-wrapper input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
-.hint { font-size: 10px; color: #888; font-style: italic; }
-
-/* ... (All existing styles) ... */
 .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; display: flex; justify-content: center; align-items: center; }
 .modal-window { background: white; width: 500px; max-width: 95%; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
 .modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; }
 .title-block h3 { margin: 0; font-size: 18px; color: #2c3e50; }
 .subtitle { font-size: 12px; color: #666; }
 .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; line-height: 1; }
+
 .tabs { display: flex; border-bottom: 1px solid #eee; background: white; }
 .tabs button { flex: 1; padding: 12px; border: none; background: none; font-weight: 500; color: #666; cursor: pointer; border-bottom: 3px solid transparent; }
 .tabs button:hover { background: #f8f9fa; }
 .tabs button.active { color: #2196f3; border-bottom-color: #2196f3; }
+
+/* [NEW] Colored Tabs */
+.tabs button.tab-action { font-weight: bold; }
+
+.tabs button.layers-mode { color: #555; }
+.tabs button.layers-mode:hover { background: #e3f2fd; color: #1976d2; }
+.tabs button.layers-mode.active { color: #1976d2; border-bottom-color: #1976d2; background: #e3f2fd50; }
+
+.tabs button.blinds-mode { color: #555; }
+.tabs button.blinds-mode:hover { background: #f3e5f5; color: #9c27b0; }
+.tabs button.blinds-mode.active { color: #9c27b0; border-bottom-color: #9c27b0; background: #f3e5f550; }
+
 .modal-body { padding: 20px; min-height: 300px; }
 .tab-pane { animation: fadeIn 0.2s; }
 .control-group { margin-bottom: 20px; }
@@ -365,8 +394,15 @@ function handlePrint() {
 .blind-info { font-family: monospace; font-size: 12px; color: #666; }
 .modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; align-items: center; gap: 10px; background: #f8f9fa; }
 .btn-secondary { background: white; border: 1px solid #ddd; color: #333; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+
+/* [NEW] Button Colors */
 .btn-primary { background: #2196f3; border: none; color: white; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
 .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+
+.btn-purple { background: #9c27b0; border: none; color: white; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+.btn-purple:hover { background: #7b1fa2; }
+.btn-purple:disabled { background: #ccc; cursor: not-allowed; }
+
 .checkbox-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .custom-section { margin-top: 15px; }
 .divider { height: 1px; background: #eee; margin: 10px 0; }
@@ -377,17 +413,30 @@ function handlePrint() {
 .btn-xs.load { background: #e3f2fd; color: #1976d2; }
 .btn-xs.delete { background: #ffebee; color: #c62828; }
 .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
+.input-group input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
 .btn-sm { padding: 0 12px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; }
-.blind-btn {padding: 10px;
-  border: 1px solid #eee;
-  background: white;
+.split-row { display: flex; gap: 15px; }
+.half { flex: 1; }
+.input-wrapper input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+.hint { font-size: 10px; color: #888; font-style: italic; }
+.info-box {
+  background-color: #e3f2fd; /* Light Blue Background */
+  border: 1px solid #90caf9; /* Slightly darker blue border */
+  color: #1565c0;            /* Dark Blue Text */
+  padding: 10px 15px;
   border-radius: 6px;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.2s;
-  font-size: 0.9rem;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);}
+  margin-bottom: 20px;       /* Spacing below the box */
+  font-size: 13px;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.info-box .icon {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;            /* Prevent icon from squishing */
+}
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
