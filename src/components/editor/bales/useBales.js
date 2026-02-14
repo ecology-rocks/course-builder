@@ -230,27 +230,78 @@ export function useBales(state, snapshot, notifications) {
     if (snapshot) snapshot()
   }
 
-  function cycleOrientation(id) {
-    const bale = state.bales.value.find(b => b.id === id)
-    if (bale) {
-      if (bale.isAnchor) { notifications.show("Cannot change orientation of Anchor bales.", "error"); return }
-      if (bale.orientation === 'flat') { bale.orientation = 'tall'; bale.lean = null }
-      else if (bale.orientation === 'tall') { bale.orientation = 'pillar'; bale.lean = null }
-      else { bale.orientation = 'flat' }
-      if (snapshot) snapshot();
+  function cycleOrientation(targetId = null) {
+    // Determine Targets: If targetId exists, check if it's part of selection. 
+    // If null (button click), use entire selection.
+    const targets = targetId 
+      ? (state.selection.value.includes(targetId) ? state.selection.value : [targetId]) 
+      : state.selection.value
+
+    if (targets.length === 0) return
+
+    let modified = false
+    let anchorError = false
+
+    state.bales.value.forEach(bale => {
+      if (targets.includes(bale.id)) {
+        // Skip anchors
+        if (bale.isAnchor) {
+          anchorError = true
+          return
+        }
+        
+        // Cycle Logic
+        if (bale.orientation === 'flat') { bale.orientation = 'tall'; bale.lean = null }
+        else if (bale.orientation === 'tall') { bale.orientation = 'pillar'; bale.lean = null }
+        else { bale.orientation = 'flat' }
+        
+        modified = true
+      }
+    })
+
+    // Show error only if we failed to modify anything and it was a specific attempt
+    if (anchorError && !modified && targets.length === 1) {
+        notifications.show("Cannot change orientation of Anchor bales.", "error")
     }
+    
+    if (modified && snapshot) snapshot()
   }
 
-  function cycleLean(id) {
-    const bale = state.bales.value.find(b => b.id === id)
-    if (bale) {
-      if (bale.isAnchor) { notifications.show("Anchor bales cannot have a lean.", "error"); return }
-      if (bale.orientation !== 'flat') { notifications.show("Only FLAT bales can have a lean.", 'error'); return }
-      if (bale.lean === null) bale.lean = 'right'
-      else if (bale.lean === 'right') bale.lean = 'left'
-      else bale.lean = null
-      if (snapshot) snapshot();
+  function cycleLean(targetId = null) {
+    const targets = targetId 
+      ? (state.selection.value.includes(targetId) ? state.selection.value : [targetId]) 
+      : state.selection.value
+
+    if (targets.length === 0) return
+
+    let modified = false
+    let errorMsg = null
+
+    state.bales.value.forEach(bale => {
+      if (targets.includes(bale.id)) {
+        if (bale.isAnchor) {
+          errorMsg = "Anchor bales cannot have a lean."
+          return
+        }
+        if (bale.orientation !== 'flat') {
+          errorMsg = "Only FLAT bales can have a lean."
+          return
+        }
+
+        // Cycle Logic
+        if (bale.lean === null) bale.lean = 'right'
+        else if (bale.lean === 'right') bale.lean = 'left'
+        else bale.lean = null
+        
+        modified = true
+      }
+    })
+
+    if (errorMsg && !modified && targets.length === 1) {
+        notifications.show(errorMsg, "error")
     }
+
+    if (modified && snapshot) snapshot()
   }
 
   function toggleAnchor(targetId = null) {

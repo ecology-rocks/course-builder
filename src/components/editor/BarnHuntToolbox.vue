@@ -11,6 +11,22 @@ const isBeta = userStore.isBeta
 const hasBaleSelected = computed(() => {
   return store.selection.some(id => store.bales.some(b => b.id === id))
 })
+
+function handleOrient() {
+  if (hasBaleSelected) {
+    store.cycleOrientation() // Trigger immediate action on selection
+  } else {
+    store.setTool('type')    // Activate tool for manual clicking
+  }
+}
+
+function handleLean() {
+  if (hasBaleSelected.value) {
+    store.cycleLean()        // Trigger immediate action on selection
+  } else {
+    store.setTool('lean')    // Activate tool for manual clicking
+  }
+}
 </script>
 
 <template>
@@ -44,10 +60,10 @@ const hasBaleSelected = computed(() => {
     <div class="tool-section">
       <h3>Bale Modifiers</h3>
       <div class="tool-grid">
-        <button @click="store.setTool('type')" :class="{ active: store.activeTool === 'type' }">
+        <button @click="handleOrient" :class="{ active: store.activeTool === 'type' }">
           📐 Orient
         </button>
-        <button @click="store.setTool('lean')" :class="{ active: store.activeTool === 'lean' }">
+        <button @click="handleLean" :class="{ active: store.activeTool === 'lean' }">
           ↗️ Lean
         </button>
         <button @click="store.toggleAnchor()" :disabled="!hasBaleSelected"
