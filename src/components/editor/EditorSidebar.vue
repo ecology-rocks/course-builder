@@ -148,18 +148,12 @@ function handleSave() {
           <span v-if="!userStore.isPro">🔒</span> 💾 Save
         </button>
         
-        <button @click="showPrintModal = true" class="btn-secondary">🖨️ Print</button>
-      </div>
-      
-      <div style="margin-top: 5px;">
-        <button @click="showAdvancedPrintModal = true" class="btn-beta">
-          🚀 Advanced Print (Beta)
-        </button>
+        <button @click="showAdvancedPrintModal = true" class="btn-secondary">🖨️ Print</button>
       </div>
 
       <div class="secondary-actions">
         <button @click="showLoadModal = true">📂 Load</button>
-        <button v-if="userStore.isPro" @click="showShareModal = true">🔗 Share</button>
+        <!--button v-if="userStore.isPro" @click="showShareModal = true">🔗 Share</button-->
         <button @click="showLibraryModal = true">📖 Lib</button>
       </div>
 

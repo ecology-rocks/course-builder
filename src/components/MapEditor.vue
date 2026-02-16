@@ -32,6 +32,7 @@ import TournamentSetupModal from 'modals/TournamentSetupModal.vue'
 import BlindManager from './editor/BlindManager.vue'
 import SaveConfirmationModal from 'modals/SaveConfirmationModal.vue'
 import PostPrintModal from 'modals/PostPrintModal.vue' // [NEW]
+import AdvancedPrintModal from '@/components/modals/AdvancedPrintModal.vue'
 
 // Context Menus
 import StageContextMenu from './editor/StageContextMenu.vue'
@@ -64,6 +65,7 @@ const sidebarRef = ref(null)
 const pendingBlindExit = ref(false)
 const isNewMap = computed(() => !store.currentMapId)
 const pendingHomeExit = ref(false)
+const showAdvancedPrintModal = ref(false)
 
 const { getNearestSnapPoint, getAngleSnapPoint } = useCustomWalls(store)
 
@@ -119,6 +121,11 @@ function resolvePostPrint(action, payload) {
   }
 }
 
+function handleBlindExitRequest() {
+  pendingBlindExit.value = true
+  showSaveModal.value = true
+}
+
 // [NEW] Handle Export Action from Modal
 function resolveExport(newNamePayload) {
   // If user typed a name in the modal, apply it before exporting
@@ -165,9 +172,21 @@ function handleGoHome() {
 // [NEW] Handle Discard Action
 function resolveDiscard() {
   showSaveModal.value = false
-  pendingHomeExit.value = false
-  store.reset()
-  router.push('/dashboard')
+  
+  // Case 1: Exiting Blind Manager (Just close mode, keep map open)
+  if (pendingBlindExit.value) {
+    isBlindMode.value = false
+    pendingBlindExit.value = false
+    store.showNotification("Changes discarded. Exiting Blind Manager.")
+    return
+  }
+
+  // Case 2: Exiting to Home (Reset map)
+  if (pendingHomeExit.value) {
+    pendingHomeExit.value = false
+    store.reset()
+    router.push('/dashboard')
+  }
 }
 
 // [UPDATED] resolveSave to handle Dashboard Exit
@@ -313,13 +332,7 @@ watch(
 )
 
 async function handleBatchPrint() {
-  // [KEEP] Legacy Blind Printing for now
-  isPrinting.value = true
-  try {
-    await printBlinds()
-  } finally {
-    isPrinting.value = false
-  }
+  showAdvancedPrintModal.value = true
 }
 
 // [KEEP] Legacy Print Handler
@@ -463,19 +476,25 @@ async function handleAdvancedPrint(config) {
       v-if="showSaveModal" 
       :mapName="store.mapName"
       :isNewMap="isNewMap"
-      :allowDiscard="pendingHomeExit"
+      :allowDiscard="pendingHomeExit || pendingBlindExit"
       @cancel="onSaveModalCancel"
       @overwrite="resolveSave('overwrite')"
       @save-as-new="(newName) => resolveSave('save-as-new', newName)"
       @discard="resolveDiscard"
-      @export-json="(newName) => resolveExport(newName)" />
+      @export-json="(newName) => resolveExport(newName)" 
+    />
     <PostPrintModal v-if="showPostPrintModal" :mapName="store.mapName" @cancel="showPostPrintModal = false"
       @save-as-new="(newName) => resolvePostPrint('save-as-new', newName)"
       @print-again="resolvePostPrint('print-again')" @reset="resolvePostPrint('reset')" />
     <CustomizationModal />
     <TournamentSetupModal v-if="showBlindSetup" @close="showBlindSetup = false" @start="handleBlindSetupStart" />
     <BlindManager v-if="isBlindMode" ref="blindManagerRef" @close="isBlindMode = false" @print="handleBatchPrint"
-      @save="handleBlindSave" />
+      @save="handleBlindSave" @exit-request="handleBlindExitRequest" />
+      <AdvancedPrintModal 
+      v-if="showAdvancedPrintModal" 
+      @close="showAdvancedPrintModal = false" 
+      @confirm="handleAdvancedPrint" 
+    />
   </div>
 </template>
 

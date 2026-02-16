@@ -4,15 +4,17 @@ import AppFooter from '@/components/AppFooter.vue'
 
 // --- MANAGE YOUR ROADMAP HERE ---
 const released = ref([
-  { version: 'v1.1', date: '2026-02-13', desc: 'Redid the blind print flow (beta) so that users do not get timed out by their browsers. Fixed hitbox on custom rings. Gave access to blind prints to all users. '},
+  { version: 'v1.1', date: '2026-02-13', desc: 'Redid the blind print flow so that users do not get timed out by their browsers. Fixed hitbox on custom rings. Gave access to blind prints to all users. Fixed anchor bales to appear at corners.'},
   { version: 'v1.0', date: '2026-02-07', desc: 'Adding right click menus and appropriate bottom bar / floating menus. Added individual object customization. ' },
   { version: 'v0.9', date: '2026-01-31', desc: 'Fully legal Barn Hunt maps thanks to beta testers.' },
   { version: 'v0.5', date: '2026-12-01', desc: 'Alpha version for testers to work out bugs.' }
 ])
 
 const inProgress = ref([
-  'Allowing custom objects in the print legend',
-  'Redoing the print flow',
+  'Rebuild the tunnel boards so that they can be combined into one tool',
+  'Rebuild share tool as it does not show custom rings or objects',
+  'Need to add wall color customization in custom rings',
+  'Need to add categories for library of importable objects, so we can add custom rings to it later.'
 ])
 
 const planned = ref([

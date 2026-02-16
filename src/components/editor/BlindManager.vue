@@ -5,7 +5,7 @@ import { useBlindManager } from './logic/useBlindManager'
 import { useUserStore } from '@/stores/userStore'
 
 
-const emit = defineEmits(['close', 'print', 'save'])
+const emit = defineEmits(['close', 'print', 'save', 'exit-request'])
 const store = useMapStore()
 const userStore = useUserStore()
 
@@ -64,11 +64,7 @@ function deleteSelected() {
 }
 
 function handleCloseAttempt() {
-  if (confirm("Would you like to save your changes before exiting?")) {
-    emit('save')
-  } else {
-    emit('close')
-  }
+    emit('exit-request')
 }
 </script>
 

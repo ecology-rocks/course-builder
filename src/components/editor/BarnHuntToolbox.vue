@@ -97,8 +97,8 @@ function handleLean() {
     <div class="tool-section">
       <h3>Blinds & Hides</h3>
       <div class="tool-grid">
-        <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }">🐀 Quick Hide</button>
-        <button class="tool-btn action-btn" @click="$emit('blind-setup')" title="Blind Manager">🏆 Full
+        <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }" title="Use for one blind only.">🐀 Quick Hide</button>
+        <button class="tool-btn action-btn" @click="$emit('blind-setup')" title="Create and manage multiple blinds and hides.">🏆 Full
           Blinds</button>
       </div>
     </div>
