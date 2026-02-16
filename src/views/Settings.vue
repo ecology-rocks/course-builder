@@ -29,7 +29,8 @@ onMounted(() => {
 async function handleUpdateProfile() {
   if (newName.value && newName.value.trim() !== "") {
     await userStore.updateJudgeName(newName.value.trim())
-    alert("Profile updated!")
+    // [UPDATED]
+    userStore.showNotification("Profile updated successfully!")
   }
 }
 
@@ -41,8 +42,14 @@ async function handlePasswordReset() {
 
 // --- PAYMENT LOGIC ---
 async function handleUpgrade() {
-  if (!auth.currentUser) return alert("Please login again.")
-  if (!PRICE_ID_FOUNDER) return alert("System Error: Founder Price ID missing.")
+  if (!auth.currentUser) {
+    // [UPDATED]
+    return userStore.showNotification("Please login again.", "error")
+  }
+  if (!PRICE_ID_FOUNDER) {
+    // [UPDATED]
+    return userStore.showNotification("System Error: Price ID missing.", "error")
+  }
 
   try {
     const createSession = httpsCallable(functions, 'createCheckoutSession')
@@ -55,7 +62,7 @@ async function handleUpgrade() {
     if (response.data.url) window.location.href = response.data.url
   } catch (e) {
     console.error("Payment Error:", e)
-    alert(`Payment failed: ${e.message}`)
+    userStore.showNotification(`Payment failed: ${e.message}`, "error")
   }
 }
 
@@ -67,13 +74,18 @@ async function handleManageBilling() {
     const response = await createPortal({ returnUrl: window.location.href })
     if (response.data.url) window.location.href = response.data.url
   } catch (e) {
-    alert("Could not open billing portal. Pleas email support@k9coursebuilder.com.")
+    userStore.showNotification("Could not open billing portal. Please contact support@k9coursebuilder.com", "error")
   }
 }
 </script>
 
 <template>
   <div class="settings-page">
+  <Transition name="fade">
+      <div v-if="userStore.notification" class="toast-notification" :class="userStore.notification.type">
+        {{ userStore.notification.message }}
+      </div>
+    </Transition>
     <nav class="navbar">
       <div class="logo" @click="router.push('/dashboard')">🐾 K9CourseBuilder</div>
       <button @click="router.push('/dashboard')" class="btn-text">← Back</button>
@@ -124,7 +136,7 @@ async function handleManageBilling() {
           <label>Judge Name (Appears on Maps):</label>
           <div class="input-row">
             <input v-model="newName" type="text" />
-            <button @click="handleUpdateProfile">Save</button>
+            <button class="btn-primary" @click="handleUpdateProfile">Save</button>
           </div>
         </div>
       </section>
@@ -184,4 +196,33 @@ async function handleManageBilling() {
 .input-row input { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
 .disabled-input { width: 100%; padding: 8px; background: #f5f5f5; border: 1px solid #eee; color: #777; }
 .sponsor-msg { background: #e3f2fd; color: #1565c0; padding: 10px; border-radius: 4px; }
+
+.toast-notification {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 8px;
+  color: white;
+  font-weight: bold;
+  z-index: 2000;
+  pointer-events: none;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.toast-notification.success { background-color: #388e3c; }
+.toast-notification.error { background-color: #d32f2f; }
+.toast-notification.info { background-color: #2196f3; }
+
+/* Transition for Fade */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
 </style>

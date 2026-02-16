@@ -69,7 +69,7 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
     .tunnelbox { height: 6px; background: rgba(139, 69, 19, 0.4); border: 1px solid brown; }
     .gate { border: 1px solid black; height: 4px; }
     .step { background: #8D6E63; border: 1px solid black;}
-    .start { border: 1px dashed black; background: #eee; }
+    .start { border: 1px solid black; background: #eee; }
     .dc { background: #d1c4e9; }
     .obstruction { border: 1px dashed black; background: rgba(100, 100, 100, 0.5); }
     .dead-zone { border: 1px dashed red; background: rgba(255, 0, 0, 0.3); }
@@ -118,7 +118,7 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
     if (l.showTunnelBox) f += `<div class="legend-item"><span class="symbol tunnelbox"></span> T-Box</div>`;
     if (l.showGate) f += `<div class="legend-item"><span class="symbol gate"></span> Gate</div>`;
     if (l.showStep) f += `<div class="legend-item"><span class="symbol step"></span> Step</div>`;
-    if (l.showLeaners) f += `<div class="legend-item"><span class="symbol leaner">↗</span> Lean</div>`;
+    if (l.showLeaners) f += `<div class="legend-item"><span class="symbol leaner">→</span> Lean</div>`;
     if (l.showAnchors) f += `<div class="legend-item"><span class="symbol anchor">⚓</span> Anchor</div>`;
     if (l.showStartBox) f += `<div class="legend-item"><span class="symbol start"></span> Start</div>`;
     if (l.showDCMat) f += `<div class="legend-item"><span class="symbol dc"></span> DC Mat</div>`;
@@ -155,7 +155,7 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
      if (l.showTunnelBox) items.push(`<div class="mini-item"><span class="mini-symbol tunnelbox"></span>T-Box</div>`);
      if (l.showGate) items.push(`<div class="mini-item"><span class="mini-symbol gate"></span>Gate</div>`);
      if (l.showStep) items.push(`<div class="mini-item"><span class="mini-symbol step"></span>Step</div>`);
-     if (l.showLeaners) items.push(`<div class="mini-item"><span class="mini-symbol leaner">↗</span>Lean</div>`);
+     if (l.showLeaners) items.push(`<div class="mini-item"><span class="mini-symbol leaner">→</span>Lean</div>`);
      if (l.showAnchors) items.push(`<div class="mini-item"><span class="mini-symbol anchor">⚓</span>Anch</div>`);
      if (l.showStartBox) items.push(`<div class="mini-item"><span class="mini-symbol start"></span>Start</div>`);
      if (l.showDCMat) items.push(`<div class="mini-item"><span class="mini-symbol dc"></span>DC</div>`);

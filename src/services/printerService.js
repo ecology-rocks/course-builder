@@ -112,7 +112,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
           <div class="legend-item"><span class="symbol flat"></span> Flat</div>
           <div class="legend-item"><span class="symbol tall"></span> Tall</div>
           <div class="legend-item"><span class="symbol pillar"></span> Pillar</div>
-          <div class="legend-item"><span class="symbol leaner">↗</span> Lean</div>
+          <div class="legend-item"><span class="symbol leaner">→</span> Lean</div>
           </div>
         <div class="mini-legend">
           <div class="legend-item"><span class="symbol hide-rat">R</span> Rat</div>
@@ -209,7 +209,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
               <div class="legend-item"><span class="symbol tunnelbox"></span>Board Box</div>
               <div class="legend-item"><span class="symbol gate"></span> Gate</div>
               <div class="legend-item"><span class="symbol step"></span> Step</div>
-              <div class="legend-item"><span class="symbol leaner">↗</span> Leaner</div>
+              <div class="legend-item"><span class="symbol leaner">→</span> Leaner</div>
               <div class="legend-item"><span class="symbol anchor">⚓</span> Anchor Bale</div>
               <div class="legend-item"><span class="symbol start"></span> Start</div>
               <div class="legend-item"><span class="symbol dc"></span> DC Mat</div>
@@ -265,7 +265,7 @@ export function usePrinter(store, userStore, stageRef, scale) {
         .tunnel { height: 4px; background: #2e7d32; border: none; }
         .tunnelbox { height: 6px; background: rgba(139, 69, 19, 0.4); border: 1px solid brown; }
         .leaner { border: none; font-size: 12px; font-weight: bold; width: auto; height: auto; }
-        .start { border: 1px dashed black; background: #eee; }
+        .start { border: 1px solid black; background: #eee; }
         .dc { background: #d1c4e9; }
         .step { background: #8D6E63; border: 1px solid black;}
         .obstruction { border: 1px dashed black; background: rgba(100, 100, 100, 0.5); }

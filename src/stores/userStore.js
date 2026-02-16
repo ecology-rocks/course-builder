@@ -17,7 +17,8 @@ export const useUserStore = defineStore('user', () => {
   const userProfile = ref(null)
   const loading = ref(true)
   const authError = ref(null)
-  const justRegistered = ref(false) // <--- NEW FLAG
+  const justRegistered = ref(false)
+  const notification = ref(null)
 
   // --- GETTERS ---
   const judgeName = computed(() => userProfile.value?.judgeName || user.value?.displayName || '')
@@ -44,6 +45,13 @@ const isBeta = computed(() => !!userProfile.value?.isBeta)
       }
       loading.value = false
     })
+  }
+
+function showNotification(message, type = 'success') {
+    notification.value = { message, type }
+    setTimeout(() => {
+      notification.value = null
+    }, 3000)
   }
 
   async function fetchUserProfile(uid) {
@@ -124,6 +132,32 @@ const isBeta = computed(() => !!userProfile.value?.isBeta)
     }
   }
 
+async function updateJudgeName(newName) {
+    if (!user.value) return
+
+    try {
+      // 1. Update Firestore (The Source of Truth)
+      // We use setDoc with merge: true to ensure we don't overwrite other fields
+      await setDoc(doc(db, 'users', user.value.uid), { 
+        judgeName: newName 
+      }, { merge: true })
+
+      // 2. Update Local State (Immediate UI Feedback)
+      if (userProfile.value) {
+        userProfile.value.judgeName = newName
+      }
+
+      // 3. Update Firebase Auth Object (Fallback/Redundancy)
+      // This ensures user.displayName is also correct if you use it elsewhere
+      await updateProfile(user.value, { displayName: newName })
+
+      return true
+    } catch (error) {
+      console.error("Failed to update judge name:", error)
+      throw error
+    }
+  }
+
   function handleAuthError(error) {
     console.error(error)
     switch (error.code) {
@@ -166,6 +200,9 @@ init()
     register,
     logout,
     resetPassword,
-    fetchUserProfile
+    fetchUserProfile,
+    updateJudgeName,
+    notification,
+    showNotification,
   }
 })
