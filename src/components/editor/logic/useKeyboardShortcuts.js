@@ -93,6 +93,7 @@ export function useKeyboardShortcuts(store, onSave) {
         store.bales.forEach(b => {
           if (store.selection.includes(b.id)) {
             b.lean = null
+            if(b.isAnchor == true) return
             const currentIdx = orientations.indexOf(b.orientation || 'flat')
             const nextIdx = (currentIdx + 1) % orientations.length
             b.orientation = orientations[nextIdx]

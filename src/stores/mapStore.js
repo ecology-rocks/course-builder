@@ -106,6 +106,7 @@ export const useMapStore = defineStore("map", () => {
   const trialLocation = ref("");
   const trialDay = ref("");
   const trialNumber = ref("");
+  const judgeNotes = ref("");
   const baleConfig = ref({ length: 36 / 12, width: 18 / 12, height: 14 / 12 });
   const dcMatConfig = ref({ width: 2, height: 3 });
     const baleColors = ref({
@@ -283,6 +284,7 @@ function setTool(tool) {
     gridStep,
     isDrawingBoard,
     isShared,
+    judgeNotes,
     mapName,
     nextNumber,
     previousBales,
@@ -450,6 +452,7 @@ watch(baleConfig, (newVal) => {
     isDraggingSelection,
     isDrawingBoard,
     isShared,
+    judgeNotes,
     layerOpacity,
     mapName,
     multiLayerView,

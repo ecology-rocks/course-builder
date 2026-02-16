@@ -47,6 +47,7 @@ export function useMapPersistence(state, userStore, notifications) {
       trialLocation: state.trialLocation.value || '',
       trialDay: state.trialDay.value || '',
       trialNumber: state.trialNumber.value || '',
+      judgeNotes: state.judgeNotes.value || '',
       baleConfig: state.baleConfig.value,
       previousClassCount: state.previousClassCount.value,
       previousBales: state.previousBales.value || [],
@@ -195,7 +196,8 @@ export function useMapPersistence(state, userStore, notifications) {
     state.trialLocation.value = source.trialLocation || "";
     state.trialDay.value = source.trialDay || "";
     state.trialNumber.value = source.trialNumber || "";
-
+    state.judgeNotes.value = source.judgeNotes || "";
+    
     // [DEBUG & FIX] Helper to sanitize numbers and Log bad data
     const safeNum = (val, fallback, context) => {
       if (val === undefined || val === null) return undefined;

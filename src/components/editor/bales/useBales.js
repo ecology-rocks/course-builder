@@ -23,7 +23,7 @@ export function useBales(state, snapshot, notifications) {
 
   // --- CORE ANCHOR CALCULATION (Helper) ---
   // This logic is now shared between toggle, rotate, and move actions
-  function recalculateAnchors(bale) {
+ function recalculateAnchors(bale) {
     // Only calculate if it's actually an anchor
     if (!bale.isAnchor) {
         bale.customAnchors = []
@@ -55,10 +55,22 @@ export function useBales(state, snapshot, notifications) {
 
     // 2. Determine Bale Dimensions & Center
     const config = state.baleConfig.value || {}
-    let w = bale.custom?.length ?? config.length ?? 3
-    let h = bale.custom?.width ?? config.width ?? 1.5
-    if (bale.orientation === 'tall') { w = config.length; h = config.width }
-    else if (bale.orientation === 'pillar') { w = config.width; h = config.width }
+    
+    // [FIX] Standardize dimensions to match BaleObject.vue logic
+    const L = bale.custom?.length ?? config.length ?? 3
+    const W = bale.custom?.width ?? config.width ?? 1.5
+    const H = bale.custom?.height ?? config.height ?? 1
+
+    let w = L
+    let h = W
+
+    if (bale.orientation === 'tall') { 
+        w = L; 
+        h = H; // Was incorrectly using width previously
+    } else if (bale.orientation === 'pillar') { 
+        w = W; 
+        h = H; // Was incorrectly using width previously
+    }
 
     const cx = bale.x + w / 2
     const cy = bale.y + h / 2
@@ -207,7 +219,7 @@ export function useBales(state, snapshot, notifications) {
       return b && !b.isAnchor; 
     });
 
-    if (validTargets.length < targets.length) notifications.show("Cannot change orientation of Anchor bales.", "error");
+    if (validTargets.length < targets.length) notifications.show("Cannot change orientation of Anchor bales. Toggle the anchor off, change the orientation, and then toggle it back on.", "error");
 
     state.bales.value.forEach(b => {
       if (validTargets.includes(b.id)) {

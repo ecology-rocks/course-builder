@@ -16,6 +16,26 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
     body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #333; background: white; }
     
+/* [NEW] Judge Notes Styles */
+    .judge-notes-section {
+      margin-top: 15px;
+      padding-top: 10px;
+      border-top: 2px solid #333;
+    }
+    .judge-notes-section h3 {
+      margin: 0 0 4px 0;
+      font-size: 14px;
+      text-transform: uppercase;
+      font-weight: 800;
+      color: #000;
+    }
+    .notes-content {
+      font-size: 12px;
+      line-height: 1.3;
+      white-space: pre-wrap; /* Preserves line breaks from the textarea */
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+    }
+
     .print-page { height: 98vh; width: 100%; page-break-after: always; position: relative; display: flex; flex-direction: column; }
     .print-page:last-child { page-break-after: auto; }
     .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 80px; opacity: 0.1; pointer-events: none; z-index: 999; }
@@ -223,6 +243,7 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
  async function generatePrintJob(config) {
     store.clearSelection();
 
+    
     const win = window.open("", "_blank");
     if (!win) return { success: false, error: "Popup blocked. Please allow popups." };
 
@@ -243,7 +264,15 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
     const originalScale = scale.value;
     const originalStep = store.gridStep;
     const originalHides = JSON.parse(JSON.stringify(store.hides)); 
-    
+    const { judgeNotes } = config;
+
+
+    const notesHTML = judgeNotes ? `
+  <div class="judge-notes-section">
+    <h3>Judge's Notes</h3>
+    <div class="notes-content">${judgeNotes}</div>
+  </div>
+` : '';
     // Helper to sync visibility
     const setVisibility = (visible) => {
       store.showHides = visible;
@@ -331,7 +360,10 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
             </div>
             <div class="page-body">
               <div class="map-container"><img src="${p.img}" class="map-img" /></div>
+              <div>
               ${sidebarLegend}
+              ${notesHTML}
+              </div>
             </div>
           </div>
         `}).join('');
@@ -361,6 +393,7 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
                     </div>
                     <div class="grid-img-wrapper"><img src="${p.img}" class="grid-img"/></div>
                     ${compactLegend}
+                    
                  </div>
                `).join('')}
             </div>

@@ -146,7 +146,8 @@ function handlePrint() {
     copies: config.copies,
     hides: { mode: config.hides.mode },
     legend: { ...config.legend, customDefinitions: detectedCustoms.value },
-    selectedBlindIds: selectedBlindIds.value
+    selectedBlindIds: selectedBlindIds.value,
+    judgeNotes: store.judgeNotes
   }
   if (config.mode === 'layers') {
     payload.layers = Object.entries(config.layers).filter(([_, a]) => a).map(([k]) => parseInt(k))
@@ -171,7 +172,7 @@ function handlePrint() {
       <div class="tabs">
         <button :class="{ active: activeTab === 'general' }" @click="activeTab = 'general'">General</button>
         <button :class="{ active: activeTab === 'legend' }" @click="activeTab = 'legend'">Legend</button>
-        
+        <button :class="{ active: activeTab === 'notes' }" @click="activeTab = 'notes'">Notes</button>
         <button 
           class="tab-action layers-mode"
           :class="{ active: activeTab === 'layers' }" 
@@ -237,6 +238,27 @@ function handlePrint() {
                 <span><strong>Ghost Overlay</strong></span>
               </label>
             </div>
+          </div>
+        </div>
+
+<div v-if="activeTab === 'notes'" class="tab-pane">
+          <div class="info-box">
+            <span class="icon">ℹ️</span>
+            These notes are saved with the map and will appear below the legend on Full Page prints.
+          </div>
+          
+          <div class="control-group">
+            <label>Judge's Notes</label>
+            <textarea 
+              v-model="store.judgeNotes" 
+              rows="8" 
+              placeholder="Enter course time, special rules, or reminders for the judge..."
+              class="notes-input"
+            ></textarea>
+          </div>
+          
+          <div v-if="config.layout !== 'full'" class="warning-box">
+            ⚠️ You currently have "{{ config.layout }}" layout selected. These notes will NOT appear on grid layouts (Half/Quarter page).
           </div>
         </div>
 
@@ -437,6 +459,31 @@ function handlePrint() {
   font-size: 16px;
   line-height: 1;
   flex-shrink: 0;            /* Prevent icon from squishing */
+}
+
+/* [NEW] Notes Styles */
+.notes-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-family: inherit;
+  resize: vertical;
+  font-size: 14px;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+.notes-input:focus { outline: none; border-color: #2196f3; }
+
+.warning-box {
+  background: #fff3e0;
+  color: #e65100;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 15px;
+  font-size: 13px;
+  border: 1px solid #ffe0b2;
+  font-weight: bold;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>

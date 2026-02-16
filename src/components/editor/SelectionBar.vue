@@ -45,12 +45,10 @@ const isStartBox = computed(() => selectionContext.value?.type === 'startBox')
 const canToggleAnchor = computed(() => {
   if (!isBale.value) return false
   const b = selectionContext.value.data
-  
-  // Rule 1: Must be Layer 1
-  if (store.currentLayer !== 1) return false
+
   
   // Rule 2: Must be Flat
-  if (b.orientation !== 'flat') return false
+  if (b.orientation === 'pillar') return false
   
   // Rule 3: Must be Rectilinear
   const rot = Math.abs(b.rotation) % 90
@@ -117,7 +115,7 @@ const hideTypes = [
             @click="store.toggleAnchor(selectionContext.data.id)"
             :disabled="!canToggleAnchor"
             :class="{ active: selectionContext.data.isAnchor }"
-            title="Toggle Anchor (Must be Flat, Rectilinear, Layer 1)"
+            title="Toggle Anchor (Must be Flat/Tall and Rectilinear)"
           >
             ⚓
           </button>

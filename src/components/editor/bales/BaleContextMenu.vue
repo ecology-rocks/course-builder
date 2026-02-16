@@ -28,11 +28,9 @@ const canToggleAnchor = computed(() => {
   const b = currentBale.value
   if (!b) return false
   
-  // Rule 1: Must be Layer 1
-  if (store.currentLayer !== 1) return false
-  
-  // Rule 2: Must be Flat
-  if (b.orientation !== 'flat') return false
+  console.log(b.orientation)
+  // Rule 2: Can't be Pillar
+  if (b.orientation !== 'tall' && b.orientation !== 'flat') return false
   
   // Rule 3: Must be Rectilinear (0, 90, 180, 270)
   const rot = Math.abs(b.rotation) % 90
@@ -81,7 +79,7 @@ function openCustomizer() {
          @click="toggleAnchor" 
          class="action-btn"
          :disabled="!canToggleAnchor"
-         :title="!canToggleAnchor ? 'Anchors must be Flat, Rectilinear, and on Layer 1' : ''"
+         :title="!canToggleAnchor ? 'Anchors must be Flat/Tall and Rectilinear' : ''"
        >
          {{ isAnchor ? '⚓ Remove Anchor' : '⚓ Make Anchor' }}
        </button>
