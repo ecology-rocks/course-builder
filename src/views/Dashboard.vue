@@ -6,6 +6,7 @@ import { useRouter } from 'vue-router'
 import AuthForm from 'components/AuthForm.vue'
 import DeleteMapModal from 'modals/DeleteMapModal.vue'
 import UpgradeModal from '@/components/modals/UpgradeModal.vue'
+import CreateFolderModal from '@/components/modals/CreateFolderModal.vue'
 
 const userStore = useUserStore()
 const mapStore = useMapStore()
@@ -16,6 +17,9 @@ const isLoading = ref(false)
 const isDragOver = ref(false)
 const localMaps = ref([])
 const showUpgradeModal = ref(false)
+const showDragTip = ref(localStorage.getItem('dismissedDragTip') !== 'true')
+const showFolderModal = ref(false)
+const folderToEdit = ref(null)
 
 //Delete States
 const showDeleteModal = ref(false)
@@ -45,23 +49,64 @@ const folderTree = computed(() => {
 })
 
 
+function dismissDragTip() {
+  showDragTip.value = false
+  localStorage.setItem('dismissedDragTip', 'true')
+}
+
 function handleLogout() {
   userStore.logout()
   router.push('/')
 }
 
+// [UPDATED] Trigger for Create (Reset edit state)
+function triggerCreateFolder() {
+  folderToEdit.value = null 
+  showFolderModal.value = true
+}
+
 // [NEW] Create Folder (supports subfolders)
-async function handleCreateFolder() {
-  const parentId = mapStore.currentFolderId // Create inside current view?
-  const name = prompt(parentId ? "New Subfolder Name:" : "New Root Folder Name:")
-  if (name) await mapStore.createFolder(name, parentId)
+async function handleCreateFolder(payload) {
+  try {
+    // Assuming your store has a createFolder action
+    // If not, you might need to adapt this to your store's logic
+    await mapStore.createFolder(payload.name, payload.parentId)
+    
+    mapStore.showNotification(`Folder "${payload.name}" created!`)
+    showFolderModal.value = false
+  } catch (error) {
+    console.error(error)
+    mapStore.showNotification("Failed to create folder", "error")
+  }
 }
 
 // [NEW] Rename Logic
-async function handleRenameFolder(folder) {
-  const newName = prompt("Rename folder:", folder.name)
-  if (newName && newName !== folder.name) {
-    await mapStore.renameFolder(folder.id, newName)
+// [UPDATED] Trigger for Rename (Set edit state)
+function handleRenameFolder(folder) {
+  folderToEdit.value = folder
+  showFolderModal.value = true
+}
+
+async function onFolderRename(payload) {
+  try {
+    const original = folderToEdit.value
+    
+    // 1. Rename if changed
+    if (payload.name !== original.name) {
+      await mapStore.renameFolder(payload.id, payload.name)
+    }
+
+    // 2. Move if parent changed
+    // Note: We use undefined/null checks loosely to catch both null and undefined
+    if (payload.parentId != original.parentId) {
+      await mapStore.moveFolder(payload.id, payload.parentId)
+    }
+
+    showFolderModal.value = false
+    mapStore.showNotification("Folder updated successfully")
+  } catch (e) {
+    console.error(e)
+    mapStore.showNotification("Failed to update folder", "error")
   }
 }
 
@@ -206,7 +251,7 @@ watch(() => userStore.justRegistered, (isNew) => {
       <aside class="sidebar">
         <div class="sidebar-header">
           <h3>Folders</h3>
-          <button @click="handleCreateFolder" class="btn-icon">+</button>
+          <button @click="triggerCreateFolder" class="btn-icon">+</button>
         </div>
 <ul>
           <li 
@@ -260,7 +305,15 @@ watch(() => userStore.justRegistered, (isNew) => {
         <hr />
 
         <section class="maps-list">
-          <h2>Your Maps</h2>
+          <h2>Your Unfiled Maps</h2>
+          <div v-if="showDragTip" class="info-box">
+        <div class="info-icon">💡</div>
+        <div class="info-content">
+          <strong>Organize your maps!</strong>
+          <p>Did you know? You can drag and drop maps into folders to organize them. To get started, add a folder on the left (+ icon in the top right of the sidebar), then drag and drop your maps to the appropriate folder. </p>
+        </div>
+        <button class="close-btn" @click="dismissDragTip" title="Dismiss">×</button>
+      </div>
           <div v-if="isLoading">Loading...</div>
           
           <div v-else-if="filteredMaps.length === 0">
@@ -287,6 +340,11 @@ watch(() => userStore.justRegistered, (isNew) => {
               draggable="true"
               @dragstart="onDragStart($event, 'map', map.id)"
             >
+            <div class="drag-handle" title="Drag to move">
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="#ccc">
+    <path d="M11 18c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2zm-2-8c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0-6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm6 4c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+  </svg>
+</div>
               <div class="map-preview" @click="openMap(map)">
                 <div class="preview-placeholder">
                   📦
@@ -322,11 +380,64 @@ watch(() => userStore.justRegistered, (isNew) => {
       @close="showUpgradeModal = false" 
     />
 
+    <CreateFolderModal
+      v-if="showFolderModal"
+      :existingFolders="mapStore.folders" 
+      :editMode="!!folderToEdit"
+      :initialName="folderToEdit?.name"
+      :initialParentId="folderToEdit?.parentId" :folderId="folderToEdit?.id"
+      @cancel="showFolderModal = false"
+      @create="handleCreateFolder"
+      @rename="onFolderRename" 
+    />
+
   </div>
 </template>
 
 <style scoped>
 /* (Styles same as previous) */
+
+.info-box {
+  background: #e3f2fd; /* Light Blue */
+  border: 1px solid #90caf9;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+}
+
+.info-icon {
+  font-size: 1.2rem;
+}
+
+.info-content strong {
+  color: #1565c0;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.info-content p {
+  margin: 0;
+  color: #555;
+  font-size: 0.9rem;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: #888;
+  cursor: pointer;
+  padding: 0 4px;
+  margin-left: auto; /* Pushes button to the far right */
+}
+
+.close-btn:hover {
+  color: #333;
+}
 .dashboard { font-family: 'Inter', sans-serif; min-height: 100vh; background: #f4f6f8; }
 .navbar { background: #fff; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ddd; }
 .logo {
@@ -386,6 +497,25 @@ watch(() => userStore.justRegistered, (isNew) => {
 .actions .btn-danger { color: #d32f2f; border-color: #ef9a9a; }
 .actions .btn-danger:hover { background: #ffebee; }
 .empty-state { text-align: center; color: #999; margin-top: 40px; font-style: italic; }
+
+.drag-handle {
+  cursor: grab;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.5;
+  transition: opacity 0.2s;
+}
+
+.drag-handle:hover {
+  opacity: 1;
+}
+
+/* Optional: Add a "grabbing" cursor when actively dragging */
+.drag-handle:active {
+  cursor: grabbing;
+}
 
 .toast-notification { 
   position: fixed; 
