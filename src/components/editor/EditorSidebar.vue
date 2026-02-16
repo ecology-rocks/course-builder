@@ -23,7 +23,7 @@ import AdvancedPrintModal from '@/components/modals/AdvancedPrintModal.vue'
 const store = useMapStore()
 const userStore = useUserStore()
 const router = useRouter()
-const emit = defineEmits(['print', 'advanced-print', 'save-map', 'save-library', 'blind-setup'])
+const emit = defineEmits(['print', 'advanced-print', 'save-map', 'save-library', 'blind-setup', 'go-home'])
 
 // State for Modals & Menus
 const showShareModal = ref(false)
@@ -38,6 +38,11 @@ const showMoreMenu = ref(false)
 const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
 const isPro = computed(() => ['pro', 'club'].includes(userStore.tier))
 const showUpgradeModal = ref(false)
+
+
+defineExpose({
+  openAdvancedPrint: () => showAdvancedPrintModal.value = true
+})
 
 // [OLD] Legacy Handler
 function onPrintConfirm(config) {
@@ -76,10 +81,7 @@ const toolboxComponent = computed(() => {
 })
 
 function goHome() {
-  if (confirm("Leave editor? Unsaved changes will be lost.")) {
-    store.reset()
-    router.push('/dashboard')
-  }
+  emit('go-home')
 }
 
 function handleSave() {

@@ -2,9 +2,12 @@
 import { computed } from 'vue' 
 import { useMapStore } from '@/stores/mapStore'
 import { useBlindManager } from './logic/useBlindManager'
+import { useUserStore } from '@/stores/userStore'
+
 
 const emit = defineEmits(['close', 'print', 'save'])
 const store = useMapStore()
+const userStore = useUserStore()
 
 const { 
   activeBlindIndex, 
@@ -151,7 +154,10 @@ function handleCloseAttempt() {
         </div>
 
         <div class="actions">
-          <button class="btn-save" @click="emit('save')">💾 Save & Return</button>
+          <button class="btn-save" @click="$emit('save')">
+        <span v-if="userStore.isPro">💾 Save & Return</span>
+        <span v-else>✅ Return (In-Memory)</span>
+      </button>
           <button type="button" class="btn-print" @click.prevent="emit('print')">🖨️ Print Batch</button>
         </div>
       </div>

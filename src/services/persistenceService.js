@@ -57,12 +57,18 @@ export function useMapPersistence(state, userStore, notifications) {
   // --- SAVE TO CLOUD ---
   async function saveToCloud(isAutoSave = false, thumbnail = null) {
     if (!userStore.user) {
-      if (!isAutoSave) alert("Please log in to save.")
+      if (!isAutoSave) {
+        // [FIX] Use notification instead of alert
+        notifications.show("Please log in to save.", "error")
+      }
       return
     }
 
     if (!state.mapName.value || state.mapName.value === "Untitled Map") {
-      if (!isAutoSave) alert("Please enter a custom name for your map.")
+      if (!isAutoSave) {
+        // [FIX] Use notification instead of alert
+        notifications.show("Please name your map before saving.", "error")
+      }
       return
     }
 
