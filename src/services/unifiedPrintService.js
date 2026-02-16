@@ -66,7 +66,7 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
     .pillar { background: linear-gradient(to bottom right, transparent 46%, black 47%, black 53%, transparent 54%), linear-gradient(to bottom left, transparent 46%, black 47%, black 53%, transparent 54%); background-color: #fff; }
     .anchor { border: 2px solid #d32f2f; color: #d32f2f; font-weight: bold; text-align: center; line-height: 8px; font-size: 10px; border-radius: 2px; background: white; }
     .tunnel { height: 4px; background: #2e7d32; border: none; }
-    .tunnelbox { height: 6px; background: rgba(139, 69, 19, 0.4); border: 1px solid brown; }
+    .tunnelbox { height: 6px; background: #8B4513 border: 1px solid brown; }
     .gate { border: 1px solid black; height: 4px; }
     .step { background: #8D6E63; border: 1px solid black;}
     .start { border: 1px solid black; background: #eee; }

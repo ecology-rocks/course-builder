@@ -10,20 +10,18 @@ function addTunnelBoard(x, y) {
       width: 4,
       height: 2, 
       rotation: 0,
-      // [NEW] Custom Properties
+      layer: state.currentLayer.value || 1,
       custom: {
         width: null,
         height: null,
         fillColor: null,
         strokeColor: null,
         textColor: null,
-        // No textValue by default for boards, but we can add it if needed
       }
     })
     if (snapshot) snapshot()
   }
 
-  // [NEW] Rotate Logic
   function rotateTunnelBoard(id) {
     const b = state.tunnelBoards.value.find(i => i.id === id)
     if (b) {

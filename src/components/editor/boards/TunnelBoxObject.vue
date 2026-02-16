@@ -2,8 +2,7 @@
 import { ref, computed} from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
-const props = defineProps(['board', 'isSelected', 'scale'])
-// [FIX] Added 'click' to emits
+const props = defineProps(['board', 'isSelected', 'scale', 'opacity'])
 const emit = defineEmits(['select', 'update', 'dragstart', 'dragmove', 'dragend', 'contextmenu', 'click'])
 
 const store = useMapStore()
@@ -34,7 +33,20 @@ const finalStroke = computed(() => {
 })
 
 const finalTextColor = computed(() => {
-  return props.board.custom?.textColor || '#3e2723' 
+  return props.board.custom?.textColor || '#ffffff' 
+})
+
+const finalOpacity = computed(() => {
+  // 1. If multi-layer view is OFF, everything is standard opacity (0.5)
+  if (!store.multiLayerView) return 1
+
+  // 2. If this board is on the current layer, standard opacity
+  // (We default to layer 1 if undefined to support legacy boards)
+  const boardLayer = props.board.layer || 1
+  if (boardLayer === store.currentLayer) return 1
+
+  // 3. Otherwise, use the "ghost" opacity from the store
+  return store.layerOpacity
 })
 
 // --- HANDLERS ---
@@ -154,7 +166,7 @@ function handleTransformEnd() {
         height: finalHeight * scale,
         cornerRadius: 10,
         fill: finalFill,
-        opacity: 0.5,
+        opacity: finalOpacity,
         stroke: finalStroke,
         strokeWidth: isSelected ? 4 : 2,
       }"
@@ -171,7 +183,8 @@ function handleTransformEnd() {
         fontStyle: 'bold',
         align: 'center',
         verticalAlign: 'middle',
-        listening: false
+        listening: false,
+        opacity: finalOpacity
       }"
     />
   </v-group>

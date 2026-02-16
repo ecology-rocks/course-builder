@@ -95,6 +95,24 @@ const visibleMeasurements = computed(() => {
   })
 })
 
+const visibleBoardEdges = computed(() => {
+  if (!store.boardEdges) return []
+  
+  return store.boardEdges.filter(m => {
+    const itemLayer = m.layer !== undefined ? m.layer : 1
+    return itemLayer === store.currentLayer
+  })
+})
+
+const visibleTunnelBoards = computed(() => {
+  if (!store.tunnelBoards) return []
+  
+  return store.tunnelBoards.filter(m => {
+    const itemLayer = m.layer !== undefined ? m.layer : 1
+    return itemLayer === store.currentLayer
+  })
+})
+
 const setRef = (el, id) => {
   if (el) objectRefs.value[id] = el
 }
@@ -335,14 +353,15 @@ function handleDragEnd(e, id) {
       @click="handleLeftClick($event, bale.id)" @dragstart="handleDragStart($event, bale.id)"
       @dragmove="handleDragMove($event, bale.id)" @dragend="handleDragEnd($event, bale.id)" />
 
-    <TunnelBoxObject v-for="board in store.tunnelBoards" :key="board.id" :board="board" :scale="scale"
+    <TunnelBoxObject v-for="board in  store.tunnelBoards" :key="board.id" :board="board" :scale="scale"
       :isSelected="store.selection.includes(board.id)" :ref="(el) => setRef(el, board.id)" @select="handleSelect"
-      @click="handleLeftClick($event, board.id)"
+      @click="handleLeftClick($event, board.id)" 
+      :opacity="store.multiLayerView && board.layer !== store.currentLayer ? store.layerOpacity : 1"
       @update="(attrs) => store.updateTunnelBoard(attrs.id, attrs)" @dragstart="handleDragStart($event, board.id)"
       @dragmove="handleDragMove($event, board.id)" @dragend="handleDragEnd($event, board.id)"
       @contextmenu="handleTunnelBoxContextMenu" />
 
-    <BoardObject v-for="board in store.boardEdges" :key="board.id" :board="board" :scale="scale"
+    <BoardObject v-for="board in visibleBoardEdges" :key="board.id" :board="board" :scale="scale"
       :ref="(el) => setRef(el, board.id)" @dragstart="handleDragStart($event, board.id)"
       @click="handleLeftClick($event, board.id)"
       :hitStrokeWidth="20"
