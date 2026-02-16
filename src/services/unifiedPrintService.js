@@ -253,7 +253,7 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
     try {
       const capturedPages = [];
       const isPro = userStore.isPro;
-      const watermark = !isPro ? `<div class="watermark">DRAFT - UPGRADE AT K9COURSEBUILDER.COM TO REMOVE</div>` : "";
+      const watermark = !isPro ? `<div class="watermark">DRAFT - UPGRADE TO REMOVE</div>` : "";
 
       // 1. Capture Images
       if (config.mode === 'layers') {

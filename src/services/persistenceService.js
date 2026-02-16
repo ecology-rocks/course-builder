@@ -175,6 +175,21 @@ export function useMapPersistence(state, userStore, notifications) {
 
     state.ringDimensions.value = source.dimensions || { width: 24, height: 24 };
 
+    // [FIX] Restore Grid Corner and Wall Types
+    state.gridStartCorner.value = source.gridStartCorner || 'top-left';
+    
+    // Check if source has wallTypes, otherwise default to all fence
+    if (source.wallTypes) {
+      state.wallTypes.value = source.wallTypes;
+    } else {
+      state.wallTypes.value = { top: "fence", right: "fence", bottom: "fence", left: "fence" };
+    }
+
+    // [FIX] Restore Trial Information
+    state.trialLocation.value = source.trialLocation || "";
+    state.trialDay.value = source.trialDay || "";
+    state.trialNumber.value = source.trialNumber || "";
+
     // [DEBUG & FIX] Helper to sanitize numbers and Log bad data
     const safeNum = (val, fallback, context) => {
       if (val === undefined || val === null) return undefined;

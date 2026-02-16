@@ -3,6 +3,8 @@
 // 1. Use the v2 imports
 const { onCall, HttpsError, onRequest } = require("firebase-functions/v2/https");
 const { setGlobalOptions } = require("firebase-functions/v2/options");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const axios = require("axios"); // [NEW] For making the API call
 const logger = require("firebase-functions/logger");
 const admin = require("firebase-admin");
 const functions = require("firebase-functions");
@@ -153,5 +155,43 @@ exports.createPortalSession = onCall(async (request) => {
   } catch (error) {
     console.error("Portal Error:", error);
     throw new HttpsError("internal", "Unable to open billing portal.");
+  }
+});
+
+exports.subscribeToKit = onDocumentCreated("users/{userId}", async (event) => {
+  // 1. Get the data from the newly created document
+  const snapshot = event.data;
+  if (!snapshot) {
+    console.log("No data associated with the event");
+    return;
+  }
+  const data = snapshot.data();
+
+  // 2. Extract user details
+  const email = data.email;
+  const firstName = data.judgeName || ""; // Use judgeName as First Name
+
+  // 3. Configuration (Set these in your .env file or hardcode for testing)
+  const KIT_API_KEY = process.env.KIT_API_KEY; 
+  const KIT_FORM_ID = process.env.KIT_FORM_ID; // The ID of the Form/Landing Page you want them added to
+
+  if (!KIT_API_KEY || !KIT_FORM_ID) {
+    console.error("❌ Missing Kit Configuration (API Key or Form ID)");
+    return;
+  }
+
+  try {
+    // 4. Send to Kit API
+    // Doc: https://developers.convertkit.com/#add-subscriber-to-a-form
+    await axios.post(`https://api.convertkit.com/v3/forms/${KIT_FORM_ID}/subscribe`, {
+      api_key: KIT_API_KEY,
+      email: email,
+      first_name: firstName,
+      // tags: [123, 456] // Optional: Add tag IDs if you want to tag them as "App User"
+    });
+
+    console.log(`✅ Successfully subscribed ${email} to Kit Form ${KIT_FORM_ID}`);
+  } catch (error) {
+    console.error("❌ Kit Subscription Error:", error.response?.data || error.message);
   }
 });
