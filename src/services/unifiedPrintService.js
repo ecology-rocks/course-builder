@@ -24,12 +24,34 @@ export function useUnifiedPrinter(
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
     body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #333; background: white; }
     
-/* [NEW] Judge Notes Styles */
-    .judge-notes-section {
-      margin-top: 15px;
-      padding-top: 10px;
-      border-top: 2px solid #333;
-    }
+/* [UPDATED] Sidebar Container */
+  .sidebar-wrapper {
+    width: 180px;           /* Fixed width for the whole column */
+    flex-shrink: 0;
+    border-left: 1px solid #ccc;
+    padding-left: 15px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+  }
+
+  /* [UPDATED] Legend Sidebar (Now fits inside wrapper) */
+  .legend-sidebar { 
+    width: 100%;            /* Fill the wrapper */
+    border-left: none;      /* Handled by wrapper */
+    padding-left: 0;        /* Handled by wrapper */
+    font-size: 11px; 
+  }
+
+  /* [UPDATED] Judge Notes Styles */
+  .judge-notes-section {
+    margin-top: 15px;
+    padding-top: 10px;
+    border-top: 2px solid #333;
+    width: 100%;            /* Constrain to wrapper */
+    overflow-wrap: break-word; /* Crucial: Forces long text to wrap */
+    box-sizing: border-box;
+  }
     .judge-notes-section h3 {
       margin: 0 0 4px 0;
       font-size: 14px;
@@ -53,8 +75,22 @@ export function useUnifiedPrinter(
     .title-block h1 { margin: 0; font-size: 24px; }
     .title-block h2 { margin: 0; font-size: 16px; color: #666; font-weight: normal; }
     .meta-block { text-align: right; font-size: 12px; line-height: 1.4; }
-    .page-body { flex: 1; display: flex; gap: 20px; overflow: hidden; padding: 0 15px; }
-    .map-container { flex: 1; display: flex; justify-content: center; align-items: flex-start; }
+    .page-body { 
+      flex: 1; 
+      display: flex; 
+      gap: 20px; 
+      overflow: hidden; 
+      padding: 0 15px; 
+      min-height: 0; /* Prevents the container from breaking the layout */
+    }
+    .map-container { 
+      flex: 1; 
+      display: flex; 
+      justify-content: center; 
+      align-items: flex-start; 
+      min-height: 0; /* Protects the image from being squished */
+      overflow: hidden;
+    }
     img.map-img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #eee; }
     
     /* Grids */
@@ -74,7 +110,7 @@ export function useUnifiedPrinter(
     .ch-meta { display: flex; justify-content: space-between; font-size: 10px; color: #444; margin-top: 2px; }
 
     /* Legends */
-    .legend-sidebar { width: 180px; flex-shrink: 0; border-left: 1px solid #ccc; padding-left: 15px; font-size: 11px; }
+
     .legend-section { margin-bottom: 12px; }
     .legend-section h4 { margin: 0 0 4px 0; font-size: 11px; text-transform: uppercase; color: #666; border-bottom: 1px solid #eee; }
     .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
@@ -322,33 +358,24 @@ export function useUnifiedPrinter(
   // =========================================
   // 3. CAPTURE LOGIC
   // =========================================
-  async function captureStage(targetScale = 35) {
+ async function captureStage(targetScale = 35) {
     const stage = stageRef.value.getStage();
     const originalStagePos = stage.position();
 
     try {
-      scale.value = targetScale;
-      store.gridStep = 1;
+      scale.value = targetScale; 
+      store.gridStep = 1; 
       stage.position({ x: 0, y: 0 });
 
-      const GRID_OFFSET = 30;
-      const cleanW = Number(store.ringDimensions.width) || 24;
-      const cleanH = Number(store.ringDimensions.height) || 24;
-      const totalWidth = cleanW * scale.value + GRID_OFFSET * 2;
-      const totalHeight = cleanH * scale.value + GRID_OFFSET * 2;
-
+      // Give Vue time to update the DOM, then flush the canvas draw
       await nextTick();
-      await wait(300);
+      await wait(300); 
       stage.batchDraw();
       await wait(100);
 
-      return await stage.toDataURL({
-        pixelRatio: 2,
-        x: 0,
-        y: 0,
-        width: totalWidth,
-        height: totalHeight,
-      });
+      // Removed manual width/height cropping to prevent 2x2 output bugs
+      return await stage.toDataURL({ pixelRatio: 2 });
+
     } catch (e) {
       console.error("Capture failed:", e);
       throw e;
@@ -476,16 +503,12 @@ export function useUnifiedPrinter(
       // 4. Generate HTML
       let pagesHtml = "";
 
-      if (config.layout === "full") {
+      if (config.layout === 'full') {
         const sidebarLegend = buildSidebarLegend(config);
-        pagesHtml = finalItems
-          .map((p) => {
-            // Combine Metadata + Page Title (e.g. "Senior • Trial 1 - Layer 2")
-            const fullSubHeader = [metaCombined, p.title]
-              .filter(Boolean)
-              .join(" - ");
+        pagesHtml = finalItems.map(p => {
+          const fullSubHeader = [metaCombined, p.title].filter(Boolean).join(' - ');
 
-            return `
+          return `
           <div class="print-page">
             ${watermark}
             <div class="header">
@@ -498,15 +521,15 @@ export function useUnifiedPrinter(
             </div>
             <div class="page-body">
               <div class="map-container"><img src="${p.img}" class="map-img" /></div>
-              <div>
-              ${sidebarLegend}
-              ${notesHTML}
+              
+              <div class="sidebar-wrapper">
+                ${sidebarLegend}
+                ${notesHTML}
               </div>
+              
             </div>
           </div>
-        `;
-          })
-          .join("");
+        `}).join('');
       } else {
         // Grid Layouts (Half / Quarter)
         const size = config.layout === "half" ? 2 : 4;
