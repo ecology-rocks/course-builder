@@ -2,7 +2,14 @@
 import { ref, watch, computed } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
-const props = defineProps(['board', 'scale'])
+const props = defineProps({
+  board: Object,
+  scale: Number,
+  opacity: {
+    type: Number,
+    default: 1
+  }
+})
 // [FIX] Added 'click' to emits so we can pass it up to BarnHuntLayer
 const emit = defineEmits(['dragstart', 'dragmove', 'dragend', 'click'])
 const store = useMapStore()
@@ -128,6 +135,7 @@ function handleClick(e) {
   <v-group ref="groupRef" :config="{
     id: board.id,
     draggable: true,
+    opacity: props.opacity,
     dragBoundFunc: dragBoundFunc
   }" @click="handleClick" @dragstart="emit('dragstart', $event)" @dragmove="emit('dragmove', $event)"
     @dragend="handleGroupDragEnd">

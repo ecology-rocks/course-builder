@@ -192,11 +192,20 @@ export function useMapPersistence(state, userStore, notifications) {
       state.wallTypes.value = { top: "fence", right: "fence", bottom: "fence", left: "fence" };
     }
 
+    if (source.comparisonMapName) {
+     state.comparisonMapName.value = source.comparisonMapName;
+  }
+  if (source.previousBales) {
+     state.previousBales.value = source.previousBales;
+  }
+
     // [FIX] Restore Trial Information
     state.trialLocation.value = source.trialLocation || "";
     state.trialDay.value = source.trialDay || "";
     state.trialNumber.value = source.trialNumber || "";
     state.judgeNotes.value = source.judgeNotes || "";
+    state.comparisonMapName.value = source.comparisonMapName || null;
+    state.previousBales.value = source.previousBales || [];
     
     // [DEBUG & FIX] Helper to sanitize numbers and Log bad data
     const safeNum = (val, fallback, context) => {

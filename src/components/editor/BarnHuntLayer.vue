@@ -100,6 +100,15 @@ const visibleBoardEdges = computed(() => {
   
   return store.boardEdges.filter(m => {
     const itemLayer = m.layer !== undefined ? m.layer : 1
+    
+    // [UPDATE] Check for multi-layer view to show boards from other layers
+    if (store.multiLayerView) {
+      if (typeof store.multiLayerView === 'number') {
+        return itemLayer <= store.multiLayerView
+      }
+      return true
+    }
+    
     return itemLayer === store.currentLayer
   })
 })
@@ -365,7 +374,7 @@ function handleDragEnd(e, id) {
       :ref="(el) => setRef(el, board.id)" @dragstart="handleDragStart($event, board.id)"
       @click="handleLeftClick($event, board.id)"
       :hitStrokeWidth="20"
-      :opacity="store.currentLayer > 1 ? store.layerOpacity : 1" @dragmove="handleDragMove($event, board.id)"
+      :opacity="store.multiLayerView && (board.layer || 1) !== store.currentLayer ? store.layerOpacity : 1" @dragmove="handleDragMove($event, board.id)"
       @dragend="handleDragEnd($event, board.id)" />
   </v-group>
 

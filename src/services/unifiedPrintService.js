@@ -1,14 +1,22 @@
 import { nextTick } from "vue";
 
-export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRef) {
-  
+export function useUnifiedPrinter(
+  store,
+  userStore,
+  stageRef,
+  scale,
+  showHidesRef,
+) {
   const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
-  const chunk = (arr, size) => Array.from({ length: Math.ceil(arr.length / size) }, (v, i) => arr.slice(i * size, i * size + size));
+  const chunk = (arr, size) =>
+    Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
+      arr.slice(i * size, i * size + size),
+    );
 
   // =========================================
   // CSS STYLES
   // =========================================
-  const getCss = (orientation = 'landscape') => `
+  const getCss = (orientation = "landscape") => `
     @media print { 
       @page { size: ${orientation}; margin: 0; } 
       body { -webkit-print-color-adjust: exact; }
@@ -78,9 +86,9 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
 
     /* Symbols */
     .symbol { display: inline-block; width: 16px; height: 10px; border: 1px solid black; position: relative; flex-shrink: 0; }
-    .l1 { background: ${store.baleColors[1] || '#e6c200'}; }
-    .l2 { background: ${store.baleColors[2] || '#4caf50'}; }
-    .l3 { background: ${store.baleColors[3] || '#2196f3'}; }
+    .l1 { background: ${store.baleColors[1] || "#e6c200"}; }
+    .l2 { background: ${store.baleColors[2] || "#4caf50"}; }
+    .l3 { background: ${store.baleColors[3] || "#2196f3"}; }
     .flat { background: #fff; }
     .tall { background: linear-gradient(to bottom right, transparent 46%, black 47%, black 53%, transparent 54%); background-color: #fff; }
     .pillar { background: linear-gradient(to bottom right, transparent 46%, black 47%, black 53%, transparent 54%), linear-gradient(to bottom left, transparent 46%, black 47%, black 53%, transparent 54%); background-color: #fff; }
@@ -106,102 +114,209 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
   // =========================================
   // 2. HTML GENERATORS
   // =========================================
-  
+
   function buildSidebarLegend(config) {
-    if (!config.legend) return '';
+    if (!config.legend) return "";
     const l = config.legend;
     let html = '<div class="legend-sidebar">';
-    const section = (title, content) => content ? `<div class="legend-section"><h4>${title}</h4><div class="legend-grid">${content}</div></div>` : '';
+    const section = (title, content) =>
+      content
+        ? `<div class="legend-section"><h4>${title}</h4><div class="legend-grid">${content}</div></div>`
+        : "";
 
     if (l.showStats) {
       const inv = store.inventory;
-      html += section("Counts", `<div class="legend-item">Total: <strong>${inv.total}</strong></div><div class="legend-item">L1: <strong>${inv.base}</strong></div><div class="legend-item">L2: <strong>${inv.layer2}</strong></div><div class="legend-item">L3: <strong>${inv.layer3}</strong></div>`);
+      let statsContent = `<div class="legend-item">Total: <strong>${inv.total}</strong></div><div class="legend-item">L1: <strong>${inv.base}</strong></div><div class="legend-item">L2: <strong>${inv.layer2}</strong></div><div class="legend-item">L3: <strong>${inv.layer3}</strong></div>`;
+
+      // --- START NEW CODE: DIFFERENTIALS ---
+      // Ported from printerService.js
+      const diffs = store.differentials;
+      if (diffs) {
+        const fmt = (layer) => {
+          const d = diffs[layer];
+          if (!d) return "";
+          const sign = d.net > 0 ? "+" : "";
+          // Only show "moved" if space allows, or simplify for the sidebar
+          return `<div class="legend-item"><strong>L${layer}:</strong> ${sign}${d.net} ${d.moved > 0 ? "(" + d.moved + " mv)" : ""}</div>`;
+        };
+
+        const totalSign = diffs.totalNet > 0 ? "+" : "";
+
+        // Append differential data to the stats content
+        statsContent += `
+          <div style="grid-column: span 2; border-top: 1px solid #eee; margin-top: 4px; padding-top: 4px; font-weight: bold;">
+            Changes: ${totalSign}${diffs.totalNet} Net
+          </div>
+          ${fmt(1)}
+          ${fmt(2)}
+          ${fmt(3)}
+        `;
+      }
+      // --- END NEW CODE ---
+
+      html += section("Counts", statsContent);
     }
     if (l.showBales) {
-      html += section("Bales", `<div class="legend-item"><span class="symbol l1"></span> Base</div><div class="legend-item"><span class="symbol flat"></span> Flat</div><div class="legend-item"><span class="symbol l2"></span> Layer 2</div><div class="legend-item"><span class="symbol tall"></span> Tall</div><div class="legend-item"><span class="symbol l3"></span> Layer 3</div><div class="legend-item"><span class="symbol pillar"></span> Pillar</div>`);
+      html += section(
+        "Bales",
+        `<div class="legend-item"><span class="symbol l1"></span> Base</div><div class="legend-item"><span class="symbol flat"></span> Flat</div><div class="legend-item"><span class="symbol l2"></span> Layer 2</div><div class="legend-item"><span class="symbol tall"></span> Tall</div><div class="legend-item"><span class="symbol l3"></span> Layer 3</div><div class="legend-item"><span class="symbol pillar"></span> Pillar</div>`,
+      );
     }
     if (l.customItems && l.customDefinitions) {
-      let c = '';
-      l.customDefinitions.forEach(def => {
+      let c = "";
+      l.customDefinitions.forEach((def) => {
         if (l.customItems[def.id]) {
-          const bg = def.style.fillColor || '#ccc';
-          const border = def.style.strokeColor || '#333';
+          const bg = def.style.fillColor || "#ccc";
+          const border = def.style.strokeColor || "#333";
           c += `<div class="legend-item"><span class="symbol" style="background:${bg}; border-color:${border}"></span> ${def.label}</div>`;
         }
       });
       html += section("Custom", c);
     }
-    let f = '';
-    if (l.showWalls) f += `<div class="legend-item"><span class="symbol wall"></span> Wall</div>`;
-    if (l.showFence) f += `<div class="legend-item"><span class="symbol fence"></span> Fence</div>`;
-    if (l.showTunnels) f += `<div class="legend-item"><span class="symbol tunnel"></span> T-Line</div>`;
-    if (l.showTunnelBox) f += `<div class="legend-item"><span class="symbol tunnelbox"></span> T-Box</div>`;
-    if (l.showGate) f += `<div class="legend-item"><span class="symbol gate"></span> Gate</div>`;
-    if (l.showStep) f += `<div class="legend-item"><span class="symbol step"></span> Step</div>`;
-    if (l.showLeaners) f += `<div class="legend-item"><span class="symbol leaner">→</span> Lean</div>`;
-    if (l.showAnchors) f += `<div class="legend-item"><span class="symbol anchor">⚓</span> Anchor</div>`;
-    if (l.showStartBox) f += `<div class="legend-item"><span class="symbol start"></span> Start</div>`;
-    if (l.showDCMat) f += `<div class="legend-item"><span class="symbol dc"></span> DC Mat</div>`;
-    if (l.showObstruction) f += `<div class="legend-item"><span class="symbol obstruction"></span> Obstr.</div>`;
-    if (l.showDeadZone) f += `<div class="legend-item"><span class="symbol dead-zone"></span> Dead Z.</div>`;
+    let f = "";
+    if (l.showWalls)
+      f += `<div class="legend-item"><span class="symbol wall"></span> Wall</div>`;
+    if (l.showFence)
+      f += `<div class="legend-item"><span class="symbol fence"></span> Fence</div>`;
+    if (l.showTunnels)
+      f += `<div class="legend-item"><span class="symbol tunnel"></span> T-Line</div>`;
+    if (l.showTunnelBox)
+      f += `<div class="legend-item"><span class="symbol tunnelbox"></span> T-Box</div>`;
+    if (l.showGate)
+      f += `<div class="legend-item"><span class="symbol gate"></span> Gate</div>`;
+    if (l.showStep)
+      f += `<div class="legend-item"><span class="symbol step"></span> Step</div>`;
+    if (l.showLeaners)
+      f += `<div class="legend-item"><span class="symbol leaner">→</span> Lean</div>`;
+    if (l.showAnchors)
+      f += `<div class="legend-item"><span class="symbol anchor">⚓</span> Anchor</div>`;
+    if (l.showStartBox)
+      f += `<div class="legend-item"><span class="symbol start"></span> Start</div>`;
+    if (l.showDCMat)
+      f += `<div class="legend-item"><span class="symbol dc"></span> DC Mat</div>`;
+    if (l.showObstruction)
+      f += `<div class="legend-item"><span class="symbol obstruction"></span> Obstr.</div>`;
+    if (l.showDeadZone)
+      f += `<div class="legend-item"><span class="symbol dead-zone"></span> Dead Z.</div>`;
     html += section("Features", f);
 
     if (l.showHides) {
-      html += section("Hides", `<div class="legend-item"><div class="symbol hide-rat">R</div> Rat</div><div class="legend-item"><div class="symbol hide-litter">L</div> Litter</div><div class="legend-item"><div class="symbol hide-empty">E</div> Empty</div><div class="legend-item"><div class="symbol hide-rat-under"></div> Under</div>`);
+      html += section(
+        "Hides",
+        `<div class="legend-item"><div class="symbol hide-rat">R</div> Rat</div><div class="legend-item"><div class="symbol hide-litter">L</div> Litter</div><div class="legend-item"><div class="symbol hide-empty">E</div> Empty</div><div class="legend-item"><div class="symbol hide-rat-under"></div> Under</div>`,
+      );
     }
-    html += '</div>';
+    html += "</div>";
     return html;
   }
 
   // [UPDATED] Compact Legend with Full Coverage
   function buildCompactLegend(config) {
-     const l = config.legend;
-     let items = [];
+    const l = config.legend;
+    let items = [];
 
-     // Bales
-     if (l.showBales) {
-       items.push(`<div class="mini-item"><span class="mini-symbol l1"></span>L1</div>`);
-       items.push(`<div class="mini-item"><span class="mini-symbol l2"></span>L2</div>`);
-       items.push(`<div class="mini-item"><span class="mini-symbol l3"></span>L3</div>`);
-       items.push(`<div class="mini-item"><span class="mini-symbol flat"></span>Flat</div>`);
-       items.push(`<div class="mini-item"><span class="mini-symbol tall"></span>Tall</div>`);
-       items.push(`<div class="mini-item"><span class="mini-symbol pillar"></span>Pillar</div>`);
-     }
-     
-     // Features (Respecting all toggles)
-     if (l.showWalls) items.push(`<div class="mini-item"><span class="mini-symbol wall"></span>Wall</div>`);
-     if (l.showFence) items.push(`<div class="mini-item"><span class="mini-symbol fence"></span>Fence</div>`);
-     if (l.showTunnels) items.push(`<div class="mini-item"><span class="mini-symbol tunnel"></span>T-Line</div>`);
-     if (l.showTunnelBox) items.push(`<div class="mini-item"><span class="mini-symbol tunnelbox"></span>T-Box</div>`);
-     if (l.showGate) items.push(`<div class="mini-item"><span class="mini-symbol gate"></span>Gate</div>`);
-     if (l.showStep) items.push(`<div class="mini-item"><span class="mini-symbol step"></span>Step</div>`);
-     if (l.showLeaners) items.push(`<div class="mini-item"><span class="mini-symbol leaner">→</span>Lean</div>`);
-     if (l.showAnchors) items.push(`<div class="mini-item"><span class="mini-symbol anchor">⚓</span>Anch</div>`);
-     if (l.showStartBox) items.push(`<div class="mini-item"><span class="mini-symbol start"></span>Start</div>`);
-     if (l.showDCMat) items.push(`<div class="mini-item"><span class="mini-symbol dc"></span>DC</div>`);
-     if (l.showObstruction) items.push(`<div class="mini-item"><span class="mini-symbol obstruction"></span>Obs</div>`);
-     if (l.showDeadZone) items.push(`<div class="mini-item"><span class="mini-symbol dead-zone"></span>Dead</div>`);
+    // Bales
+    if (l.showBales) {
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol l1"></span>L1</div>`,
+      );
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol l2"></span>L2</div>`,
+      );
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol l3"></span>L3</div>`,
+      );
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol flat"></span>Flat</div>`,
+      );
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol tall"></span>Tall</div>`,
+      );
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol pillar"></span>Pillar</div>`,
+      );
+    }
 
-     // Hides (Full set)
-     if (l.showHides) {
-       items.push(`<div class="mini-item"><span class="mini-symbol hide-rat" style="border-radius:50%">R</span>Rat</div>`);
-       items.push(`<div class="mini-item"><span class="mini-symbol hide-litter" style="border-radius:50%">L</span>Lit</div>`);
-       items.push(`<div class="mini-item"><span class="mini-symbol hide-empty" style="border-radius:50%">E</span>Emp</div>`);
-       items.push(`<div class="mini-item"><span class="mini-symbol hide-rat-under" style="border-radius:50%; border-style:dashed"></span>Und</div>`);
-     }
+    // Features (Respecting all toggles)
+    if (l.showWalls)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol wall"></span>Wall</div>`,
+      );
+    if (l.showFence)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol fence"></span>Fence</div>`,
+      );
+    if (l.showTunnels)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol tunnel"></span>T-Line</div>`,
+      );
+    if (l.showTunnelBox)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol tunnelbox"></span>T-Box</div>`,
+      );
+    if (l.showGate)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol gate"></span>Gate</div>`,
+      );
+    if (l.showStep)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol step"></span>Step</div>`,
+      );
+    if (l.showLeaners)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol leaner">→</span>Lean</div>`,
+      );
+    if (l.showAnchors)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol anchor">⚓</span>Anch</div>`,
+      );
+    if (l.showStartBox)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol start"></span>Start</div>`,
+      );
+    if (l.showDCMat)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol dc"></span>DC</div>`,
+      );
+    if (l.showObstruction)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol obstruction"></span>Obs</div>`,
+      );
+    if (l.showDeadZone)
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol dead-zone"></span>Dead</div>`,
+      );
 
-     // Custom Items
-     if (l.customItems && l.customDefinitions) {
-       l.customDefinitions.forEach(def => {
-          if (l.customItems[def.id]) {
-             const bg = def.style.fillColor || '#ccc';
-             const border = def.style.strokeColor || '#333';
-             items.push(`<div class="mini-item"><span class="mini-symbol" style="background:${bg}; border-color:${border}"></span>${def.label}</div>`);
-          }
-       });
-     }
+    // Hides (Full set)
+    if (l.showHides) {
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol hide-rat" style="border-radius:50%">R</span>Rat</div>`,
+      );
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol hide-litter" style="border-radius:50%">L</span>Lit</div>`,
+      );
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol hide-empty" style="border-radius:50%">E</span>Emp</div>`,
+      );
+      items.push(
+        `<div class="mini-item"><span class="mini-symbol hide-rat-under" style="border-radius:50%; border-style:dashed"></span>Und</div>`,
+      );
+    }
 
-     return `<div class="mini-legend">${items.join('')}</div>`;
+    // Custom Items
+    if (l.customItems && l.customDefinitions) {
+      l.customDefinitions.forEach((def) => {
+        if (l.customItems[def.id]) {
+          const bg = def.style.fillColor || "#ccc";
+          const border = def.style.strokeColor || "#333";
+          items.push(
+            `<div class="mini-item"><span class="mini-symbol" style="background:${bg}; border-color:${border}"></span>${def.label}</div>`,
+          );
+        }
+      });
+    }
+
+    return `<div class="mini-legend">${items.join("")}</div>`;
   }
 
   // =========================================
@@ -212,23 +327,28 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
     const originalStagePos = stage.position();
 
     try {
-      scale.value = targetScale; 
-      store.gridStep = 1; 
+      scale.value = targetScale;
+      store.gridStep = 1;
       stage.position({ x: 0, y: 0 });
 
       const GRID_OFFSET = 30;
       const cleanW = Number(store.ringDimensions.width) || 24;
       const cleanH = Number(store.ringDimensions.height) || 24;
-      const totalWidth = cleanW * scale.value + (GRID_OFFSET * 2);
-      const totalHeight = cleanH * scale.value + (GRID_OFFSET * 2);
+      const totalWidth = cleanW * scale.value + GRID_OFFSET * 2;
+      const totalHeight = cleanH * scale.value + GRID_OFFSET * 2;
 
       await nextTick();
-      await wait(300); 
+      await wait(300);
       stage.batchDraw();
       await wait(100);
 
-      return await stage.toDataURL({ pixelRatio: 2, x: 0, y: 0, width: totalWidth, height: totalHeight });
-
+      return await stage.toDataURL({
+        pixelRatio: 2,
+        x: 0,
+        y: 0,
+        width: totalWidth,
+        height: totalHeight,
+      });
     } catch (e) {
       console.error("Capture failed:", e);
       throw e;
@@ -240,12 +360,12 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
   // =========================================
   // 4. MAIN ENTRY
   // =========================================
- async function generatePrintJob(config) {
+  async function generatePrintJob(config) {
     store.clearSelection();
 
-    
     const win = window.open("", "_blank");
-    if (!win) return { success: false, error: "Popup blocked. Please allow popups." };
+    if (!win)
+      return { success: false, error: "Popup blocked. Please allow popups." };
 
     win.document.write(`
       <div style="font-family:sans-serif; text-align:center; padding-top:50px;">
@@ -263,16 +383,17 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
     const originalMultiView = store.multiLayerView;
     const originalScale = scale.value;
     const originalStep = store.gridStep;
-    const originalHides = JSON.parse(JSON.stringify(store.hides)); 
+    const originalHides = JSON.parse(JSON.stringify(store.hides));
     const { judgeNotes } = config;
 
-
-    const notesHTML = judgeNotes ? `
+    const notesHTML = judgeNotes
+      ? `
   <div class="judge-notes-section">
     <h3>Judge's Notes</h3>
     <div class="notes-content">${judgeNotes}</div>
   </div>
-` : '';
+`
+      : "";
     // Helper to sync visibility
     const setVisibility = (visible) => {
       store.showHides = visible;
@@ -282,72 +403,89 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
     try {
       const capturedPages = [];
       const isPro = userStore.isPro;
-      const watermark = !isPro ? `<div class="watermark">DRAFT - UPGRADE TO REMOVE</div>` : "";
+      const watermark = !isPro
+        ? `<div class="watermark">DRAFT - UPGRADE TO REMOVE</div>`
+        : "";
 
       // 1. Capture Images
-      if (config.mode === 'layers') {
-        for (const layer of (config.layers || [1, 2, 3])) {
-          if (layer !== 1 && !store.bales.some(b => b.layer === layer)) continue;
-          
+      if (config.mode === "layers") {
+        for (const layer of config.layers || [1, 2, 3]) {
+          if (layer !== 1 && !store.bales.some((b) => b.layer === layer))
+            continue;
+
           store.currentLayer = layer;
           store.multiLayerView = config.overlayAll ? layer : false;
-          setVisibility(config.hides.mode === 'quick');
+          setVisibility(config.hides.mode === "quick");
 
           const img = await captureStage();
-          capturedPages.push({ title: `Layer ${layer}`, subTitle: store.mapName, img });
+          capturedPages.push({
+            title: `Layer ${layer}`,
+            subTitle: store.mapName,
+            img,
+          });
         }
-      } 
-      else if (config.mode === 'blinds') {
+      } else if (config.mode === "blinds") {
         let blinds = store.mapData.blinds || [];
         if (config.selectedBlindIds && config.selectedBlindIds.length > 0) {
-          blinds = blinds.filter(b => config.selectedBlindIds.includes(b.id));
+          blinds = blinds.filter((b) => config.selectedBlindIds.includes(b.id));
         }
         if (blinds.length === 0) throw new Error("No blinds selected.");
 
         // [FIX] Detect highest populated layer (3 -> 2 -> 1)
         // This ensures we print the "Top" view looking down through all layers
-        const topLayer = [3, 2].find(l => store.bales.some(b => b.layer === l)) || 1;
+        const topLayer =
+          [3, 2].find((l) => store.bales.some((b) => b.layer === l)) || 1;
 
         store.currentLayer = topLayer;
         store.multiLayerView = topLayer; // Enable ghosting for layers below the top
         setVisibility(true); // Force hides ON for blinds
 
         for (const blind of blinds) {
-          store.hides = blind.hides; 
-          const img = await captureStage(40); 
-          capturedPages.push({ title: blind.name, subTitle: `Randoms: ${blind.randoms.join(' - ')}`, img });
+          store.hides = blind.hides;
+          const img = await captureStage(40);
+          capturedPages.push({
+            title: blind.name,
+            subTitle: `Randoms: ${blind.randoms.join(" - ")}`,
+            img,
+          });
         }
       }
 
       // 2. Apply Copies
       let finalItems = [];
       const copies = config.copies || 1;
-      capturedPages.forEach(page => {
+      capturedPages.forEach((page) => {
         for (let i = 0; i < copies; i++) {
           finalItems.push(page);
         }
       });
 
       // 3. Build Metadata Strings (Shared)
-      const classStr = store.classLevel || '';
-      const trialStr = store.trialNumber ? `Trial ${store.trialNumber}` : '';
-      const dayStr = store.trialDay || '';
+      const classStr = store.classLevel || "";
+      const trialStr = store.trialNumber ? `Trial ${store.trialNumber}` : "";
+      const dayStr = store.trialDay || "";
       // Join non-empty parts with bullets
-      const metaCombined = [classStr, trialStr, dayStr].filter(Boolean).join(' • ');
-      
+      const metaCombined = [classStr, trialStr, dayStr]
+        .filter(Boolean)
+        .join(" • ");
+
       const metaJudge = userStore.judgeName || "__________________";
-      const metaClub = store.trialLocation || userStore.clubName || "__________________";
+      const metaClub =
+        store.trialLocation || userStore.clubName || "__________________";
 
       // 4. Generate HTML
       let pagesHtml = "";
 
-      if (config.layout === 'full') {
+      if (config.layout === "full") {
         const sidebarLegend = buildSidebarLegend(config);
-        pagesHtml = finalItems.map(p => {
-          // Combine Metadata + Page Title (e.g. "Senior • Trial 1 - Layer 2")
-          const fullSubHeader = [metaCombined, p.title].filter(Boolean).join(' - ');
+        pagesHtml = finalItems
+          .map((p) => {
+            // Combine Metadata + Page Title (e.g. "Senior • Trial 1 - Layer 2")
+            const fullSubHeader = [metaCombined, p.title]
+              .filter(Boolean)
+              .join(" - ");
 
-          return `
+            return `
           <div class="print-page">
             ${watermark}
             <div class="header">
@@ -366,20 +504,26 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
               </div>
             </div>
           </div>
-        `}).join('');
-      } 
-      else {
+        `;
+          })
+          .join("");
+      } else {
         // Grid Layouts (Half / Quarter)
-        const size = config.layout === 'half' ? 2 : 4;
-        const gridClass = config.layout === 'half' ? 'half-grid' : 'quarter-grid';
+        const size = config.layout === "half" ? 2 : 4;
+        const gridClass =
+          config.layout === "half" ? "half-grid" : "quarter-grid";
         const pageGroups = chunk(finalItems, size);
         const compactLegend = buildCompactLegend(config);
-        
-        pagesHtml = pageGroups.map(group => `
+
+        pagesHtml = pageGroups
+          .map(
+            (group) => `
           <div class="print-page">
             ${watermark}
             <div class="grid-container ${gridClass}">
-               ${group.map(p => `
+               ${group
+                 .map(
+                   (p) => `
                  <div class="grid-item">
                     <div class="compact-header">
                       <div class="ch-top">
@@ -395,10 +539,14 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
                     ${compactLegend}
                     
                  </div>
-               `).join('')}
+               `,
+                 )
+                 .join("")}
             </div>
           </div>
-        `).join('');
+        `,
+          )
+          .join("");
       }
 
       win.document.open();
@@ -414,9 +562,11 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
       `);
       win.document.close();
 
-      setTimeout(() => { win.focus(); win.print(); }, 500);
+      setTimeout(() => {
+        win.focus();
+        win.print();
+      }, 500);
       return { success: true };
-
     } catch (e) {
       console.error(e);
       win.document.body.innerHTML = `<h3 style="color:red">Error: ${e.message}</h3>`;
@@ -428,7 +578,7 @@ export function useUnifiedPrinter(store, userStore, stageRef, scale, showHidesRe
       scale.value = originalScale;
       store.gridStep = originalStep;
       store.hides = originalHides;
-      
+
       // Restore Visibility
       store.showHides = originalShowHides;
       if (showHidesRef) showHidesRef.value = originalRefState;
