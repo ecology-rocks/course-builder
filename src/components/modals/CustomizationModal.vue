@@ -7,9 +7,11 @@ const isOpen = computed(() => store.showCustomizationModal)
 const selectedId = computed(() => store.editingCustomObject)
 const unit = ref('feet') 
 
-// Identify type based on store arrays to handle missing JSON properties
+// Identify type
 const isBale = computed(() => store.bales?.some(b => b.id === selectedId.value))
 const isNote = computed(() => store.notes?.some(n => n.id === selectedId.value))
+// [NEW] Check if it is a Tunnel Path
+const isTunnel = computed(() => store.tunnelPaths?.some(t => t.id === selectedId.value))
 
 const selectedObject = computed(() => {
   if (!selectedId.value) return null
@@ -20,17 +22,24 @@ const selectedObject = computed(() => {
     store.notes?.find(n => n.id === selectedId.value) ||
     store.zones?.find(z => z.id === selectedId.value) ||
     store.tunnelBoards?.find(t => t.id === selectedId.value) ||
+    store.tunnelPaths?.find(t => t.id === selectedId.value) || // [FIX] Look up the tunnel path
     (store.startBox?.id === selectedId.value ? store.startBox : null)
 
-  if (obj && !obj.custom) {
-    obj.custom = {}
+  if (obj) {
+    if (!obj.custom) obj.custom = {}
+    
+    // [FIX] Initialize default properties for tunnels if missing
+    if (isTunnel.value) {
+        if (!obj.custom.strokeColor) obj.custom.strokeColor = 'blue'
+        if (!obj.custom.strokeWidth) obj.custom.strokeWidth = 2
+        if (!obj.custom.dash) obj.custom.dash = [10, 5]
+    }
   }
   return obj
 })
 
 function hasProp(prop) {
   if (!selectedObject.value) return false
-  // Check custom object, then base object
   return (selectedObject.value.custom && prop in selectedObject.value.custom) || (prop in selectedObject.value)
 }
 
@@ -42,9 +51,15 @@ function close() {
 function resetToDefault() {
   if (!selectedObject.value) return
   const obj = selectedObject.value
+  
+  // [FIX] Tunnel Reset
+  if (isTunnel.value) {
+    obj.custom = { strokeColor: 'blue', strokeWidth: 2, dash: [10, 5] }
+    return
+  }
+
   const newCustom = {}
 
-  // Bales and objects with existing width/height should have these reset options
   if (hasProp('width') || isBale.value) newCustom.width = null
   if (hasProp('height') || isBale.value) newCustom.height = null
   if (hasProp('length') || isBale.value) newCustom.length = null
@@ -61,6 +76,22 @@ function resetToDefault() {
 
   selectedObject.value.custom = newCustom
 }
+
+// [FIX] Helper to map array dash style to dropdown string
+const tunnelDashStyle = computed({
+  get: () => {
+    const d = selectedObject.value?.custom?.dash
+    if (!d || d.length === 0) return 'solid'
+    if (d[0] === 2) return 'dotted'
+    return 'dashed'
+  },
+  set: (val) => {
+    if (!selectedObject.value?.custom) return
+    if (val === 'solid') selectedObject.value.custom.dash = []
+    if (val === 'dashed') selectedObject.value.custom.dash = [10, 10]
+    if (val === 'dotted') selectedObject.value.custom.dash = [2, 10]
+  }
+})
 
 function useDimension(key) {
   return computed({
@@ -93,8 +124,8 @@ const safeColor = (val, fallback = '#ffffff') => (!val || val === 'transparent')
     <div v-if="isOpen && selectedObject" class="modal-overlay" @click.self="close">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>Customize Object</h3>
-          <div class="unit-toggle">
+          <h3>Customize {{ isTunnel ? 'Tunnel Path' : 'Object' }}</h3>
+          <div class="unit-toggle" v-if="!isTunnel">
              <button :class="{ active: unit === 'feet' }" @click="unit = 'feet'">ft</button>
              <button :class="{ active: unit === 'inches' }" @click="unit = 'inches'">in</button>
           </div>
@@ -102,67 +133,91 @@ const safeColor = (val, fallback = '#ffffff') => (!val || val === 'transparent')
         <hr />
 
         <div class="form-container">
-          <div v-if="isBale || hasProp('length')" class="form-group">
-            <label>Length ({{ unitLabel }})</label>
-            <input type="number" v-model.number="customLength" placeholder="Default" :step="inputStep" />
-          </div>
-
-          <div v-if="isBale || hasProp('width')" class="form-group">
-            <label>Width ({{ unitLabel }})</label>
-            <input type="number" v-model.number="customWidth" placeholder="Default" :step="inputStep" />
-          </div>
-
-          <div v-if="isBale || hasProp('height')" class="form-group">
-            <label>Height ({{ unitLabel }})</label>
-            <input type="number" v-model.number="customHeight" placeholder="Default" :step="inputStep" />
-          </div>
-
-          <div class="type-specific-section" v-if="selectedObject.custom">
-            <div v-if="isNote || hasProp('textValue') || 'text' in selectedObject" class="form-group">
-              <label>Label Text</label>
-              <input type="text" v-model="selectedObject.custom.textValue" />
-            </div>
-
-            <div v-if="isNote || hasProp('fontSize') || 'fontSize' in selectedObject" class="form-group">
-              <label>Font Size</label>
-              <input type="number" v-model.number="selectedObject.custom.fontSize" />
+          
+          <div v-if="isTunnel && selectedObject.custom" class="type-specific-section">
+            <div class="form-group">
+              <label>Line Color</label>
+              <input type="color" v-model="selectedObject.custom.strokeColor" />
             </div>
 
             <div class="form-group">
-              <label>Fill Color</label>
-              <div class="color-row">
+              <label>Line Width ({{ selectedObject.custom.strokeWidth }}px)</label>
+              <input type="range" min="1" max="10" v-model.number="selectedObject.custom.strokeWidth" />
+            </div>
+
+            <div class="form-group">
+              <label>Dash Style</label>
+              <select v-model="tunnelDashStyle">
+                <option value="solid">Solid ────</option>
+                <option value="dashed">Dashed ╌╌╌╌</option>
+                <option value="dotted">Dotted ····</option>
+              </select>
+            </div>
+          </div>
+
+          <div v-else>
+            <div v-if="isBale || hasProp('length')" class="form-group">
+              <label>Length ({{ unitLabel }})</label>
+              <input type="number" v-model.number="customLength" placeholder="Default" :step="inputStep" />
+            </div>
+
+            <div v-if="isBale || hasProp('width')" class="form-group">
+              <label>Width ({{ unitLabel }})</label>
+              <input type="number" v-model.number="customWidth" placeholder="Default" :step="inputStep" />
+            </div>
+
+            <div v-if="isBale || hasProp('height')" class="form-group">
+              <label>Height ({{ unitLabel }})</label>
+              <input type="number" v-model.number="customHeight" placeholder="Default" :step="inputStep" />
+            </div>
+
+            <div class="type-specific-section" v-if="selectedObject.custom">
+              <div v-if="isNote || hasProp('textValue') || 'text' in selectedObject" class="form-group">
+                <label>Label Text</label>
+                <input type="text" v-model="selectedObject.custom.textValue" />
+              </div>
+
+              <div v-if="isNote || hasProp('fontSize') || 'fontSize' in selectedObject" class="form-group">
+                <label>Font Size</label>
+                <input type="number" v-model.number="selectedObject.custom.fontSize" />
+              </div>
+
+              <div class="form-group">
+                <label>Fill Color</label>
+                <div class="color-row">
+                  <input 
+                    type="color" 
+                    :value="safeColor(selectedObject.custom.fillColor, '#ffffff')" 
+                    @input="e => selectedObject.custom.fillColor = e.target.value"
+                    :disabled="selectedObject.custom.fillColor === 'transparent'"
+                  />
+                  <label class="checkbox-label">
+                    <input 
+                      type="checkbox" 
+                      :checked="selectedObject.custom.fillColor === 'transparent'"
+                      @change="e => selectedObject.custom.fillColor = e.target.checked ? 'transparent' : '#ffffff'"
+                    >
+                    Transparent
+                  </label>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label>Border Color</label>
                 <input 
                   type="color" 
-                  :value="safeColor(selectedObject.custom.fillColor, '#ffffff')" 
-                  @input="e => selectedObject.custom.fillColor = e.target.value"
-                  :disabled="selectedObject.custom.fillColor === 'transparent'"
+                  :value="safeColor(selectedObject.custom.strokeColor, '#000000')" 
+                  @input="e => selectedObject.custom.strokeColor = e.target.value" 
                 />
-                <label class="checkbox-label">
-                  <input 
-                    type="checkbox" 
-                    :checked="selectedObject.custom.fillColor === 'transparent'"
-                    @change="e => selectedObject.custom.fillColor = e.target.checked ? 'transparent' : '#ffffff'"
-                  >
-                  Transparent
-                </label>
               </div>
-            </div>
 
-            <div class="form-group">
-              <label>Border Color</label>
-              <input 
-                type="color" 
-                :value="safeColor(selectedObject.custom.strokeColor, '#000000')" 
-                @input="e => selectedObject.custom.strokeColor = e.target.value" 
-              />
-            </div>
-
-            <div class="form-group">
-              <label>Border Style</label>
-              <select v-model="selectedObject.custom.borderStyle">
-                <option value="solid">Solid</option>
-                <option value="dashed">Dashed</option>
-              </select>
+              <div class="form-group">
+                <label>Border Style</label>
+                <select v-model="selectedObject.custom.borderStyle">
+                  <option value="solid">Solid</option>
+                  <option value="dashed">Dashed</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -185,7 +240,7 @@ const safeColor = (val, fallback = '#ffffff') => (!val || val === 'transparent')
 .unit-toggle button.active { background: white; color: #2196f3; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
 .form-container { margin: 15px 0; max-height: 450px; overflow-y: auto; }
 .form-group { margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; }
-.form-group input { width: 110px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
+.form-group input[type="text"], .form-group input[type="number"] { width: 110px; padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
 .color-row { display: flex; align-items: center; gap: 8px; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px; }
 .btn-primary { background: #00a1ff; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; }

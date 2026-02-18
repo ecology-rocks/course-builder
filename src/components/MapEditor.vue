@@ -8,7 +8,6 @@ import { useRouter } from 'vue-router'
 // [KEEP] Legacy Printers
 import { usePrinter } from 'services/printerService'
 import { useBlindPrinter } from '@/services/blindPrinterService'
-// [NEW] Unified Printer
 import { useUnifiedPrinter } from '@/services/unifiedPrintService'
 
 // --- COMPOSABLES ---
@@ -31,8 +30,11 @@ import CustomizationModal from 'modals/CustomizationModal.vue'
 import TournamentSetupModal from 'modals/TournamentSetupModal.vue'
 import BlindManager from './editor/BlindManager.vue'
 import SaveConfirmationModal from 'modals/SaveConfirmationModal.vue'
-import PostPrintModal from 'modals/PostPrintModal.vue' // [NEW]
+import PostPrintModal from 'modals/PostPrintModal.vue'
 import AdvancedPrintModal from '@/components/modals/AdvancedPrintModal.vue'
+import TunnelManager from './editor/tunnels/TunnelManager.vue'
+import TunnelEditorLayer from './editor/tunnels/TunnelEditorLayer.vue'
+import TunnelRenderer from './editor/tunnels/TunnelRenderer.vue'
 
 // Context Menus
 import StageContextMenu from './editor/StageContextMenu.vue'
@@ -45,6 +47,7 @@ import TunnelBoxContextMenu from './editor/boards/TunnelBoxContextMenu.vue'
 import BaleContextMenu from './editor/bales/BaleContextMenu.vue'
 import NoteContextMenu from './editor/annotations/NoteContextMenu.vue'
 import WallContextMenu from './editor/walls/WallContextMenu.vue'
+import TunnelContextMenu from './editor/tunnels/TunnelContextMenu.vue' // [NEW] Import this
 
 // Setup
 const store = useMapStore()
@@ -77,11 +80,8 @@ const { handleSaveMap, handleLibrarySave } = useExportTools(store, stageRef, sca
 const { selectionRect, handleStageMouseDown, handleStageMouseMove, handleStageMouseUp, handleDragStart } = useStageInteraction(store, scale, GRID_OFFSET)
 const { contextMenu, handleStageContextMenu, closeContextMenu } = useContextMenu(store)
 
-// [KEEP] Legacy Hooks
 const { handlePrint: printLogic } = usePrinter(store, userStore, stageRef, scale)
 const { printBlinds } = useBlindPrinter(store, userStore, stageRef, scale)
-
-// [NEW] Unified Hook
 const { generatePrintJob } = useUnifiedPrinter(store, userStore, stageRef, scale, showHides)
 
 useKeyboardShortcuts(store, handleSaveMap)
@@ -93,26 +93,17 @@ const activeDisplayHides = computed(() => {
   return store.hides
 })
 
-
 function resolvePostPrint(action, payload) {
-
   if (action === 'print-again') {
     showPostPrintModal.value = false
-    // Trigger the modal inside the sidebar
     sidebarRef.value?.openAdvancedPrint()
     return
   }
-
   showPostPrintModal.value = false
-
   if (action === 'save-as-new') {
-    // 1. Clear ID to force new creation
     store.currentMapId = null
-    // 2. Update Name
     store.mapName = payload
-    // 3. Save immediately
     handleSaveMap()
-    // 4. Notify
     store.showNotification(`Starting new map: ${payload}`)
   } else if (action === 'reset') {
     if (confirm("Are you sure you want to clear the map? Any unsaved changes will be lost.")) {
@@ -126,23 +117,15 @@ function handleBlindExitRequest() {
   showSaveModal.value = true
 }
 
-// [NEW] Handle Export Action from Modal
 function resolveExport(newNamePayload) {
-  // If user typed a name in the modal, apply it before exporting
   if (newNamePayload) store.mapName = newNamePayload
-  
-  // Trigger download
   store.exportMapToJSON()
   showSaveModal.value = false
-
-  // 1. Blind Manager Exit
   if (pendingBlindExit.value) {
     isBlindMode.value = false
     pendingBlindExit.value = false
     store.showNotification("Map exported! Exiting Blind Manager.")
   }
-
-  // 2. Dashboard Exit
   if (pendingHomeExit.value) {
     pendingHomeExit.value = false
     store.reset()
@@ -151,37 +134,23 @@ function resolveExport(newNamePayload) {
   }
 }
 
-// --- SAVE INTERCEPTION LOGIC ---
 function requestSave() {
-  // ALWAYS open the modal now.
-  // The Modal will decide whether to show "Step 1" (Overwrite/Copy) or "Step 2" (Name New Map)
-  // based on the isNewMap prop we pass it.
   showSaveModal.value = true
 }
 
-// [NEW] Triggered by Sidebar Home Button
 function handleGoHome() {
-  // If user is Pro, we offer Safe Exit. 
-  // If user is Free, we just warn/reset because they can't save anyway? 
-  // Actually, Free users can export JSON. So let's show the modal but Discard might be their only option if they don't want to Upgrade.
-  // For simplicity, we use the same flow.
   pendingHomeExit.value = true
   showSaveModal.value = true
 }
 
-// [NEW] Handle Discard Action
 function resolveDiscard() {
   showSaveModal.value = false
-  
-  // Case 1: Exiting Blind Manager (Just close mode, keep map open)
   if (pendingBlindExit.value) {
     isBlindMode.value = false
     pendingBlindExit.value = false
     store.showNotification("Changes discarded. Exiting Blind Manager.")
     return
   }
-
-  // Case 2: Exiting to Home (Reset map)
   if (pendingHomeExit.value) {
     pendingHomeExit.value = false
     store.reset()
@@ -189,30 +158,35 @@ function resolveDiscard() {
   }
 }
 
-// [UPDATED] resolveSave to handle Dashboard Exit
 function resolveSave(action, newNamePayload) {
   if (action === 'save-as-new') {
-    store.currentMapId = null 
+    store.currentMapId = null
     if (newNamePayload) store.mapName = newNamePayload
   }
-  
+
   handleSaveMap()
   showSaveModal.value = false
 
-  // 1. Blind Manager Exit
   if (pendingBlindExit.value) {
     isBlindMode.value = false
     pendingBlindExit.value = false
     store.showNotification("Map saved! Exiting Blind Manager.")
   }
 
-  // 2. [NEW] Dashboard Exit
   if (pendingHomeExit.value) {
     pendingHomeExit.value = false
-    store.reset() // Clear memory after save
+    store.reset()
     router.push('/dashboard')
     store.showNotification("Map saved! Returning to Dashboard.")
   }
+
+  if (store.isTunnelMode) {
+    store.isTunnelMode = false
+  }
+}
+
+function handleTunnelExitRequest() {
+  showSaveModal.value = true
 }
 
 function handleBlindSetupStart(config) {
@@ -224,20 +198,15 @@ function handleBlindSetupStart(config) {
 }
 
 async function handleBlindSave() {
-  // 1. FREE USER: Just exit (Keep changes in session memory)
   if (!userStore.isPro) {
     isBlindMode.value = false
     store.showNotification("Blinds kept in session (Unsaved)", "info")
     return
   }
-
-  // 2. PRO USER:
   if (!store.currentMapId) {
-    // If map is new/unsaved, trigger the Save Modal flow
     pendingBlindExit.value = true
-    requestSave() // Opens the modal
+    requestSave()
   } else {
-    // If map exists, just save and close
     await handleSaveMap()
     isBlindMode.value = false
     store.showNotification("Map & Blinds saved!")
@@ -259,11 +228,10 @@ function handleStageMenuClose() {
   store.setTool('select')
 }
 
-// [UPDATED] Cancel handler
 function onSaveModalCancel() {
   showSaveModal.value = false
   pendingBlindExit.value = false
-  pendingHomeExit.value = false // Reset this too
+  pendingHomeExit.value = false
 }
 
 function handleGlobalClick(e) {
@@ -282,7 +250,8 @@ function handleGlobalClick(e) {
     store.activeTunnelBoxMenu ||
     store.activeZoneMenu ||
     store.activeNoteMenu ||
-    store.activeWallMenu
+    store.activeWallMenu ||
+    store.activeTunnelMenu // [NEW] Add tunnel menu to global close logic
 
   if (isAnyItemMenuOpen) {
     store.setTool('select')
@@ -296,7 +265,6 @@ function onStageMouseDown(e) {
     e.evt.stopPropagation();
   }
 
-  // If in Blind Mode, divert click to BlindManager
   if (isBlindMode.value) {
     if (blindManagerRef.value) {
       blindManagerRef.value.handleCanvasClick(e, GRID_OFFSET, scale.value)
@@ -322,7 +290,8 @@ watch(
     store.activeStepMenu,
     store.activeTunnelBoxMenu,
     store.activeZoneMenu,
-    store.activeNoteMenu
+    store.activeNoteMenu,
+    store.activeTunnelMenu // [NEW] Add watcher
   ],
   (menus) => {
     if (menus.some(m => m !== null)) {
@@ -335,7 +304,6 @@ async function handleBatchPrint() {
   showAdvancedPrintModal.value = true
 }
 
-// [KEEP] Legacy Print Handler
 async function handlePrint(options) {
   isPrinting.value = true
   const orientation = options.orientation || 'landscape'
@@ -344,7 +312,6 @@ async function handlePrint(options) {
 
   try {
     await printLogic(options, orientation)
-    // [NEW] Trigger Modal after successful print
     setTimeout(() => { showPostPrintModal.value = true }, 500)
   } catch (e) {
     console.error(e)
@@ -354,12 +321,10 @@ async function handlePrint(options) {
   }
 }
 
-// [NEW] Advanced Print Handler
 async function handleAdvancedPrint(config) {
   isPrinting.value = true
   try {
     await generatePrintJob(config)
-    // [NEW] Trigger Modal after successful print
     setTimeout(() => { showPostPrintModal.value = true }, 500)
   } finally {
     isPrinting.value = false
@@ -369,15 +334,9 @@ async function handleAdvancedPrint(config) {
 
 <template>
   <div class="editor-container" @click="handleGlobalClick">
-    <EditorSidebar 
-      ref="sidebarRef"
-      v-if="!isBlindMode" 
-      @print="handlePrint" 
-      @advanced-print="handleAdvancedPrint"
-      @save-map="requestSave" 
-      @save-library="handleLibrarySave"
-      @blind-setup="handleOpenBlindManager"
-      @go-home="handleGoHome"  />
+    <EditorSidebar ref="sidebarRef" v-if="!isBlindMode && !store.isTunnelMode" @print="handlePrint"
+      @advanced-print="handleAdvancedPrint" @save-map="requestSave" @save-library="handleLibrarySave"
+      @blind-setup="handleOpenBlindManager" @go-home="handleGoHome" />
 
     <div class="canvas-wrapper" ref="wrapperRef" :class="{ 'is-anchor-mode': store.activeTool === 'anchor' }">
       <EditNoteModal v-if="store.editingNoteId" />
@@ -407,6 +366,8 @@ async function handleAdvancedPrint(config) {
 
       <v-stage ref="stageRef" :config="stageConfig" @mousedown="onStageMouseDown" @dragstart="handleDragStart"
         @mousemove="handleStageMouseMove" @mouseup="handleStageMouseUp" @contextmenu="handleStageContextMenu">
+
+
 
         <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
           <template v-for="n in store.ringDimensions.width + 1" :key="'v'+n">
@@ -448,10 +409,19 @@ async function handleAdvancedPrint(config) {
 
           <BarnHuntLayer :scale="scale" :showHides="showHides" :hides="activeDisplayHides" :GRID_OFFSET="GRID_OFFSET"
             :locked="isBlindMode && !isPrinting" />
+
+          <TunnelRenderer :scale="scale" />
+
           <v-rect v-if="selectionRect"
             :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
 
         </v-layer>
+        <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET, listening: true }">
+
+          <TunnelEditorLayer v-if="store.isTunnelMode" :scale="scale" />
+
+        </v-layer>
+
       </v-stage>
     </div>
 
@@ -472,17 +442,14 @@ async function handleAdvancedPrint(config) {
     <NoteContextMenu v-if="store.activeNoteMenu" v-bind="store.activeNoteMenu" :noteId="store.activeNoteMenu.id"
       @close="store.activeNoteMenu = null" />
     <WallContextMenu v-if="store.activeWallMenu" />
-    <SaveConfirmationModal 
-      v-if="showSaveModal" 
-      :mapName="store.mapName"
-      :isNewMap="isNewMap"
-      :allowDiscard="pendingHomeExit || pendingBlindExit"
-      @cancel="onSaveModalCancel"
-      @overwrite="resolveSave('overwrite')"
-      @save-as-new="(newName) => resolveSave('save-as-new', newName)"
-      @discard="resolveDiscard"
-      @export-json="(newName) => resolveExport(newName)" 
-    />
+
+    <TunnelContextMenu v-if="store.activeTunnelMenu" v-bind="store.activeTunnelMenu" :id="store.activeTunnelMenu.id"
+      @close="store.activeTunnelMenu = null"/>
+
+    <SaveConfirmationModal v-if="showSaveModal" :mapName="store.mapName" :isNewMap="isNewMap"
+      :allowDiscard="pendingHomeExit || pendingBlindExit" @cancel="onSaveModalCancel"
+      @overwrite="resolveSave('overwrite')" @save-as-new="(newName) => resolveSave('save-as-new', newName)"
+      @discard="resolveDiscard" @export-json="(newName) => resolveExport(newName)" />
     <PostPrintModal v-if="showPostPrintModal" :mapName="store.mapName" @cancel="showPostPrintModal = false"
       @save-as-new="(newName) => resolvePostPrint('save-as-new', newName)"
       @print-again="resolvePostPrint('print-again')" @reset="resolvePostPrint('reset')" />
@@ -490,11 +457,10 @@ async function handleAdvancedPrint(config) {
     <TournamentSetupModal v-if="showBlindSetup" @close="showBlindSetup = false" @start="handleBlindSetupStart" />
     <BlindManager v-if="isBlindMode" ref="blindManagerRef" @close="isBlindMode = false" @print="handleBatchPrint"
       @save="handleBlindSave" @exit-request="handleBlindExitRequest" />
-      <AdvancedPrintModal 
-      v-if="showAdvancedPrintModal" 
-      @close="showAdvancedPrintModal = false" 
-      @confirm="handleAdvancedPrint" 
-    />
+    <TunnelManager v-if="store.isTunnelMode" @close="handleTunnelExitRequest" />
+
+    <AdvancedPrintModal v-if="showAdvancedPrintModal" @close="showAdvancedPrintModal = false"
+      @confirm="handleAdvancedPrint" />
   </div>
 </template>
 

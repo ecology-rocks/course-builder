@@ -42,6 +42,7 @@ const DEFAULT_MAP_DATA = {
   startBox: null,
   gate: null,
   measurements: [],
+  tunnelPaths: [],
 };
 
 export const useMapStore = defineStore("map", () => {
@@ -94,6 +95,12 @@ export const useMapStore = defineStore("map", () => {
   const showMapStats = ref(true);
   const previousClassCount = ref(0);
   const activeMeasurement = ref(null);
+  const isTunnelMode = ref(false);
+  const tunnelConfig = ref({
+    showGuardLines: false, // Toggle for the "18 inch minimum" visualization
+    activePathId: null,    // ID of the path currently being drawn/edited
+  });
+  const activeTunnelMenu = ref(null);
 
   // Configs
   const wallTypes = ref({
@@ -177,6 +184,10 @@ export const useMapStore = defineStore("map", () => {
       selection.value = [];
       previousBales.value = [];
       comparisonMapName.value = null;
+
+      mapData.value.tunnelPaths = [];
+    isTunnelMode.value = false;
+    tunnelConfig.value = { showGuardLines: false, activePathId: null };
 
       // 4. Reset Configs
       gridStartCorner.value = "top-left";
@@ -269,8 +280,10 @@ function setTool(tool) {
     zones: createMapRef("zones"),
     masterBlinds: createMapRef("masterBlinds"),
     customWalls: createMapRef("customWalls"),
+    tunnelPaths: createMapRef("tunnelPaths"),
     activeMeasurement,
     activeTool,
+    activeTunnelMenu,
     baleConfig,
     classLevel,
     comparisonMapName,
@@ -283,6 +296,8 @@ function setTool(tool) {
     gridStartCorner,
     gridStep,
     isDrawingBoard,
+    isTunnelMode,
+    tunnelConfig,
     isShared,
     judgeNotes,
     mapName,
@@ -383,6 +398,7 @@ watch(baleConfig, (newVal) => {
     stateRefs.activeWallMenu.value = null;
     stateRefs.activeBaleMenu.value = null;
     stateRefs.activeHideMenu.value = null;
+    stateRefs.activeTunnelMenu.value = null;
   }
 
   const selectionLogic = useSelectionLogic(
@@ -432,6 +448,7 @@ watch(baleConfig, (newVal) => {
     zones: stateRefs.zones,
     masterBlinds: stateRefs.masterBlinds,
     customWalls: stateRefs.customWalls,
+    tunnelPaths: stateRefs.tunnelPaths,
     activeWall,
     activeWallMenu,
     activeMeasurement,
@@ -452,6 +469,7 @@ watch(baleConfig, (newVal) => {
     isDraggingSelection,
     isDrawingBoard,
     isShared,
+    isTunnelMode,
     judgeNotes,
     layerOpacity,
     mapName,
@@ -474,6 +492,7 @@ watch(baleConfig, (newVal) => {
     trialDay,
     trialLocation,
     trialNumber,
+    tunnelConfig,
     wallTypes,
     selectHide,
     activeHideMenu,

@@ -67,11 +67,29 @@ export function useKeyboardShortcuts(store, onSave) {
     // Delete
     if (key === 'delete' || key === 'backspace') {
       if (store.selection.length > 0) {
+        // [NEW] Tunnel Specific Delete Logic
+        // We handle this explicitly to ensure activePathId is cleared if we delete the active path
+        const id = store.selection[0]
+        const isTunnel = store.mapData.tunnelPaths && store.mapData.tunnelPaths.find(t => t.id === id)
+
+        if (isTunnel) {
+           store.mapData.tunnelPaths = store.mapData.tunnelPaths.filter(t => t.id !== id)
+           
+           // If we deleted the path we were currently drawing, exit drawing mode
+           if (store.tunnelConfig && store.tunnelConfig.activePathId === id) {
+              store.tunnelConfig.activePathId = null
+           }
+           
+           store.selection = []
+           store.showNotification("Tunnel path deleted")
+           return
+        }
+
+        // Standard Delete for everything else
         store.deleteSelection()
       }
       return
     }
-
     // --- MANIPULATION ---
 
     // Rotate: R (15deg), Shift+R (45deg)

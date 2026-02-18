@@ -37,12 +37,19 @@ const showAdvancedPrintModal = ref(false) // New Modal
 const showMoreMenu = ref(false)
 const isAdmin = computed(() => userStore.user?.email === 'reallyjustsam@gmail.com')
 const isPro = computed(() => ['pro', 'club'].includes(userStore.tier))
+const isBeta = userStore.isBeta
 const showUpgradeModal = ref(false)
 
 
 defineExpose({
   openAdvancedPrint: () => showAdvancedPrintModal.value = true
 })
+
+function startTunnelMode() {
+  store.isTunnelMode = true
+  store.setTool('tunnel_edges') // Default to step 1
+  store.closeAllMenus()
+}
 
 // [OLD] Legacy Handler
 function onPrintConfirm(config) {
@@ -163,6 +170,7 @@ function handleSave() {
 
       <div v-if="showMoreMenu" class="more-menu">
         <button v-if="isAdmin" @click="emit('save-library')">📚 Save to Library</button>
+        <button v-if="isBeta" @click="startTunnelMode">🚇 Tunnel Engineer</button>
         <button @click="triggerFileUpload">⬆ Import JSON</button>
         <button @click="store.exportMapToJSON()">⬇ Export JSON</button>
         <button @click="store.realignGrid()">📏 Realign All to Grid</button>
