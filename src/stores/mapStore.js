@@ -8,7 +8,7 @@ import { useHistory } from "services/historyService";
 import { useMapStatistics } from "services/mapStatistics";
 import { useGridLogic } from "editor/logic/useGridLogic";
 
-// Direct imports (previously hidden in barnHuntLogic)
+// Direct imports
 import { useBales } from "editor/bales/useBales";
 import { useBoardEdges } from "editor/boards/useBoardEdges";
 import { useDCMats } from "editor/mats/useDCMats";
@@ -22,11 +22,6 @@ import { useTunnelBoards } from "editor/boards/useTunnelBoards";
 import { useZones } from "editor/zones/useZones";
 import { useCustomWalls } from "editor/walls/useCustomWalls";
 
-// ==========================================
-// 0. CONSTANTS & STRATEGIES
-// ==========================================
-
-// This acts as the "Schema" for your map.
 const DEFAULT_MAP_DATA = {
   bales: [],
   boardEdges: [],
@@ -42,43 +37,24 @@ const DEFAULT_MAP_DATA = {
   startBox: null,
   gate: null,
   measurements: [],
-  tunnelPaths: [],
+  tunnelPaths: [], // Ensure this exists
 };
 
 export const useMapStore = defineStore("map", () => {
   const userStore = useUserStore();
 
-  // ==========================================
-  // 1. STATE DEFINITIONS
-  // ==========================================
-
-  // A. The Unified Map Data
+  // STATE
   const mapData = ref(JSON.parse(JSON.stringify(DEFAULT_MAP_DATA)));
-
-  // B. Settings & Metadata
   const _ringDimensions = ref({ width: 24, height: 24 });
 
-  // [FIX] Computed property to intercept and sanitize writes
   const ringDimensions = computed({
     get: () => _ringDimensions.value,
     set: (newVal) => {
-      if (!newVal || typeof newVal !== 'object') {
-        console.warn("⚠️ [MapStore] Attempted to set invalid ringDimensions:", newVal);
-        return;
-      }
+      if (!newVal || typeof newVal !== 'object') return;
       let w = Number(newVal.width);
       let h = Number(newVal.height);
-
-      if (isNaN(w) || w <= 0) {
-        console.warn(`⚠️ [MapStore] Invalid Width detected: ${newVal.width}. Resetting to 24.`);
-        w = 24;
-      }
-      if (isNaN(h) || h <= 0) {
-        console.warn(`⚠️ [MapStore] Invalid Height detected: ${newVal.height}. Resetting to 24.`);
-        h = 24;
-      }
-      
-      console.log(`📏 [MapStore] Dimensions set to: ${w}x${h}`);
+      if (isNaN(w) || w <= 0) w = 24;
+      if (isNaN(h) || h <= 0) h = 24;
       _ringDimensions.value = { width: w, height: h };
     }
   });
@@ -96,33 +72,19 @@ export const useMapStore = defineStore("map", () => {
   const previousClassCount = ref(0);
   const activeMeasurement = ref(null);
   const isTunnelMode = ref(false);
-  const tunnelConfig = ref({
-    showGuardLines: false, // Toggle for the "18 inch minimum" visualization
-    activePathId: null,    // ID of the path currently being drawn/edited
-  });
+  const tunnelConfig = ref({ showGuardLines: false, activePathId: null });
   const activeTunnelMenu = ref(null);
 
-  // Configs
-  const wallTypes = ref({
-    top: "fence",
-    right: "fence",
-    bottom: "fence",
-    left: "fence",
-  });
+  const wallTypes = ref({ top: "fence", right: "fence", bottom: "fence", left: "fence" });
   const gridStartCorner = ref("top-left");
   const trialLocation = ref("");
   const trialDay = ref("");
   const trialNumber = ref("");
   const judgeNotes = ref("");
-  const baleConfig = ref({ length: 36 / 12, width: 18 / 12, height: 14 / 12 });
+  const baleConfig = ref({ length: 3, width: 1.5, height: 1 });
   const dcMatConfig = ref({ width: 2, height: 3 });
-    const baleColors = ref({
-    1: "#e6c200",
-    2: "#4caf50",
-    3: "#2196f3",
-  });
+  const baleColors = ref({ 1: "#e6c200", 2: "#4caf50", 3: "#2196f3" });
 
-  // Editor State
   const savedMaps = ref([]);
   const comparisonMapName = ref(null);
   const previousBales = ref([]);
@@ -134,11 +96,11 @@ export const useMapStore = defineStore("map", () => {
   const nextNumber = ref(1);
   const isDrawingBoard = ref(false);
   const gridStep = ref(2);
-  const activeHideMenu = ref(null); // Stores { id, x, y } or null
+  const activeHideMenu = ref(null);
   const showCustomizationModal = ref(false);
   const editingCustomObject = ref(null);
 
-  // context menus
+  // Menus
   const activeDCMatMenu = ref(null);
   const activeZoneMenu = ref(null);
   const activeStepMenu = ref(null);
@@ -149,121 +111,66 @@ export const useMapStore = defineStore("map", () => {
   const activeWallMenu = ref(null);
   const activeWall = ref(null);
 
-  // ==========================================
-  // 2. ACTIONS (Internal & External)
-  // ==========================================
-
+  // ACTIONS
   function showNotification(message, type = "info") {
     notification.value = { message, type };
-    setTimeout(() => {
-      notification.value = null;
-    }, 3000);
+    setTimeout(() => { notification.value = null; }, 3000);
   }
 
   function reset() {
-    console.group("🛑 [MapStore] RESET STARTED");
-    console.time("Reset Duration");
-
-    try {
-      // 1. Reset Data
-      mapData.value = JSON.parse(JSON.stringify(DEFAULT_MAP_DATA));
-      console.log("✅ mapData cleared");
-
-      // 2. Reset Metadata
-      currentMapId.value = null;
-      mapName.value = "Untitled Map";
-      classLevel.value = "Novice";
-      sport.value = "barnhunt";
-      
-      // 3. Reset Dimensions (Triggers setter logging)
-      ringDimensions.value = { width: 24, height: 24 };
-      
-      currentLayer.value = 1;
-      activeTool.value = "bale";
-      nextNumber.value = 1;
-      selection.value = [];
-      previousBales.value = [];
-      comparisonMapName.value = null;
-
-      mapData.value.tunnelPaths = [];
+    mapData.value = JSON.parse(JSON.stringify(DEFAULT_MAP_DATA));
+    currentMapId.value = null;
+    mapName.value = "Untitled Map";
+    classLevel.value = "Novice";
+    sport.value = "barnhunt";
+    ringDimensions.value = { width: 24, height: 24 };
+    currentLayer.value = 1;
+    activeTool.value = "bale";
+    nextNumber.value = 1;
+    selection.value = [];
+    previousBales.value = [];
+    comparisonMapName.value = null;
+    mapData.value.tunnelPaths = [];
     isTunnelMode.value = false;
     tunnelConfig.value = { showGuardLines: false, activePathId: null };
-
-      // 4. Reset Configs
-      gridStartCorner.value = "top-left";
-      baleConfig.value = { length: 3, width: 1.5, height: 1 };
-      console.log("✅ baleConfig reset to default (3 x 1.5 x 1)");
-
-      dcMatConfig.value = { width: 2, height: 3 };
-      activeMeasurement.value = null;
-
-      // 5. Close Editors
-      if (domainModules && domainModules.closeNoteEditor) {
-        domainModules.closeNoteEditor();
-      }
-      
-    } catch (e) {
-      console.error("🔥 [MapStore] Error during RESET:", e);
-    } finally {
-      console.timeEnd("Reset Duration");
-      console.groupEnd();
-    }
+    gridStartCorner.value = "top-left";
+    baleConfig.value = { length: 3, width: 1.5, height: 1 };
+    dcMatConfig.value = { width: 2, height: 3 };
+    activeMeasurement.value = null;
+    if (domainModules?.closeNoteEditor) domainModules.closeNoteEditor();
   }
 
-function initBlinds(count, generateRandoms = true) {
+  function initBlinds(count, generateRandoms = true) {
     const newBlinds = [];
     for (let i = 1; i <= count; i++) {
       newBlinds.push({
         id: i,
         name: `Blind ${i}`,
-        // If generateRandoms is true, create 5 random numbers 1-5
-        randoms: generateRandoms 
-          ? Array(5).fill(0).map(() => Math.floor(Math.random() * 5) + 1)
-          : [],
-        hides: [] // Start empty, or we could clone 'master' hides if desired
+        randoms: generateRandoms ? Array(5).fill(0).map(() => Math.floor(Math.random() * 5) + 1) : [],
+        hides: []
       });
     }
-    // Update the mapData directly so it reacts and saves
     mapData.value.blinds = newBlinds;
   }
 
   function realignGrid() {
-    // 1. Snap Generic Items
     gridLogic.realignGeneric();
-
-    // 2. Snap Bales (Domain Specific)
-    if (domainModules && domainModules.realignBales) {
-      domainModules.realignBales();
-    }
-
-    // 3. Snap Singulars
+    if (domainModules?.realignBales) domainModules.realignBales();
     gridLogic.realignSingulars();
-
     if (historyModule.snapshot) historyModule.snapshot();
     showNotification("Realigned to grid");
   }
 
-function setTool(tool) {
-  // [NEW] Finish any active measurement before switching tools
-  if (activeTool.value === 'measure' || activeTool.value === 'measurePath') {
-    domainModules.finishMeasurement();
+  function setTool(tool) {
+    if (activeTool.value === 'measure' || activeTool.value === 'measurePath') domainModules.finishMeasurement();
+    if (activeTool.value === 'wall' && stateRefs.activeWall.value) domainModules.cancelWall();
+    activeTool.value = tool;
   }
 
-  if (activeTool.value === 'wall' && stateRefs.activeWall.value) {
-    domainModules.cancelWall();
-  }
-  activeTool.value = tool;
-}
-
-  // ==========================================
-  // 3. MODULE INITIALIZATION (The Adapter Layer)
-  // ==========================================
-
-  const createMapRef = (key) =>
-    computed({
-      get: () => mapData.value[key],
-      set: (val) => (mapData.value[key] = val),
-    });
+  const createMapRef = (key) => computed({
+    get: () => mapData.value[key],
+    set: (val) => (mapData.value[key] = val),
+  });
 
   const stateRefs = {
     mapData,
@@ -327,42 +234,12 @@ function setTool(tool) {
     reset,
   };
 
-
-watch(baleConfig, (newVal) => {
-    if (isNaN(newVal.width) || isNaN(newVal.height) || isNaN(newVal.length)) {
-      console.error("🚨 [MapStore] CRITICAL: baleConfig became NaN!", newVal);
-      console.trace("Who set this?"); // This prints the exact function call stack
-    }
-  }, { deep: true });
-
-  watch(() => mapData.value, (newData) => {
-    // Check Dimensions
-    const w = ringDimensions.value.width
-    const h = ringDimensions.value.height
-    
-    if (isNaN(w) || isNaN(h)) {
-      console.error("🚨 STORE CORRUPTION DETECTED: Ring Dimensions are NaN", ringDimensions.value)
-    }
-
-    // Check Bale Config (Common source of width errors)
-    const bc = baleConfig.value
-    if (isNaN(bc.length) || isNaN(bc.width)) {
-      console.error("🚨 STORE CORRUPTION DETECTED: Bale Config is NaN", bc)
-    }
-  }, { deep: true, immediate: true })
-
   const historyModule = useHistory(stateRefs, () => {});
   const gridLogic = useGridLogic(stateRefs);
-
   stateRefs.snapshot = historyModule.snapshot;
 
-  // NEW CODE TO ADD
-  const deps = {
-    snapshot: historyModule.snapshot,
-    show: showNotification,
-  };
+  const deps = { snapshot: historyModule.snapshot, show: showNotification };
 
-  // 1. Initialize Domain Modules directly
   const domainModules = {
     ...useBales(stateRefs, deps.snapshot, deps),
     ...useBoardEdges(stateRefs, deps.snapshot),
@@ -378,17 +255,11 @@ watch(baleConfig, (newVal) => {
     ...useCustomWalls(stateRefs, deps.snapshot),
   };
 
-  // 2. Initialize Statistics (Logic moved from barnHuntLogic)
   const stats = useMapStatistics(stateRefs);
-
-  const persistence = useMapPersistence(stateRefs, userStore, {
-    show: showNotification,
-  });
+  const persistence = useMapPersistence(stateRefs, userStore, { show: showNotification });
 
   function closeAllMenus() {
-    if (activeMeasurement.value) {
-    domainModules.finishMeasurement();
-  }
+    if (activeMeasurement.value) domainModules.finishMeasurement();
     stateRefs.activeStepMenu.value = null;
     stateRefs.activeStartBoxMenu.value = null;
     stateRefs.activeTunnelBoxMenu.value = null;
@@ -401,40 +272,18 @@ watch(baleConfig, (newVal) => {
     stateRefs.activeTunnelMenu.value = null;
   }
 
-  const selectionLogic = useSelectionLogic(
-    stateRefs,
-    historyModule.snapshot,
-    // Pass the existing deps object which contains 'show'
-    deps,
-  );
-
-  function selectHide(id) {
-    // Pass 'false' for isMulti to make it a single selection by default
-    selectionLogic.selectObject(id, false);
-  }
-
-  // [FIX] Wrapper: Finish measurements before manual saves
-  // This ensures that if a user draws a line and immediately clicks "Save",
-  // we commit that line instead of losing it.
+  const selectionLogic = useSelectionLogic(stateRefs, historyModule.snapshot, deps);
+  function selectHide(id) { selectionLogic.selectObject(id, false); }
   const saveToCloud = async (isAutoSave = false, thumbnail = null) => {
-    // Only force-finish on MANUAL save.
-    // We don't want autosave to interrupt a user mid-drawing.
-    if (!isAutoSave && stateRefs.activeMeasurement.value) {
-      domainModules.finishMeasurement();
-    }
+    if (!isAutoSave && stateRefs.activeMeasurement.value) domainModules.finishMeasurement();
     await persistence.saveToCloud(isAutoSave, thumbnail);
   };
 
   const multiLayerView = ref(true);
   const layerOpacity = ref(0.4);
 
-  // ==========================================
-  // 4. EXPORTS
-  // ==========================================
   return {
     mapData,
-
-    // Legacy State (Computed Wrappers)
     bales: stateRefs.bales,
     boardEdges: stateRefs.boardEdges,
     dcMats: stateRefs.dcMats,
@@ -448,11 +297,15 @@ watch(baleConfig, (newVal) => {
     zones: stateRefs.zones,
     masterBlinds: stateRefs.masterBlinds,
     customWalls: stateRefs.customWalls,
-    tunnelPaths: stateRefs.tunnelPaths,
+    
+    // [CRITICAL FIX] Export this so AdvancedPrintModal can scan it
+    tunnelPaths: stateRefs.tunnelPaths, 
+
     activeWall,
     activeWallMenu,
     activeMeasurement,
     activeTool,
+    activeTunnelMenu,
     baleConfig,
     classLevel,
     comparisonMapName,

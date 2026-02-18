@@ -29,7 +29,8 @@ const config = reactive({
     showHides: true,
     showWalls: true,
     showFence: true,
-    showTunnels: true,
+    showTunnels: true,     // Boards
+    showTunnelPaths: true, // [NEW] Tunnel Paths
     showTunnelBox: true,
     showGate: true,
     showStep: true,
@@ -52,7 +53,6 @@ const printButtonLabel = computed(() => {
   return config.mode === 'blinds' ? 'Print Blinds' : 'Print Layers'
 })
 
-// [NEW] Dynamic Button Class based on Mode
 const printButtonClass = computed(() => {
   if (activeTab.value === 'blinds' || config.mode === 'blinds') {
     return 'btn-purple'
@@ -60,35 +60,61 @@ const printButtonClass = computed(() => {
   return 'btn-primary'
 })
 
+// [UPDATED] Scans for Tunnels and Lines
 const detectedCustoms = computed(() => {
   const customs = []
   const seen = new Set()
-  const scan = (collection, typeLabel) => {
+
+  const scan = (collection, typeLabel, isLine = false) => {
     if (!collection) return
     const items = Array.isArray(collection) ? collection : [collection]
+    
     items.forEach(item => {
-      let fill = null, stroke = null
-      if (item.custom) { fill = item.custom.fillColor; stroke = item.custom.strokeColor } 
-      else { fill = item.fillColor; stroke = item.strokeColor || item.color }
+      let fill = null, stroke = null, dashStyle = 'solid'
 
+      // Handle Tunnel Paths (Line Objects)
+      if (isLine) {
+        stroke = item.custom?.strokeColor || item.style?.color || 'blue'
+        const d = item.custom?.dash || item.style?.dash || []
+        if (d.length > 0) dashStyle = (d[0] === 2) ? 'dotted' : 'dashed'
+        fill = 'transparent' // Lines don't have fill
+      } 
+      // Handle Standard Objects (Rects)
+      else {
+        if (item.custom) { fill = item.custom.fillColor; stroke = item.custom.strokeColor } 
+        else { fill = item.fillColor; stroke = item.strokeColor || item.color }
+      }
+
+      // If it has a relevant style, add it
       if (fill || stroke) {
-         const sig = JSON.stringify({ f: fill, s: stroke, t: typeLabel })
+         // Create unique signature including dash style
+         const sig = JSON.stringify({ f: fill, s: stroke, d: dashStyle, t: typeLabel })
+         
          if (!seen.has(sig)) {
            seen.add(sig)
            customs.push({
              id: sig,
              label: item.label || item.name || `Custom ${typeLabel}`,
-             style: { fillColor: fill, strokeColor: stroke }
+             isLine,
+             style: { 
+               fillColor: fill, 
+               strokeColor: stroke,
+               dashStyle
+             }
            })
          }
       }
     })
   }
+
   scan(store.bales, "Bale")
   scan(store.customWalls, "Wall")
   scan(store.tunnelBoards, "Board")
+  // [CRITICAL] This requires store.tunnelPaths to be exported from mapStore.js
+  scan(store.tunnelPaths, "Tunnel Path", true) 
   scan(store.dcMats, "Mat")
   if (store.startBox) scan(store.startBox, "Start Box")
+  
   return customs
 })
 
@@ -99,6 +125,8 @@ onMounted(() => {
   if (hasLayer2.value) config.layers[2] = true
   if (hasLayer3.value) config.layers[3] = true
   selectedBlindIds.value = availableBlinds.value.map(b => b.id)
+  
+  // Auto-select all detected customs
   detectedCustoms.value.forEach(c => {
     config.legend.customItems[c.id] = true
   })
@@ -184,12 +212,9 @@ function handlePrint() {
           :class="{ active: activeTab === 'blinds' }" 
           @click="activeTab = 'blinds'"
         >Print Blinds</button>
-        
-        <!--button :class="{ active: activeTab === 'profiles' }" @click="activeTab = 'profiles'">Profiles</button-->
       </div>
 
       <div class="modal-body">
-        
         <div v-if="activeTab === 'general'" class="tab-pane">
             <div class="info-box"><span class="icon">ℹ️</span>These settings apply to both the Print Layers and Print Blinds workflows. </div>
           <div class="control-group">
@@ -226,7 +251,6 @@ function handlePrint() {
           <div class="split-row">
             <div class="control-group half">
               <label>Copies per Item</label>
-              
               <div class="input-wrapper">
                 <input type="number" v-model.number="config.copies" min="1" max="50">
               </div>
@@ -241,24 +265,22 @@ function handlePrint() {
           </div>
         </div>
 
-<div v-if="activeTab === 'notes'" class="tab-pane">
+        <div v-if="activeTab === 'notes'" class="tab-pane">
           <div class="info-box">
             <span class="icon">ℹ️</span>
             These notes are saved with the map and will appear below the legend on Full Page prints.
           </div>
-          
           <div class="control-group">
             <label>Judge's Notes</label>
             <textarea 
               v-model="store.judgeNotes" 
               rows="8" 
-              placeholder="Enter course time, special rules, or reminders for the judge..."
+              placeholder="Enter course time, special rules, or reminders..."
               class="notes-input"
             ></textarea>
           </div>
-          
           <div v-if="config.layout !== 'full'" class="warning-box">
-            ⚠️ You currently have "{{ config.layout }}" layout selected. These notes will NOT appear on grid layouts (Half/Quarter page).
+            ⚠️ You currently have "{{ config.layout }}" layout selected. These notes will NOT appear on grid layouts.
           </div>
         </div>
 
@@ -301,9 +323,11 @@ function handlePrint() {
         </div>
 
         <div v-if="activeTab === 'legend'" class="tab-pane">
-            <div class="info-box"><span class="icon">ℹ️</span>These settings apply to both the Print Layers and Print Blinds workflows. </div>
-          <p class="help-text">Select items to display in the key:</p>
+            <div class="info-box"><span class="icon">ℹ️</span>Select items to display in the key.</div>
+          
           <div class="checkbox-grid">
+            <label class="checkbox-row highlight-row"><input type="checkbox" v-model="config.legend.showTunnelPaths"> <strong>Tunnel Paths</strong></label>
+            
             <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showStats"> Stats</label>
             <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showBales"> Bales</label>
             <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showHides"> Hides</label>
@@ -327,26 +351,24 @@ function handlePrint() {
             <div class="checkbox-grid">
               <label v-for="c in detectedCustoms" :key="c.id" class="checkbox-row">
                 <input type="checkbox" v-model="config.legend.customItems[c.id]">
-                <span class="color-dot" :style="{ background: c.style.fillColor || '#ccc', border: c.style.strokeColor ? `2px solid ${c.style.strokeColor}` : '1px solid #333' }"></span>
+                
+                <span v-if="c.isLine" class="line-dot" 
+                  :style="{ 
+                    borderColor: c.style.strokeColor, 
+                    borderStyle: c.style.dashStyle 
+                  }">
+                </span>
+                
+                <span v-else class="color-dot" 
+                  :style="{ 
+                    background: c.style.fillColor || '#ccc', 
+                    border: c.style.strokeColor ? `2px solid ${c.style.strokeColor}` : '1px solid #333' 
+                  }">
+                </span>
+                
                 <span>{{ c.label }}</span>
               </label>
             </div>
-          </div>
-        </div>
-
-        <div v-if="activeTab === 'profiles'" class="tab-pane">
-           <div class="input-group">
-            <input type="text" v-model="newProfileName" placeholder="Profile Name">
-            <button @click="saveProfile" :disabled="!newProfileName" class="btn-sm">Save</button>
-          </div>
-          <div class="profile-list">
-             <div v-for="p in savedProfiles" :key="p.id" class="profile-item">
-               <span>{{ p.name }}</span>
-               <div class="p-actions">
-                 <button @click="applyProfile(p)" class="btn-xs load">Load</button>
-                 <button @click="deleteProfile(p.id)" class="btn-xs delete">×</button>
-               </div>
-             </div>
           </div>
         </div>
 
@@ -368,30 +390,32 @@ function handlePrint() {
 </template>
 
 <style scoped>
+/* (Existing styles...) */
 .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; display: flex; justify-content: center; align-items: center; }
-.modal-window { background: white; width: 500px; max-width: 95%; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; }
-.modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; }
+.modal-window { background: white; width: 500px; max-width: 95%; border-radius: 12px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.2); display: flex; flex-direction: column; max-height: 90vh; /* [FIX] Limit height */ }
+.modal-header { padding: 15px 20px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; flex-shrink: 0; }
 .title-block h3 { margin: 0; font-size: 18px; color: #2c3e50; }
 .subtitle { font-size: 12px; color: #666; }
 .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; line-height: 1; }
 
-.tabs { display: flex; border-bottom: 1px solid #eee; background: white; }
+.tabs { display: flex; border-bottom: 1px solid #eee; background: white; flex-shrink: 0; }
 .tabs button { flex: 1; padding: 12px; border: none; background: none; font-weight: 500; color: #666; cursor: pointer; border-bottom: 3px solid transparent; }
 .tabs button:hover { background: #f8f9fa; }
 .tabs button.active { color: #2196f3; border-bottom-color: #2196f3; }
-
-/* [NEW] Colored Tabs */
 .tabs button.tab-action { font-weight: bold; }
-
 .tabs button.layers-mode { color: #555; }
 .tabs button.layers-mode:hover { background: #e3f2fd; color: #1976d2; }
 .tabs button.layers-mode.active { color: #1976d2; border-bottom-color: #1976d2; background: #e3f2fd50; }
-
 .tabs button.blinds-mode { color: #555; }
 .tabs button.blinds-mode:hover { background: #f3e5f5; color: #9c27b0; }
 .tabs button.blinds-mode.active { color: #9c27b0; border-bottom-color: #9c27b0; background: #f3e5f550; }
 
-.modal-body { padding: 20px; min-height: 300px; }
+.modal-body { 
+  padding: 20px; 
+  flex: 1; /* Take remaining space */
+  overflow-y: auto; /* [FIX] Enable Scrolling */
+}
+
 .tab-pane { animation: fadeIn 0.2s; }
 .control-group { margin-bottom: 20px; }
 .control-group label { display: block; font-size: 12px; font-weight: bold; color: #666; margin-bottom: 8px; text-transform: uppercase; }
@@ -414,13 +438,10 @@ function handlePrint() {
 .blind-item:hover { background: #f0f7ff; }
 .blind-name { font-weight: bold; font-size: 13px; flex: 1; }
 .blind-info { font-family: monospace; font-size: 12px; color: #666; }
-.modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; align-items: center; gap: 10px; background: #f8f9fa; }
+.modal-footer { padding: 15px 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; align-items: center; gap: 10px; background: #f8f9fa; flex-shrink: 0; }
 .btn-secondary { background: white; border: 1px solid #ddd; color: #333; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
-
-/* [NEW] Button Colors */
 .btn-primary { background: #2196f3; border: none; color: white; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
 .btn-primary:disabled { background: #ccc; cursor: not-allowed; }
-
 .btn-purple { background: #9c27b0; border: none; color: white; padding: 8px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; }
 .btn-purple:hover { background: #7b1fa2; }
 .btn-purple:disabled { background: #ccc; cursor: not-allowed; }
@@ -429,11 +450,9 @@ function handlePrint() {
 .custom-section { margin-top: 15px; }
 .divider { height: 1px; background: #eee; margin: 10px 0; }
 .color-dot { width: 12px; height: 12px; display: inline-block; margin-right: 5px; }
-.profile-list { max-height: 220px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; }
-.profile-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-bottom: 1px solid #eee; }
-.btn-xs { border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; }
-.btn-xs.load { background: #e3f2fd; color: #1976d2; }
-.btn-xs.delete { background: #ffebee; color: #c62828; }
+.line-dot { width: 20px; height: 0; border-bottom-width: 2px; display: inline-block; margin-right: 5px; }
+.highlight-row { background-color: #e3f2fd; }
+
 .input-group { display: flex; gap: 8px; margin-bottom: 15px; }
 .input-group input { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
 .btn-sm { padding: 0 12px; background: #2c3e50; color: white; border: none; border-radius: 4px; cursor: pointer; }
@@ -441,49 +460,10 @@ function handlePrint() {
 .half { flex: 1; }
 .input-wrapper input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
 .hint { font-size: 10px; color: #888; font-style: italic; }
-.info-box {
-  background-color: #e3f2fd; /* Light Blue Background */
-  border: 1px solid #90caf9; /* Slightly darker blue border */
-  color: #1565c0;            /* Dark Blue Text */
-  padding: 10px 15px;
-  border-radius: 6px;
-  margin-bottom: 20px;       /* Spacing below the box */
-  font-size: 13px;
-  line-height: 1.4;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.info-box .icon {
-  font-size: 16px;
-  line-height: 1;
-  flex-shrink: 0;            /* Prevent icon from squishing */
-}
-
-/* [NEW] Notes Styles */
-.notes-input {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  font-family: inherit;
-  resize: vertical;
-  font-size: 14px;
-  line-height: 1.5;
-  box-sizing: border-box;
-}
+.info-box { background-color: #e3f2fd; border: 1px solid #90caf9; color: #1565c0; padding: 10px 15px; border-radius: 6px; margin-bottom: 20px; font-size: 13px; line-height: 1.4; display: flex; align-items: flex-start; gap: 10px; }
+.info-box .icon { font-size: 16px; line-height: 1; flex-shrink: 0; }
+.notes-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-family: inherit; resize: vertical; font-size: 14px; line-height: 1.5; box-sizing: border-box; }
 .notes-input:focus { outline: none; border-color: #2196f3; }
-
-.warning-box {
-  background: #fff3e0;
-  color: #e65100;
-  padding: 12px;
-  border-radius: 6px;
-  margin-top: 15px;
-  font-size: 13px;
-  border: 1px solid #ffe0b2;
-  font-weight: bold;
-}
+.warning-box { background: #fff3e0; color: #e65100; padding: 12px; border-radius: 6px; margin-top: 15px; font-size: 13px; border: 1px solid #ffe0b2; font-weight: bold; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
