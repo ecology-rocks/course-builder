@@ -410,7 +410,7 @@ async function handleAdvancedPrint(config) {
           <BarnHuntLayer :scale="scale" :showHides="showHides" :hides="activeDisplayHides" :GRID_OFFSET="GRID_OFFSET"
             :locked="isBlindMode && !isPrinting" />
 
-          <TunnelRenderer :scale="scale" />
+          <TunnelRenderer :scale="scale" :isPrinting="isPrinting" />
 
           <v-rect v-if="selectionRect"
             :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />

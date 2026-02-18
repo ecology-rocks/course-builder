@@ -3,77 +3,47 @@ import { computed } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 import { useTunnelLogic } from './useTunnelLogic'
 
-const props = defineProps({ scale: Number })
+// [FIX] Add isPrinting prop
+const props = defineProps({ 
+  scale: Number,
+  isPrinting: { type: Boolean, default: false }
+})
+
 const store = useMapStore()
 const { resolvePathPoints, selectPath } = useTunnelLogic(store)
 
-// --- MATH HELPERS ---
-
-// Standard line intersection formula
+// --- MATH HELPERS (Keep existing) ---
 function getIntersection(p1, p2, p3, p4) {
   const d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x)
-  if (d === 0) return null // Parallel lines
-
+  if (d === 0) return null
   const t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / d
-  
-  return {
-    x: p1.x + t * (p2.x - p1.x),
-    y: p1.y + t * (p2.y - p1.y)
-  }
+  return { x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) }
 }
 
-// Generates a continuous offset polyline (Left or Right rail)
 function getOffsetPolyline(points, offset) {
   if (points.length < 2) return []
-
-  // 1. Calculate infinite offset lines for every segment
   const lines = []
   for (let i = 0; i < points.length - 1; i++) {
-    const pA = points[i]
-    const pB = points[i+1]
-    
-    const dx = pB.x - pA.x
-    const dy = pB.y - pA.y
-    const len = Math.sqrt(dx*dx + dy*dy)
-    if (len === 0) continue
-
-    const nx = -dy / len
-    const ny = dx / len
-
-    // Create a "Segment Object" defining the infinite line for this offset
+    const pA = points[i]; const pB = points[i+1];
+    const dx = pB.x - pA.x; const dy = pB.y - pA.y;
+    const len = Math.sqrt(dx*dx + dy*dy);
+    if (len === 0) continue;
+    const nx = -dy / len; const ny = dx / len;
     lines.push({
       p1: { x: pA.x + nx * offset, y: pA.y + ny * offset },
       p2: { x: pB.x + nx * offset, y: pB.y + ny * offset }
     })
   }
-
   if (lines.length === 0) return []
-
   const result = []
-
-  // 2. Start Point (Start of first offset line)
   result.push(lines[0].p1)
-
-  // 3. Middle Joints (Intersections of adjacent offset lines)
   for (let i = 0; i < lines.length - 1; i++) {
-    const l1 = lines[i]
-    const l2 = lines[i+1]
-    
-    // Calculate the "Miter Point"
+    const l1 = lines[i]; const l2 = lines[i+1];
     const intersect = getIntersection(l1.p1, l1.p2, l2.p1, l2.p2)
-    
-    if (intersect) {
-      // This single point handles both Acute (trimming) and Obtuse (extending) cases
-      result.push(intersect)
-    } else {
-      // Parallel segments (collinear)? Just continue.
-      result.push(l1.p2) 
-    }
+    if (intersect) result.push(intersect)
+    else result.push(l1.p2) 
   }
-
-  // 4. End Point (End of last offset line)
   result.push(lines[lines.length - 1].p2)
-
   return result
 }
 
@@ -91,14 +61,10 @@ function getPathMidpoint(points, totalLength) {
   if (points.length < 2) return points[0]
   let target = totalLength / 2
   let currentDist = 0
-
   for (let i = 0; i < points.length - 1; i++) {
-    const p1 = points[i]
-    const p2 = points[i+1]
-    const dx = p2.x - p1.x
-    const dy = p2.y - p1.y
-    const segLen = Math.sqrt(dx*dx + dy*dy)
-
+    const p1 = points[i]; const p2 = points[i+1];
+    const dx = p2.x - p1.x; const dy = p2.y - p1.y;
+    const segLen = Math.sqrt(dx*dx + dy*dy);
     if (currentDist + segLen >= target) {
       const t = (target - currentDist) / segLen
       return { x: p1.x + t * dx, y: p1.y + t * dy }
@@ -115,6 +81,7 @@ function formatLength(feet) {
   return `${f}' ${i}"`
 }
 
+
 // --- COMPUTED STATE ---
 
 const renderedTunnels = computed(() => {
@@ -128,23 +95,19 @@ const renderedTunnels = computed(() => {
       const isSelected = store.selection.includes(path.id)
       const isDrawing = path.id === store.tunnelConfig.activePathId
       
-      // [FIX] Read from 'custom' instead of 'style'
-      // Use standard names: strokeColor, dash
       let stroke = path.custom?.strokeColor || 'blue'
       let dash = path.custom?.dash || [10, 5]
 
       if (isDrawing) { stroke = '#ff00ff'; dash = [10, 5]; }
       if (isSelected) { stroke = '#fa8c16'; }
 
-      // MAIN LINE POINTS
       const flatPoints = pts.flatMap(p => [p.x * props.scale, p.y * props.scale])
 
-      // GUARD LINE POINTS (Left and Right Rails)
       let leftGuard = []
       let rightGuard = []
 
-      if (store.tunnelConfig.showGuardLines) {
-        // Offset is 9 inches (0.75 ft)
+      // [FIX] Check !props.isPrinting to hide guards during print
+      if (store.tunnelConfig.showGuardLines && !props.isPrinting) {
         const rawLeft = getOffsetPolyline(pts, 0.75)
         const rawRight = getOffsetPolyline(pts, -0.75)
         
@@ -158,8 +121,8 @@ const renderedTunnels = computed(() => {
         labelPos: { x: mid.x * props.scale, y: mid.y * props.scale },
         labelText: formatLength(len),
         stroke,
-        dash, // Pass dash array
-        width: path.custom?.strokeWidth || 2, // Pass width
+        dash, 
+        width: path.custom?.strokeWidth || 2, 
         isSelected,
         leftGuard,
         rightGuard
@@ -197,8 +160,8 @@ function onContextMenu(evt, pathId) {
         :config="{
           points: t.flatPoints,
           stroke: t.stroke,
-          strokeWidth: t.isSelected ? (t.width + 4) : t.width, // Scale width on select
-          dash: t.dash, // Use the custom dash array
+          strokeWidth: t.isSelected ? (t.width + 4) : t.width,
+          dash: t.dash,
           lineCap: 'round',
           lineJoin: 'round',
           opacity: 0.8,
@@ -220,7 +183,6 @@ function onContextMenu(evt, pathId) {
            listening: false
          }"
       />
-
       <v-line 
          v-if="t.rightGuard.length > 0"
          :config="{
