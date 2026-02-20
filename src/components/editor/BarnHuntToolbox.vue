@@ -5,7 +5,7 @@ import IconLine from '@/assets/icons/measure-line.svg?component'
 import IconPath from '@/assets/icons/measure-path.svg?component' 
 import IconBale from '@/assets/icons/bale-icon.svg?component'
 const store = useMapStore()
-const emit = defineEmits(['tool-select', 'blind-setup'])
+const emit = defineEmits(['tool-select', 'blind-setup', 'tunnel-setup'])
 
 
 import { useUserStore } from '@/stores/userStore'

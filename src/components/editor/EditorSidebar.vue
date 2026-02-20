@@ -15,15 +15,12 @@ import BugReportModal from 'common/BugReportModal.vue'
 import DeleteMapModal from 'modals/DeleteMapModal.vue'
 import LibraryModal from 'modals/LibraryModal.vue'
 import UpgradeModal from 'modals/UpgradeModal.vue'
-// [KEEP] Old Print Modal
-import PrintModal from 'modals/PrintModal.vue'
-// [NEW] Advanced Print Modal
 import AdvancedPrintModal from '@/components/modals/AdvancedPrintModal.vue'
 
 const store = useMapStore()
 const userStore = useUserStore()
-const router = useRouter()
-const emit = defineEmits(['print', 'advanced-print', 'save-map', 'save-library', 'blind-setup', 'go-home'])
+//const router = useRouter()
+const emit = defineEmits(['print', 'advanced-print', 'save-map', 'save-library', 'blind-setup', 'go-home', 'tunnel-setup'])
 
 // State for Modals & Menus
 const showShareModal = ref(false)
@@ -191,7 +188,6 @@ function handleSave() {
     <LibraryModal v-if="showLibraryModal" @close="showLibraryModal = false" />
     <UpgradeModal v-if="showUpgradeModal" @close="showUpgradeModal = false" />
     
-    <PrintModal v-if="showPrintModal" @close="showPrintModal = false" @confirm="onPrintConfirm" />
     <AdvancedPrintModal v-if="showAdvancedPrintModal" @close="showAdvancedPrintModal = false" @confirm="onAdvancedPrintConfirm" />
   </div>
 </template>
