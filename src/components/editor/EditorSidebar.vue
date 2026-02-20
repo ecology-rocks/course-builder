@@ -20,7 +20,7 @@ import AdvancedPrintModal from '@/components/modals/AdvancedPrintModal.vue'
 const store = useMapStore()
 const userStore = useUserStore()
 //const router = useRouter()
-const emit = defineEmits(['print', 'advanced-print', 'save-map', 'save-library', 'blind-setup', 'go-home', 'tunnel-setup'])
+const emit = defineEmits(['print', 'advanced-print', 'save-map', 'save-library', 'blind-setup', 'go-home'])
 
 // State for Modals & Menus
 const showShareModal = ref(false)
@@ -42,11 +42,6 @@ defineExpose({
   openAdvancedPrint: () => showAdvancedPrintModal.value = true
 })
 
-function startTunnelMode() {
-  store.isTunnelMode = true
-  store.setTool('tunnel_edges') // Default to step 1
-  store.closeAllMenus()
-}
 
 // [OLD] Legacy Handler
 function onPrintConfirm(config) {
@@ -167,7 +162,6 @@ function handleSave() {
 
       <div v-if="showMoreMenu" class="more-menu">
         <button v-if="isAdmin" @click="emit('save-library')">📚 Save to Library</button>
-        <button v-if="isBeta" @click="startTunnelMode">🚇 Tunnel Engineer</button>
         <button @click="triggerFileUpload">⬆ Import JSON</button>
         <button @click="store.exportMapToJSON()">⬇ Export JSON</button>
         <button @click="store.realignGrid()">📏 Realign All to Grid</button>
