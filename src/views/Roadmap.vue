@@ -12,6 +12,7 @@ const released = ref([
 
 const inProgress = ref([
   'Rebuild the tunnel boards so that they can be combined into one tool',
+  'Add comparison stats to half and quarter page printables',
   'Rebuild share tool as it does not show custom rings or objects',
   'Need to add wall color customization in custom rings',
   'Need to add categories for library of importable objects, so we can add custom rings to it later.'

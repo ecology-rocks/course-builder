@@ -88,6 +88,7 @@ export function useUnifiedPrinter(
     .gate { border: 1px solid black; height: 4px; }
     .step { background: #8D6E63; border: 1px solid black;}
     .start { border: 1px solid black; background: #eee; }
+    .board { background:#5D4037; }
     .dc { background: #d1c4e9; }
     .obstruction { border: 1px dashed black; background: rgba(100, 100, 100, 0.5); }
     .dead-zone { border: 1px dashed red; background: rgba(255, 0, 0, 0.3); }
@@ -190,7 +191,7 @@ export function useUnifiedPrinter(
     if (l.showDeadZone)
       f += `<div class="legend-item"><span class="symbol dead-zone"></span> Dead Z.</div>`;
     if (l.showTunnelPaths)
-      f += `<div class="legend-item"><span class="line-symbol" style="border-color:blue; border-style:dashed"></span> Tunnel</div>`;
+      f += `<div class="legend-item"><span class="symbol tunnel"></span> Tunnel</div>`;
     html += section("Features", f);
 
     if (l.showHides) {
@@ -206,6 +207,35 @@ export function useUnifiedPrinter(
   function buildCompactLegend(config) {
     const l = config.legend;
     let items = [];
+
+if (l.showStats) {
+      const inv = store.inventory;
+      // Add Total Count
+      items.push(
+        `<div class="mini-item" style="border-right:1px solid #ccc; padding-right:5px; margin-right:2px;"><strong>Tot: ${inv.total}</strong></div>`
+      );
+
+      const diffs = store.differentials;
+      if (diffs) {
+        const totalSign = diffs.totalNet > 0 ? "+" : "";
+        // Add Net Change
+        items.push(
+          `<div class="mini-item"><strong>Net: ${totalSign}${diffs.totalNet}</strong></div>`
+        );
+
+        // Add Per-Layer Diffs
+        [1, 2, 3].forEach((layer) => {
+          const d = diffs[layer];
+          if (d && (d.net !== 0 || d.moved > 0)) {
+            const sign = d.net > 0 ? "+" : "";
+            const mv = d.moved > 0 ? `(${d.moved}mv)` : "";
+            items.push(
+              `<div class="mini-item">L${layer}: ${sign}${d.net}${mv}</div>`
+            );
+          }
+        });
+      }
+    }
 
     // Bales
     if (l.showBales) {
@@ -241,11 +271,11 @@ export function useUnifiedPrinter(
 
     if (l.showTunnelPaths)
       items.push(
-        `<div class="mini-item"><span class="line-symbol" style="width:12px; border-color:blue; border-style:dashed"></span>Tun</div>`,
+        `<div class="mini-item"><span class="mini-symbol tunnel"></span>Tun</div>`,
       );
     if (l.showTunnels)
       items.push(
-        `<div class="mini-item"><span class="mini-symbol" style="background:#5D4037"></span>Brd</div>`,
+        `<div class="mini-item"><span class="mini-symbol board"></span>Brd</div>`,
       );
 
     if (l.showTunnelBox)
@@ -297,7 +327,7 @@ export function useUnifiedPrinter(
         `<div class="mini-item"><span class="mini-symbol hide-empty" style="border-radius:50%">E</span>E</div>`,
       );
       items.push(
-        `<div class="mini-item"><span class="mini-symbol hide-rat-under" style="border-radius:50%; border-style:dashed"></span>U</div>`,
+        `<div class="mini-item"><span class="mini-symbol hide-rat-under" style="border-radius:50%; border-style:dashed"></span>Under</div>`,
       );
     }
 
@@ -446,9 +476,9 @@ export function useUnifiedPrinter(
       const metaCombined = [classStr, trialStr, dayStr]
         .filter(Boolean)
         .join(" • ");
-      const metaJudge = userStore.judgeName || "__________________";
+      const metaJudge = userStore.judgeName || "";
       const metaClub =
-        store.trialLocation || userStore.clubName || "__________________";
+        store.trialLocation || userStore.clubName || "";
 
       let pagesHtml = "";
 

@@ -63,5 +63,38 @@ async function copyMapToAdmin(map) {
     return await mapService.createMap(clonedMapData);
   }
 
-  return { targetUserMaps, loading, fetchUserMaps, copyMapToAdmin };
+
+  // --- NEW EXPORT FUNCTION ---
+  async function fetchAllUsers() {
+    loading.value = true;
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        
+        // Handle Firestore Timestamps safely
+        let createdDate = '';
+        if (data.createdAt?.toDate) {
+          createdDate = data.createdAt.toDate().toISOString().split('T')[0];
+        } else if (data.createdAt) {
+          createdDate = data.createdAt; // Fallback if it's already a string
+        }
+
+        return {
+          uid: doc.id,
+          email: data.email || 'No Email',
+          judgeName: data.judgeName || '',
+          tier: data.tier || 'free',
+          createdAt: createdDate
+        };
+      });
+    } catch (e) {
+      console.error("Error fetching users:", e);
+      throw e;
+    } finally {
+      loading.value = false;
+    }
+  }
+  return { targetUserMaps, loading, fetchUserMaps, copyMapToAdmin, fetchAllUsers, };
 });
