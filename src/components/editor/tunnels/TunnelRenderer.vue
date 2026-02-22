@@ -10,7 +10,7 @@ const props = defineProps({
 })
 
 const store = useMapStore()
-const { resolvePathPoints, selectPath } = useTunnelLogic(store)
+const { resolvePathPoints, selectPath, handlePathClick } = useTunnelLogic(store)
 
 // --- MATH HELPERS (Keep existing) ---
 function getIntersection(p1, p2, p3, p4) {
@@ -131,7 +131,27 @@ const renderedTunnels = computed(() => {
 })
 
 function onLineClick(evt, pathId) {
-  if (store.activeTool !== 'tunnel_path') {
+  // Case 1: Drawing Mode - Clicked existing path -> Merge/Snap
+  if (store.activeTool === 'tunnel_path') {
+    evt.cancelBubble = true // Stop it from hitting the background and creating a free point
+    
+    // 1. Calculate grid coordinates from the event
+    const stage = evt.target.getStage()
+    const ptr = stage.getRelativePointerPosition()
+    const GRID_OFFSET = 30
+    const rawX = (ptr.x - GRID_OFFSET) / props.scale
+    const rawY = (ptr.y - GRID_OFFSET) / props.scale
+
+    // 2. Find the target path object
+    const targetPath = store.mapData.tunnelPaths.find(p => p.id === pathId)
+    
+    // 3. Trigger the branching logic
+    if (targetPath) {
+      handlePathClick(targetPath, rawX, rawY)
+    }
+  }
+  // Case 2: Selection Mode
+  else {
     evt.cancelBubble = true
     selectPath(pathId)
   }

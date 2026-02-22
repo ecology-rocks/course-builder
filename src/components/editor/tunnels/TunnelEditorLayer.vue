@@ -10,7 +10,7 @@ const store = useMapStore()
 const { 
   pendingHandle, getBaleHandles, handleHandleClick,
   snapTargets, handleSnapClick, handleFreeClick, handlePathClick,
-  freeDrawAnchor, handleFreeEdgeClick
+  freeDrawAnchor, handleFreeEdgeClick, findPathAtPoint,
 } = useTunnelLogic(store)
 
 const currentMousePos = ref({ x: 0, y: 0 })
@@ -39,13 +39,22 @@ function handleStageClick(e) {
   const x = (ptr.x - GRID_OFFSET) / props.scale
   const y = (ptr.y - GRID_OFFSET) / props.scale
 
-  // Case 1: Drawing Tunnel Path (Existing)
+  // Case 1: Drawing Tunnel Path
   if (store.activeTool === 'tunnel_path' && store.tunnelConfig.activePathId) {
-    handleFreeClick(x, y)
+    // A. Check if we clicked on an EXISTING path first
+    const targetPath = findPathAtPoint(x, y)
+    
+    if (targetPath) {
+      // It's a merge/branch!
+      handlePathClick(targetPath, x, y)
+    } else {
+      // It's a free point
+      handleFreeClick(x, y)
+    }
   }
   
-  // Case 2: Free Drawing Edges (New)
-  if (store.activeTool === 'tunnel_edges' && store.tunnelConfig.edgeMode === 'free') {
+  // Case 2: Free Drawing Edges
+  else if (store.activeTool === 'tunnel_edges' && store.tunnelConfig.edgeMode === 'free') {
     handleFreeEdgeClick(x, y)
   }
 }

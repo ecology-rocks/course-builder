@@ -26,6 +26,13 @@ function getClosestPointOnSegment(p, p1, p2) {
   return { x: p1.x + t * dx, y: p1.y + t * dy }
 }
 
+function getDistToSegment(p, p1, p2) {
+  const closest = getClosestPointOnSegment(p, p1, p2)
+  const dx = p.x - closest.x
+  const dy = p.y - closest.y
+  return Math.sqrt(dx * dx + dy * dy)
+}
+
 export function useTunnelLogic(store) {
 
   // ref defionitions
@@ -279,14 +286,29 @@ export function useTunnelLogic(store) {
     const visited = new Set()
     const groups = []
 
-    // Helper: Check if two paths touch
+    // Helper: Check if p1 connects to p2 (Vertex-to-Vertex OR Vertex-to-Segment)
     const areConnected = (p1, p2) => {
       const pts1 = resolvePathPoints(p1)
       const pts2 = resolvePathPoints(p2)
-      // Check for any shared point (Intersection)
-      return pts1.some(a => 
-        pts2.some(b => Math.abs(a.x - b.x) < 0.1 && Math.abs(a.y - b.y) < 0.1)
-      )
+      const THRESHOLD = 0.15 // Slightly larger than strict equality
+
+      // Check if any point in pts1 is on the LINE of pts2
+      const p1TouchingP2 = pts1.some(pt => {
+        for (let i = 0; i < pts2.length - 1; i++) {
+          if (getDistToSegment(pt, pts2[i], pts2[i+1]) < THRESHOLD) return true
+        }
+        return false
+      })
+      if (p1TouchingP2) return true
+
+      // Check if any point in pts2 is on the LINE of pts1
+      const p2TouchingP1 = pts2.some(pt => {
+        for (let i = 0; i < pts1.length - 1; i++) {
+          if (getDistToSegment(pt, pts1[i], pts1[i+1]) < THRESHOLD) return true
+        }
+        return false
+      })
+      return p2TouchingP1
     }
 
     // Recursive Cluster Builder
@@ -306,7 +328,6 @@ export function useTunnelLogic(store) {
         const cluster = []
         buildCluster(p, cluster)
         
-        // Calculate Total Length
         let totalLen = 0
         cluster.forEach(subPath => {
           const pts = resolvePathPoints(subPath)
@@ -318,7 +339,7 @@ export function useTunnelLogic(store) {
         })
 
         groups.push({
-          id: cluster[0].id, // Group ID is just the ID of the first member
+          id: cluster[0].id,
           name: `Tunnel ${groups.length + 1}`,
           paths: cluster,
           totalLength: totalLen.toFixed(1)
@@ -339,6 +360,24 @@ export function useTunnelLogic(store) {
     store.selection = []
   }
 
+  function findPathAtPoint(x, y, threshold = 0.5) {
+    const paths = store.mapData.tunnelPaths.filter(p => p.layer === store.currentLayer)
+    
+    for (const path of paths) {
+      // Don't snap to self while drawing (optional, but usually good)
+      if (path.id === store.tunnelConfig.activePathId) continue
+
+      const pts = resolvePathPoints(path)
+      for (let i = 0; i < pts.length - 1; i++) {
+        const dist = getDistToSegment({ x, y }, pts[i], pts[i+1])
+        if (dist <= threshold) {
+          return path
+        }
+      }
+    }
+    return null
+  }
+
   return {
     pendingHandle,
     freeDrawAnchor,
@@ -355,6 +394,7 @@ export function useTunnelLogic(store) {
     resolvePathPoints,
     handlePathClick,
     selectPath,
-    deletePath
+    deletePath,
+    findPathAtPoint
   }
 }

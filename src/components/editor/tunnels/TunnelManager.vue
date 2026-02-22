@@ -24,6 +24,13 @@ const edgeMode = computed({
   }
 })
 
+const selectedGroup = computed(() => {
+  if (store.selection.length === 0) return null
+  return tunnelGroups.value.find(g =>
+    g.paths.some(p => store.selection.includes(p.id))
+  )
+})
+
 // [INSERT] Helper to check if a group is fully selected
 function isGroupSelected(group) {
   // If the first path in the group is selected, we consider the group active for the UI
@@ -47,7 +54,16 @@ function isSelected(id) {
         <h3>Tunnel Engineer</h3>
         <button class="close-icon" @click="handleExit">×</button>
       </div>
-
+      <div v-if="selectedGroup" class="selected-info-panel">
+        <div class="panel-header">
+          <h4>Selected Tunnel</h4>
+          <span class="length-badge">{{ selectedGroup.totalLength }} ft</span>
+        </div>
+        <div class="panel-stats">
+          <span>Segments: <b>{{ selectedGroup.paths.length }}</b></span>
+          <button class="btn-clear-select" @click="store.selection = []">Close</button>
+        </div>
+      </div>
       <div class="tool-selector">
         <button :class="{ active: activeTool === 'tunnel_edges' }" @click="activeTool = 'tunnel_edges'"
           title="Step 1: Define Openings">
@@ -104,7 +120,8 @@ function isSelected(id) {
 
     <div class="top-status">
       <span v-if="activeTool === 'tunnel_edges'">
-        Setting Edges: <strong>{{ edgeMode === 'snap' ? 'Click Bale Handles' : 'Click Anywhere (Start -> End)' }}</strong>
+        Setting Edges: <strong>{{ edgeMode === 'snap' ? 'Click Bale Handles' : 'Click Anywhere (Start -> End)'
+          }}</strong>
       </span>
       <span v-else>
         Mode: <strong>Drawing Tunnel Path</strong>
@@ -115,6 +132,53 @@ function isSelected(id) {
 
 <style scoped>
 /* [INSERT] New styles */
+.selected-info-panel {
+  padding: 15px;
+  background: #e3f2fd;
+  border-bottom: 1px solid #90caf9;
+  animation: slideIn 0.2s ease-out;
+}
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+.panel-header h4 {
+  margin: 0;
+  font-size: 14px;
+  color: #1565c0;
+  text-transform: uppercase;
+}
+.length-badge {
+  background: #1976d2;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: bold;
+  font-size: 13px;
+}
+.panel-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #555;
+}
+.btn-clear-select {
+  background: none;
+  border: none;
+  text-decoration: underline;
+  color: #1976d2;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .sub-tool-options {
   padding: 10px 15px;
   background: #f0f0f0;
@@ -123,16 +187,19 @@ function isSelected(id) {
   font-size: 13px;
   border-bottom: 1px solid #ddd;
 }
+
 .sub-tool-options label {
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 5px;
 }
+
 .tunnel-info {
   display: flex;
   flex-direction: column;
 }
+
 .tunnel-meta {
   font-size: 11px;
   color: #666;
