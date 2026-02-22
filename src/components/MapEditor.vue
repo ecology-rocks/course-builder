@@ -111,88 +111,184 @@ function resolvePostPrint(action, payload) {
 async function handleLibrarySaveConfirm({ name, category }) {
   try {
     const stage = stageRef.value.getStage()
-    
-    // --- 1. SMART SCREENSHOT LOGIC ---
-    let cropConfig = {}
-    
-    const isSubset = ['tunnel', 'sequence'].includes(category)
+    const isSubset = ['tunnel', 'sequence', 'setup'].includes(category)
     const hasSelection = store.selection.length > 0
     
-    if (isSubset && hasSelection) {
-      // Calculate bounds of selection
-      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+    // --- HELPER: Resolve Coordinates ---
+    const resolvePoint = (pt) => {
+      // 1. Already Static
+      if (typeof pt.x === 'number' && typeof pt.y === 'number') return pt
       
-      const checkBounds = (obj) => {
-        if (!store.selection.includes(obj.id)) return
-        const padding = 2 
-        minX = Math.min(minX, obj.x - padding); minY = Math.min(minY, obj.y - padding)
-        maxX = Math.max(maxX, obj.x + padding + 3); maxY = Math.max(maxY, obj.y + padding + 3)
-      }
-
-      store.bales.forEach(checkBounds)
-      store.tunnelBoards.forEach(checkBounds)
-      store.dcMats.forEach(checkBounds)
-      // Add other arrays if needed
-
-      if (minX !== Infinity) {
-        cropConfig = {
-          x: (minX * scale.value) + GRID_OFFSET,
-          y: (minY * scale.value) + GRID_OFFSET,
-          width: (maxX - minX) * scale.value,
-          height: (maxY - minY) * scale.value
+      // 2. Resolve Anchor
+      if (pt.type === 'edge-anchor' && pt.targetId) {
+        const edge = store.mapData.boardEdges?.find(e => e.id === pt.targetId)
+        if (edge) {
+          return { 
+            x: (edge.x1 + edge.x2) / 2, 
+            y: (edge.y1 + edge.y2) / 2 
+          }
         }
       }
-    } else {
-      // Full Ring Snapshot
-      cropConfig = {
-        x: GRID_OFFSET, 
-        y: GRID_OFFSET,
-        width: store.ringDimensions.width * scale.value,
-        height: store.ringDimensions.height * scale.value
+      return null // Failed to resolve
+    }
+
+    // --- HELPER: Get Bounds ---
+    const getObjectBounds = (obj) => {
+      if (typeof obj.x === 'number' && typeof obj.y === 'number') {
+        const w = obj.width || 3; const h = obj.height || 3
+        return { x1: obj.x, y1: obj.y, x2: obj.x + w, y2: obj.y + h }
+      }
+      if (typeof obj.x1 === 'number' && typeof obj.x2 === 'number') {
+        return {
+          x1: Math.min(obj.x1, obj.x2), y1: Math.min(obj.y1, obj.y2),
+          x2: Math.max(obj.x1, obj.x2), y2: Math.max(obj.y1, obj.y2)
+        }
+      }
+      if (Array.isArray(obj.points)) {
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+        let valid = false
+        obj.points.forEach(rawPt => {
+          const pt = resolvePoint(rawPt)
+          if (pt) {
+            valid = true
+            minX = Math.min(minX, pt.x); minY = Math.min(minY, pt.y)
+            maxX = Math.max(maxX, pt.x); maxY = Math.max(maxY, pt.y)
+          }
+        })
+        if (valid) return { x1: minX, y1: minY, x2: maxX, y2: maxY }
+      }
+      return null
+    }
+
+    // --- 1. DETERMINE CAPTURE BOUNDS ---
+    let captureBounds = null
+    
+    if (isSubset && hasSelection) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      let found = false
+
+      Object.values(store.mapData).forEach(val => {
+        const items = Array.isArray(val) ? val : (val && val.id ? [val] : [])
+        items.forEach(item => {
+          if (store.selection.includes(item.id)) {
+            const b = getObjectBounds(item)
+            if (b) {
+              found = true
+              minX = Math.min(minX, b.x1); minY = Math.min(minY, b.y1)
+              maxX = Math.max(maxX, b.x2); maxY = Math.max(maxY, b.y2)
+            }
+          }
+        })
+      })
+      
+      if (found) {
+        captureBounds = { 
+          x1: minX - 2, y1: minY - 2, 
+          x2: maxX + 2, y2: maxY + 2 
+        }
       }
     }
 
+    if (!captureBounds) {
+      captureBounds = { 
+        x1: 0, y1: 0, 
+        x2: store.ringDimensions.width, y2: store.ringDimensions.height 
+      }
+    }
+
+    // --- 2. GATHER DATA ---
+    const dataPayload = {}
+    
+    // Check intersection
+    const isInside = (item) => {
+      // Always save explicitly selected items
+      if (item.id && store.selection.includes(item.id)) return true
+      
+      // For arrays of points, check if points fall inside
+      if (Array.isArray(item.points)) {
+        return item.points.some(rawPt => {
+          const pt = resolvePoint(rawPt)
+          if (!pt) return false
+          return (
+            pt.x >= captureBounds.x1 && pt.x <= captureBounds.x2 &&
+            pt.y >= captureBounds.y1 && pt.y <= captureBounds.y2
+          )
+        })
+      }
+
+      const b = getObjectBounds(item)
+      if (!b) return false
+
+      return (
+        b.x1 < captureBounds.x2 &&
+        b.x2 > captureBounds.x1 &&
+        b.y1 < captureBounds.y2 &&
+        b.y2 > captureBounds.y1
+      )
+    }
+
+    Object.keys(store.mapData).forEach(key => {
+      const val = store.mapData[key]
+      
+      if (Array.isArray(val)) {
+        // [IMPORTANT] Deep clone items to avoid mutating the store later
+        const filtered = val.filter(isInside).map(item => JSON.parse(JSON.stringify(item)))
+        if (filtered.length > 0) dataPayload[key] = filtered
+      } 
+      else if (val && typeof val === 'object' && val.id) {
+        if (isInside(val)) dataPayload[key] = JSON.parse(JSON.stringify(val))
+      }
+    })
+
+    if (category === 'ring') {
+      dataPayload.dimensions = store.ringDimensions
+    }
+
+    // --- 3. POST-PROCESSING: BAKE TUNNEL PATHS ---
+    // This fixes the NaN errors by converting references to static coordinates
+    if (dataPayload.tunnelPaths) {
+      dataPayload.tunnelPaths.forEach(path => {
+        if (path.points) {
+          path.points = path.points.map(pt => {
+            const resolved = resolvePoint(pt)
+            if (resolved) {
+              // Bake it to a static point so it loads without needing the edge ID
+              return { type: 'static', x: resolved.x, y: resolved.y }
+            }
+            // Fallback for broken references to prevent NaN
+            return { type: 'static', x: 0, y: 0 }
+          })
+        }
+      })
+    }
+
+    // --- 4. GENERATE SCREENSHOT ---
     const screenshotData = stage.toDataURL({
-      ...cropConfig,
+      x: (captureBounds.x1 * scale.value) + GRID_OFFSET,
+      y: (captureBounds.y1 * scale.value) + GRID_OFFSET,
+      width: (captureBounds.x2 - captureBounds.x1) * scale.value,
+      height: (captureBounds.y2 - captureBounds.y1) * scale.value,
       pixelRatio: 0.5,
       mimeType: 'image/jpeg',
       quality: 0.7
     })
 
-    // --- 2. DATA PAYLOAD ---
-    const itemData = {
+    // --- 5. UPLOAD ---
+    const finalItem = {
       name,
       sport: store.sport || 'barnhunt',
       type: category,
-      // [FIX] Must match 'thumbnail' expected by libraryService.js
-      thumbnail: screenshotData, 
-      data: {
-        bales: store.bales || [],
-        tunnelBoards: store.tunnelBoards || [],
-        startBox: store.startBox,
-        gate: store.gate,
-        dcMats: store.dcMats || [],
-        steps: store.steps || [],
-        zones: store.zones || [],
-        customWalls: store.customWalls || [],
-        tunnelPaths: store.tunnelPaths || [],
-        dimensions: category === 'ring' ? store.ringDimensions : undefined
-      }
+      thumbnail: screenshotData,
+      data: dataPayload
     }
 
-    // Clean undefineds
-    Object.keys(itemData.data).forEach(key => itemData.data[key] === undefined && delete itemData.data[key])
-
-    // --- 3. SAVE ---
-    await libraryService.addToLibrary(userStore.user, itemData)
-    
+    await libraryService.addToLibrary(userStore.user, finalItem)
     store.showNotification("Saved to Library!", "success")
     showLibrarySaveModal.value = false
 
   } catch (e) {
     console.error(e)
     alert("Failed to save: " + e.message)
-    // Don't close modal on error so they can try again
   }
 }
 

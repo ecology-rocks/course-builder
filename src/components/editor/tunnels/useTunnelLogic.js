@@ -156,7 +156,6 @@ export function useTunnelLogic(store) {
         points: [
           { type: 'edge-anchor', targetId: targetId }
         ],
-        // [FIX] Use 'custom' instead of 'style'
       })
       store.tunnelConfig.activePathId = newId
     }

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 import { toDataURL } from 'qrcode'
 
@@ -13,22 +13,23 @@ const isLoading = ref(true)
 const isPublishing = ref(false)
 
 onMounted(async () => {
-  // 1. Safety Check
+  // 1. Safety: Must have a saved map ID
   if (!store.currentMapId) {
-    error.value = "Map is not saved. Save to cloud to generate a link."
+    error.value = "Map must be saved to the cloud first."
     isLoading.value = false
     return
   }
 
-  // 2. AUTO-PUBLISH: If map is private, make it public immediately
+  // 2. Auto-Publish: If private, flip the switch and save
   if (!store.isShared) {
     isPublishing.value = true
     store.isShared = true
     try {
       await store.saveToCloud(true) // Silent save
     } catch (e) {
-      console.error("Failed to publish map", e)
-      error.value = "Could not update map permissions."
+      console.error("Publish failed", e)
+      error.value = "Could not update permission settings."
+      store.isShared = false // Revert on fail
       isLoading.value = false
       return
     } finally {
@@ -37,54 +38,45 @@ onMounted(async () => {
   }
 
   // 3. Generate Link & QR
-  shareLink.value = `${window.location.origin}/view/${store.currentMapId}`
-  
+  await generateShareAssets()
+})
+
+async function generateShareAssets() {
   try {
+    isLoading.value = true
+    // Use window.location.origin to ensure it works on localhost & prod
+    shareLink.value = `${window.location.origin}/view/${store.currentMapId}`
+    
     shareQrUrl.value = await toDataURL(shareLink.value, { 
-      width: 250, 
+      width: 300,
       margin: 2,
       color: { dark: '#000000', light: '#ffffff' }
     })
   } catch (e) {
-    console.error("QR Generation failed", e)
-    error.value = "Could not generate QR Code."
+    console.error("QR Gen failed", e)
+    error.value = "Could not generate QR code."
   } finally {
     isLoading.value = false
   }
-})
+}
 
-// [NEW] Download Logic
 function downloadQr() {
   if (!shareQrUrl.value) return
-  
   const link = document.createElement('a')
   link.href = shareQrUrl.value
-  
-  // Create a safe filename based on the map name
+  // Sanitize filename
   const safeName = (store.mapName || 'map').replace(/[^a-z0-9]/gi, '_').toLowerCase()
   link.download = `${safeName}_qr.png`
-  
-  document.body.appendChild(link)
   link.click()
-  document.body.removeChild(link)
+}
+
+function copyToClipboard() {
+  navigator.clipboard.writeText(shareLink.value)
+  alert("Link copied!")
 }
 
 function close() {
   emit('close')
-}
-
-function copyToClipboard() {
-  if (!shareLink.value) return
-  navigator.clipboard.writeText(shareLink.value)
-  alert("Link copied to clipboard!")
-}
-
-async function stopSharing() {
-  if (confirm("Are you sure? The existing link will stop working.")) {
-    store.isShared = false
-    await store.saveToCloud()
-    close()
-  }
 }
 </script>
 
