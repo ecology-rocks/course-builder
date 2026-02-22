@@ -54,7 +54,8 @@ const inProgress = ref([
   'Change layer with a right click menu',
   'Highlight changed bales w/ comparison tools',
   'Mobile view optimization',
-  'Print or print group from Dashboard'
+  'Print or print group from Dashboard',
+  'remove handles from tunnels and just do some robust snapping'
 ])
 
 const privateInHouse = ref([
@@ -103,7 +104,7 @@ const planned = ref([
         <h2>🔮 Future Plans</h2>
         <div class="card future">
           <ul>
-            <li v-for="(task, i) in privateInHouse" :key="i">{{ task }}</li>
+            <li v-for="(task, i) in planned" :key="i">{{ task }}</li>
           </ul>
         </div>
       </div>
