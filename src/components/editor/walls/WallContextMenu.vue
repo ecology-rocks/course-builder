@@ -33,6 +33,14 @@ function handleOutsideClick(e) {
   }
 }
 
+function handleCustomize() {
+  if (store.activeWallMenu) {
+    store.editingCustomObject = store.activeWallMenu.wallId
+    store.showCustomizationModal = true
+  }
+  close()
+}
+
 // Attach listener to window to catch clicks outside the menu
 onMounted(() => setTimeout(() => window.addEventListener('click', handleOutsideClick), 0))
 onUnmounted(() => window.removeEventListener('click', handleOutsideClick))
@@ -42,6 +50,8 @@ onUnmounted(() => window.removeEventListener('click', handleOutsideClick))
   <div ref="menuRef" class="context-menu" :style="style">
     <button @click="handleAction('solid')">🧱 Set Wall (Thick)</button>
     <button @click="handleAction('fence')">🚧 Set Fence (Thin)</button>
+    <div class="menu-divider"></div>
+    <button @click="handleCustomize">🎨 Customize Style</button>
     <div class="menu-divider"></div>
     <button @click="store.removeWall(store.activeWallMenu.wallId); close()" class="delete-btn">🗑️ Delete Ring</button>
   </div>

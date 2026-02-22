@@ -174,8 +174,11 @@ export function useUnifiedPrinter(
             const stroke = def.style.strokeColor || "#333";
             const dash = def.style.dashStyle || "solid";
             // Skip if it matches default tunnel style to avoid duplication
+            const rawWidth = def.style.strokeWidth || 2;
+            const legWidth = Math.max(1, rawWidth / 2); 
+
             if (stroke === "blue" && dash === "dashed") return;
-            c += `<div class="legend-item"><span class="line-symbol" style="border-color:${stroke}; border-style:${dash}"></span> ${def.label}</div>`;
+            c += `<div class="legend-item"><span class="line-symbol" style="border-color:${stroke}; border-style:${dash}; border-bottom-width:${legWidth}px"></span> ${def.label}</div>`;
           } else {
             const bg = def.style.fillColor || "#ccc";
             const border = def.style.strokeColor || "#333";
@@ -382,9 +385,12 @@ export function useUnifiedPrinter(
           if (def.isLine) {
             const stroke = def.style.strokeColor || "#333";
             const dash = def.style.dashStyle || "solid";
+
+            const rawWidth = def.style.strokeWidth || 2;
+            const legWidth = Math.max(1, rawWidth / 2);
             if (stroke === "blue" && dash === "dashed") return;
             items.push(
-              `<div class="mini-item"><span class="line-symbol" style="width:12px; border-color:${stroke}; border-style:${dash}"></span>${def.label}</div>`,
+              `<div class="mini-item"><span class="line-symbol" style="width:12px; border-color:${stroke}; border-style:${dash}; border-bottom-width:${legWidth}px"></span>${def.label}</div>`,
             );
           } else {
             const bg = def.style.fillColor || "#ccc";

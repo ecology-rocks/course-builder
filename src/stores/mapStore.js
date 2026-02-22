@@ -282,6 +282,45 @@ export const useMapStore = defineStore("map", () => {
   const multiLayerView = ref(true);
   const layerOpacity = ref(0.4);
 
+
+  // src/stores/mapStore.js
+
+// [REPLACE] the findObjectById function with this version:
+
+ function findObjectById(id) {
+    if (!id) return null
+
+    // Helper: checks the store Ref and returns the Key as the type
+    const check = (key) => {
+      const val = stateRefs[key]?.value
+      if (!val) return null
+      
+      // Handle Arrays (bales, notes, etc.)
+      if (Array.isArray(val)) {
+        const found = val.find(i => i.id === id)
+        return found ? { item: found, type: key } : null
+      }
+      
+      // Handle Single Objects (startBox, gate)
+      if (val.id === id) return { item: val, type: key }
+      return null
+    }
+
+    // Check all interactive collections
+    return check('bales') ||
+           check('customWalls') ||
+           check('tunnelPaths') ||
+           check('notes') ||
+           check('dcMats') ||
+           check('steps') ||
+           check('zones') ||
+           check('tunnelBoards') ||
+           check('hides') ||
+           check('startBox') ||
+           check('gate')
+  }
+
+
   return {
     mapData,
     bales: stateRefs.bales,
@@ -313,6 +352,7 @@ export const useMapStore = defineStore("map", () => {
     currentLayer,
     currentMapId,
     dcMatConfig,
+    findObjectById,
     folders,
     gridSize,
     closeAllMenus,

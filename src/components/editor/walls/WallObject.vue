@@ -5,42 +5,49 @@ import { useMapStore } from '@/stores/mapStore'
 const props = defineProps(['wall', 'scale'])
 const store = useMapStore()
 
-// --- SELECTION STATE ---
 const isSelected = computed(() => store.selection.includes(props.wall.id))
-// Blue highlight when selected, Black otherwise
-const baseColor = computed(() => isSelected.value ? '#2196f3' : 'black')
+const points = computed(() => props.wall.points.map(p => ({ x: p.x * props.scale, y: p.y * props.scale })))
 
-const points = computed(() => {
-  return props.wall.points.map(p => ({ x: p.x * props.scale, y: p.y * props.scale }))
-})
+// [INSERT] Helper to resolve style per segment type
+function getSegmentStyle(index) {
+  const type = props.wall.segmentTypes[index] || 'solid'
+  const isSolid = type === 'solid'
+  
+  // Defaults
+  const defaults = isSolid 
+    ? { color: 'black', width: 6, dash: [] }
+    : { color: 'black', width: 2, dash: [] }
+
+  // Custom Overrides (Nested Structure)
+  const custom = isSolid 
+    ? props.wall.custom?.wall 
+    : props.wall.custom?.fence
+
+  // Legacy fallback (if user had old single-color custom)
+  const legacyColor = props.wall.custom?.strokeColor
+
+  return {
+    stroke: custom?.strokeColor || legacyColor || defaults.color,
+    strokeWidth: custom?.strokeWidth || defaults.width,
+    dash: custom?.dash || defaults.dash
+  }
+}
 
 // --- HANDLERS ---
-
 function handleWallClick(e) {
-  // [FIX] If Gate tool is active, let the click pass through to the Stage.
-  // This allows 'Place Gate' to work without selecting the wall.
-  if (store.activeTool === 'gate') {
-    return
-  }
-
-  // Prevent Stage Deselect for other tools (Select, Measure, etc)
+  if (store.activeTool === 'gate') return
   e.cancelBubble = true 
-  
   if (store.activeTool === 'delete') {
     store.removeWall(props.wall.id)
     return
   }
-
-  // Select the wall (Supports Shift+Click for multi-select)
   const isMulti = e.evt.shiftKey || e.evt.metaKey
   store.selectObject(props.wall.id, isMulti)
 }
 
 function handleSegmentContextMenu(index, e) {
   e.evt.preventDefault()
-  e.cancelBubble = true // Stop browser menu
-  
-  // Open Custom Context Menu
+  e.cancelBubble = true 
   store.activeWallMenu = {
     wallId: props.wall.id,
     segmentIndex: index,
@@ -49,26 +56,41 @@ function handleSegmentContextMenu(index, e) {
   }
 }
 
-// --- CORNER DRAGGING ---
-
 function handlePointDragMove(index, e) {
   const node = e.target
-  // Convert local pixels back to grid units
   const newX = node.x() / props.scale
   const newY = node.y() / props.scale
-  
-  // Real-time update (so the lines follow the dot)
   store.updateWallPoint(props.wall.id, index, newX, newY)
 }
 
 function handlePointDragEnd(e) {
-  // Trigger snapshot for undo/redo history
   store.snapshot()
 }
 </script>
 
 <template>
   <v-group>
+    
+    <template v-if="isSelected">
+      <v-line 
+        v-for="(pt, i) in points" 
+        :key="'halo-'+i"
+        :config="{
+          points: [
+            pt.x, pt.y, 
+            points[(i + 1) % points.length].x, 
+            points[(i + 1) % points.length].y
+          ],
+          stroke: '#2196f3',
+          strokeWidth: getSegmentStyle(i).strokeWidth + 8, // 8px wider than the actual wall
+          opacity: 0.3,
+          lineCap: 'round',
+          lineJoin: 'round',
+          listening: false
+        }" 
+      />
+    </template>
+
     <template v-for="(pt, i) in points" :key="'seg-'+i">
       <v-line :config="{
         points: [
@@ -76,11 +98,12 @@ function handlePointDragEnd(e) {
           points[(i + 1) % points.length].x, 
           points[(i + 1) % points.length].y
         ],
-        stroke: baseColor, 
-        strokeWidth: wall.segmentTypes[i] === 'solid' ? 6 : 2,
-        hitStrokeWidth: 20, // Wide invisible hit area for easier clicking
-        shadowColor: isSelected ? '#2196f3' : null,
-        shadowBlur: isSelected ? 10 : 0
+        stroke: getSegmentStyle(i).stroke,
+        strokeWidth: getSegmentStyle(i).strokeWidth,
+        dash: getSegmentStyle(i).dash,
+        hitStrokeWidth: 20, 
+        lineCap: 'round',
+        lineJoin: 'round'
       }" 
       @click="handleWallClick"
       @contextmenu="handleSegmentContextMenu(i, $event)"

@@ -112,12 +112,64 @@ const detectedCustoms = computed(() => {
   }
 
   scan(store.bales, "Bale")
-  scan(store.customWalls, "Wall")
+  // [REMOVE] scan(store.customWalls, "Wall") 
   scan(store.tunnelBoards, "Board")
-  // [CRITICAL] This requires store.tunnelPaths to be exported from mapStore.js
   scan(store.tunnelPaths, "Tunnel Path", true) 
   scan(store.dcMats, "Mat")
   if (store.startBox) scan(store.startBox, "Start Box")
+
+  // [INSERT] Specific Scan for Nested Wall/Fence Styles
+  if (store.customWalls) {
+    store.customWalls.forEach(wall => {
+      // A. Solid Wall Style
+      const w = wall.custom?.wall
+      if (w) {
+         const stroke = w.strokeColor || 'black'
+         const width = w.strokeWidth || 6
+         const dash = (w.dash && w.dash.length > 0) ? (w.dash[0]===2?'dotted':'dashed') : 'solid'
+         
+         // Ignore default style (Black, Solid, 6px) to prevent clutter
+         const isDefault = stroke === 'black' && dash === 'solid' && width === 6
+         
+         if (!isDefault) {
+           const sig = JSON.stringify({ t: 'Wall', s: stroke, d: dash, w: width })
+           if (!seen.has(sig)) {
+             seen.add(sig)
+             customs.push({
+               id: sig,
+               label: wall.label || "Custom Wall",
+               isLine: true,
+               style: { strokeColor: stroke, dashStyle: dash, strokeWidth: width }
+             })
+           }
+         }
+      }
+
+      // B. Fence Style
+      const f = wall.custom?.fence
+      if (f) {
+         const stroke = f.strokeColor || 'black'
+         const width = f.strokeWidth || 2
+         const dash = (f.dash && f.dash.length > 0) ? (f.dash[0]===2?'dotted':'dashed') : 'solid'
+
+         // Ignore default style (Black, Solid, 2px)
+         const isDefault = stroke === 'black' && dash === 'solid' && width === 2
+         
+         if (!isDefault) {
+           const sig = JSON.stringify({ t: 'Fence', s: stroke, d: dash, w: width })
+           if (!seen.has(sig)) {
+             seen.add(sig)
+             customs.push({
+               id: sig,
+               label: wall.label ? `${wall.label} (Fence)` : "Custom Fence",
+               isLine: true,
+               style: { strokeColor: stroke, dashStyle: dash, strokeWidth: width }
+             })
+           }
+         }
+      }
+    })
+  }
   
   return customs
 })
