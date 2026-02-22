@@ -3,125 +3,135 @@ import { ref } from 'vue'
 import AppFooter from '@/components/AppFooter.vue'
 
 // --- MANAGE YOUR ROADMAP HERE ---
+// [UPDATE] Changed 'desc' string to 'changes' array for bullet points
 const released = ref([
-  { version: 'v1.1.5', date: '2026-02-22', desc: 'Added tunnel manager (beta) and tunnel length stats to printables. Re-added comparison stats to smaller prints. ' },
-  { version: 'v1.1', date: '2026-02-13', desc: 'Redid the blind print flow so that users do not get timed out by their browsers. Fixed hitbox on custom rings. Gave access to blind prints to all users. Fixed anchor bales to appear at corners.'},
-  { version: 'v1.0', date: '2026-02-07', desc: 'Adding right click menus and appropriate bottom bar / floating menus. Added individual object customization. ' },
-  { version: 'v0.9', date: '2026-01-31', desc: 'Fully legal Barn Hunt maps thanks to beta testers.' },
-  { version: 'v0.5', date: '2026-12-01', desc: 'Alpha version for testers to work out bugs.' }
+  { 
+    version: 'v1.1.5', 
+    date: '2026-02-22', 
+    changes: [
+      'Added tunnel manager (beta) and tunnel length stats to printables.',
+      'Re-added comparison stats to smaller prints.',
+      'Wall/fence customization.',
+      'Updated library saves and added categories for future expansion',
+      'Refreshed the share feature'
+    ]
+  },
+  { 
+    version: 'v1.1', 
+    date: '2026-02-13', 
+    changes: [
+      'Redid the blind print flow so that users do not get timed out by their browsers.',
+      'Fixed hitbox on custom rings.',
+      'Gave access to blind prints to all users.',
+      'Fixed anchor bales to appear at corners.'
+    ]
+  },
+  { 
+    version: 'v1.0', 
+    date: '2026-02-07', 
+    changes: [
+      'Added right click menus and appropriate bottom bar / floating menus.',
+      'Added individual object customization.'
+    ]
+  },
+  { 
+    version: 'v0.9', 
+    date: '2026-01-31', 
+    changes: [
+      'Fully legal Barn Hunt maps thanks to beta testers.'
+    ]
+  },
+  { 
+    version: 'v0.5', 
+    date: '2025-12-01', // Fixed year typo (was 2026)
+    changes: [
+      'Alpha version for testers to work out bugs.'
+    ]
+  }
 ])
 
 const inProgress = ref([
-  'Rebuild the tunnel boards so that they can be combined into one tool',
-  'Add comparison stats to half and quarter page printables',
-  'Rebuild share tool as it does not show custom rings or objects',
-  'Need to add wall color customization in custom rings',
-  'rebuild library (add categories), so we can add custom rings to it later.',
-  'Need to add actual administrative functions'
+  'Change layer with a right click menu',
+  'Highlight changed bales w/ comparison tools',
+  'Mobile view optimization',
+  'Print or print group from Dashboard'
 ])
 
 const privateInHouse = ref([
   'make business cards with promo code JUDGE10',
-  'order decals for DTF tea towels for thank yous',
-  
 ])
 
 const planned = ref([
   'Desktop Offline App (Late 2026)',
-  'Mobile View Optimization',
-  'Highlighting changed bales w/ comparison tools',
-  'Print all or print group for trial sets of maps',
   '3d view - research to see if implementation is possible',
-  'change layer with a right click menu'
 ])
-// -------------------------------
-
 </script>
 
 <template>
-  <div class="page-wrapper">
-    <nav class="navbar">
-      <div class="logo">🐾 K9CourseBuilder</div>
-      <router-link to="/" class="btn-text">← Back Home</router-link>
-    </nav>
+  <div class="about-page">
+    <div class="header">
+      <h1>Roadmap</h1>
+      <p class="subtitle">See what's new and what's coming next.</p>
+    </div>
 
-    <div class="container">
-      <header class="header">
-        <h1>Product Roadmap</h1>
-        <p class="subtitle">See what's new and what's coming next for K9CourseBuilder.</p>
-      </header>
-
-      <div class="roadmap-grid">
-        
-        <div class="column">
-          <div class="card current">
-            <h3>🚧 In Progress</h3>
-            <ul>
-              <li v-for="(item, i) in inProgress" :key="i">{{ item }}</li>
-            </ul>
-          </div>
-
-          <div class="card future">
-            <h3>🔮 Up Next</h3>
-            <ul>
-              <li v-for="(item, i) in planned" :key="i">{{ item }}</li>
-            </ul>
-          </div>
-        </div>
-
-        <div class="column">
-          <h3>🚀 Release History</h3>
-          <div class="timeline">
-            <div v-for="(release, i) in released" :key="i" class="release-item">
-              <div class="version-badge">{{ release.version }}</div>
-              <div class="release-content">
-                <span class="date">{{ release.date }}</span>
-                <p>{{ release.desc }}</p>
-              </div>
+    <div class="roadmap-grid">
+      <div class="column">
+        <h2>🚀 Released</h2>
+        <div class="timeline">
+          <div v-for="(release, i) in released" :key="i" class="card current">
+            <div class="release-header">
+              <h3>{{ release.version }}</h3>
+              <span class="date">{{ release.date }}</span>
             </div>
+            <ul>
+              <li v-for="(change, cIndex) in release.changes" :key="cIndex">
+                {{ change }}
+              </li>
+            </ul>
           </div>
         </div>
+      </div>
 
+      <div class="column">
+        <h2>🛠️ In Progress</h2>
+        <div class="card future">
+          <ul>
+            <li v-for="(task, i) in inProgress" :key="i">{{ task }}</li>
+          </ul>
+        </div>
+
+        <h2>🔮 Future Plans</h2>
+        <div class="card future">
+          <ul>
+            <li v-for="(task, i) in privateInHouse" :key="i">{{ task }}</li>
+          </ul>
+        </div>
       </div>
     </div>
+
     <AppFooter />
   </div>
 </template>
 
 <style scoped>
-.page-wrapper { font-family: 'Inter', sans-serif; background: #fff; min-height: 100vh; display: flex; flex-direction: column; }
-.container { max-width: 900px; margin: 0 auto; padding: 40px 20px; flex: 1; }
-
-.navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 40px; border-bottom: 1px solid #eee; }
-.logo { font-weight: 900; font-size: 1.2rem; color: #2c3e50; }
-.btn-text { text-decoration: none; color: #666; font-weight: bold; }
-
+.about-page { max-width: 900px; margin: 0 auto; padding: 40px 20px; font-family: 'Segoe UI', sans-serif; }
 .header { text-align: center; margin-bottom: 60px; }
 h1 { font-size: 2.5rem; margin-bottom: 10px; color: #2c3e50; }
 .subtitle { color: #666; font-size: 1.1rem; }
 
 .roadmap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+@media (max-width: 768px) { .roadmap-grid { grid-template-columns: 1fr; } }
 
-.card { padding: 25px; border-radius: 12px; margin-bottom: 20px; }
-.card h3 { margin-top: 0; color: #2c3e50; }
-.card ul { padding-left: 20px; color: #555; line-height: 1.6; }
+.column h2 { color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+
+.card { padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 .card.current { background: #e3f2fd; border: 1px solid #bbdefb; }
 .card.future { background: #f5f5f5; border: 1px solid #e0e0e0; }
 
-.timeline { border-left: 2px solid #eee; margin-top: 20px; padding-left: 20px; }
-.release-item { margin-bottom: 30px; position: relative; }
-.release-item::before { 
-  content: ''; position: absolute; left: -26px; top: 5px; 
-  width: 10px; height: 10px; background: #2c3e50; border-radius: 50%; 
-}
-.version-badge { 
-  display: inline-block; background: #2c3e50; color: white; 
-  padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 0.8rem; margin-bottom: 5px; 
-}
-.date { font-size: 0.85rem; color: #999; margin-left: 10px; }
-.release-content p { margin: 5px 0 0 0; color: #444; }
+.release-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 5px; }
+.release-header h3 { margin: 0; color: #1565c0; }
+.date { font-size: 0.85rem; color: #555; font-family: monospace; }
 
-@media (max-width: 768px) {
-  .roadmap-grid { grid-template-columns: 1fr; }
-}
+ul { margin: 0; padding-left: 20px; }
+li { color: #444; margin-bottom: 6px; line-height: 1.5; }
 </style>

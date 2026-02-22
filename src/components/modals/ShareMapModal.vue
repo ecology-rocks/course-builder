@@ -1,10 +1,14 @@
 <script setup>
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
+import { useUserStore } from '@/stores/userStore' // [NEW] Import User Store
 import { toDataURL } from 'qrcode'
+import { doc, updateDoc } from 'firebase/firestore' // [NEW] Firestore imports
+import { db } from '@/firebase'
 
 const emit = defineEmits(['close'])
 const store = useMapStore()
+const userStore = useUserStore() // [NEW]
 
 const shareQrUrl = ref('')
 const shareLink = ref('')
@@ -13,23 +17,34 @@ const isLoading = ref(true)
 const isPublishing = ref(false)
 
 onMounted(async () => {
-  // 1. Safety: Must have a saved map ID
   if (!store.currentMapId) {
-    error.value = "Map must be saved to the cloud first."
+    error.value = "Map is not saved. Save to cloud to generate a link."
     isLoading.value = false
     return
   }
 
-  // 2. Auto-Publish: If private, flip the switch and save
+  // [NEW] FORCE UPDATE JUDGE NAME
+  // Whenever we share, we ensure the map is tagged with the current Judge Name
+  if (userStore.judgeName) {
+    try {
+      await updateDoc(doc(db, "maps", store.currentMapId), {
+        judgeName: userStore.judgeName
+      })
+      console.log("Updated Judge Name on Map:", userStore.judgeName)
+    } catch (e) {
+      console.error("Could not tag judge name:", e)
+    }
+  }
+
+  // Auto-Publish Logic
   if (!store.isShared) {
     isPublishing.value = true
     store.isShared = true
     try {
-      await store.saveToCloud(true) // Silent save
+      await store.saveToCloud(true) 
     } catch (e) {
-      console.error("Publish failed", e)
-      error.value = "Could not update permission settings."
-      store.isShared = false // Revert on fail
+      console.error("Failed to publish map", e)
+      error.value = "Could not update map permissions."
       isLoading.value = false
       return
     } finally {
@@ -37,46 +52,46 @@ onMounted(async () => {
     }
   }
 
-  // 3. Generate Link & QR
-  await generateShareAssets()
-})
-
-async function generateShareAssets() {
+  // Generate Assets
+  shareLink.value = `${window.location.origin}/view/${store.currentMapId}`
+  
   try {
-    isLoading.value = true
-    // Use window.location.origin to ensure it works on localhost & prod
-    shareLink.value = `${window.location.origin}/view/${store.currentMapId}`
-    
     shareQrUrl.value = await toDataURL(shareLink.value, { 
-      width: 300,
+      width: 250, 
       margin: 2,
       color: { dark: '#000000', light: '#ffffff' }
     })
   } catch (e) {
-    console.error("QR Gen failed", e)
-    error.value = "Could not generate QR code."
+    console.error("QR Generation failed", e)
+    error.value = "Could not generate QR Code."
   } finally {
     isLoading.value = false
   }
-}
+})
 
 function downloadQr() {
   if (!shareQrUrl.value) return
   const link = document.createElement('a')
   link.href = shareQrUrl.value
-  // Sanitize filename
   const safeName = (store.mapName || 'map').replace(/[^a-z0-9]/gi, '_').toLowerCase()
   link.download = `${safeName}_qr.png`
   link.click()
 }
 
+function close() { emit('close') }
+
 function copyToClipboard() {
+  if (!shareLink.value) return
   navigator.clipboard.writeText(shareLink.value)
-  alert("Link copied!")
+  alert("Link copied to clipboard!")
 }
 
-function close() {
-  emit('close')
+async function stopSharing() {
+  if (confirm("Are you sure? The existing link will stop working.")) {
+    store.isShared = false
+    await store.saveToCloud()
+    close()
+  }
 }
 </script>
 

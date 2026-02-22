@@ -1,137 +1,32 @@
 <script setup>
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { doc, getDoc } from 'firebase/firestore'
-import { db, auth } from '@/firebase'
+import { db } from '@/firebase'
+import { useMapStore } from '@/stores/mapStore'
+
+// --- VISUAL MODULES ---
+import BarnHuntLayer from '@/components/editor/BarnHuntLayer.vue'
+import TunnelRenderer from '@/components/editor/tunnels/TunnelRenderer.vue'
+import MapLegend from '@/components/editor/MapLegend.vue'
+import { useGridSystem } from '@/components/editor/logic/useGridSystem'
+import { useCanvasControls } from '@/components/editor/logic/useCanvasControls'
 
 const route = useRoute()
+const store = useMapStore()
 const loading = ref(true)
 const error = ref(null)
+const wrapperRef = ref(null)
+const stageRef = ref(null)
 
-// Local state
-const mapData = ref(null)
-const currentLayer = ref(1) 
-const scale = 40
+// Local View State
+const showNotes = ref(false)
+const judgeName = ref('') 
+
 const GRID_OFFSET = 30
 
-// --- 1. VISUAL HELPERS ---
-
-const hatchPattern = (() => {
-  const canvas = document.createElement('canvas')
-  canvas.width = 20; canvas.height = 20
-  const ctx = canvas.getContext('2d')
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'
-  ctx.fillRect(0,0,20,20)
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 1
-  ctx.beginPath(); ctx.moveTo(0, 20); ctx.lineTo(20, 0); ctx.stroke()
-  return canvas
-})()
-
-const pillarPattern = (() => {
-  const canvas = document.createElement('canvas')
-  canvas.width = 20; canvas.height = 20
-  const ctx = canvas.getContext('2d')
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
-  ctx.fillRect(0,0,20,20)
-  ctx.strokeStyle = '#d32f2f'; ctx.lineWidth = 2
-  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(20, 20); ctx.moveTo(20, 0); ctx.lineTo(0, 20); ctx.stroke()
-  return canvas
-})()
-
-function getBaleColor(layer) {
-  switch(layer) {
-    case 1: return '#e6c200'
-    case 2: return '#4caf50' 
-    case 3: return '#2196f3' 
-    return '#ccc'
-  }
-}
-
-function getOpacity(layer) {
-  if (layer === currentLayer.value) return 1
-  return 0.3 
-}
-
-function getBaleDims(bale) {
-  if (bale.orientation === 'pillar') return { width: 1.5, height: 1.0 }
-  if (bale.orientation === 'tall') return { width: 3.0, height: 1.0 }
-  return { width: 3.0, height: 1.5 }
-}
-
-function getArrowPoints(width, height, direction) {
-  const cx = width / 2
-  const cy = height / 2
-  const size = Math.min(width, height) * 0.4
-  switch (direction) {
-    case 'top':    return [cx, cy + size, cx, cy - size]
-    case 'bottom': return [cx, cy - size, cx, cy + size]
-    case 'left':   return [cx + size, cy, cx - size, cy]
-    case 'right':  return [cx - size, cy, cx + size, cy]
-    default: return []
-  }
-}
-
-// Helper to format feet/inches
-const fmtDist = (val) => {
-  const total = Math.round(val * 12)
-  const ft = Math.floor(total / 12)
-  const inch = total % 12
-  return inch === 0 ? `${ft}'` : `${ft}' ${inch}"`
-}
-
-// --- 2. COMPUTED DATA ---
-
-const stageConfig = computed(() => {
-  if (!mapData.value) return { width: 300, height: 300 }
-  return {
-    width: (mapData.value.dimensions.width * scale) + (GRID_OFFSET * 2),
-    height: (mapData.value.dimensions.height * scale) + (GRID_OFFSET * 2)
-  }
-})
-
-const visibleBales = computed(() => {
-  if (!mapData.value || !mapData.value.bales) return []
-  return mapData.value.bales.slice().sort((a, b) => {
-    if (a.layer !== b.layer) return a.layer - b.layer
-    const aIsLeaner = a.lean !== null
-    const bIsLeaner = b.lean !== null
-    if (aIsLeaner && !bIsLeaner) return 1
-    if (!aIsLeaner && bIsLeaner) return -1
-    return 0
-  })
-})
-
-// [NEW] Measurement Segment Calculator
-const processedMeasurements = computed(() => {
-  if (!mapData.value || !mapData.value.measurements) return []
-  
-  return mapData.value.measurements.map(m => {
-    if (!m.points || m.points.length < 2) return null
-    
-    const segments = []
-    let runningTotal = 0
-    
-    for (let i = 0; i < m.points.length - 1; i++) {
-      const p1 = m.points[i]
-      const p2 = m.points[i+1]
-      const dx = p2.x - p1.x
-      const dy = p2.y - p1.y
-      const dist = Math.sqrt(dx*dx + dy*dy)
-      runningTotal += dist
-      
-      segments.push({
-        p1, 
-        p2, 
-        midX: (p1.x + p2.x) / 2, 
-        midY: (p1.y + p2.y) / 2,
-        label: fmtDist(runningTotal)
-      })
-    }
-    return { id: m.id, segments }
-  }).filter(Boolean)
-})
-
-// --- 3. FETCH DATA ---
+const { scale, stageConfig, zoom, fitToScreen } = useCanvasControls(store, wrapperRef, GRID_OFFSET)
+const { getWallStroke, getGridLabelX, getGridLabelY, getXAxisY, getYAxisX, getYAxisAlign } = useGridSystem(store, scale)
 
 onMounted(async () => {
   const mapId = route.params.id
@@ -142,40 +37,52 @@ onMounted(async () => {
   }
 
   try {
-    const docRef = doc(db, "maps", mapId)
-    const docSnap = await getDoc(docRef)
+    store.reset()
     
-    if (docSnap.exists()) {
-      const fullDoc = docSnap.data()
-      
-      if (!fullDoc.isShared) {
-        const currentUid = auth.currentUser ? auth.currentUser.uid : null
-        if (currentUid === fullDoc.uid) {
-          alert("⚠️ NOTE: This map is currently PRIVATE.\n\nOnly you can see this.")
-        } else {
-          error.value = "This map is private."
-          return
-        }
-      }
+    console.log("🔍 Fetching Map:", mapId)
+    const snap = await getDoc(doc(db, "maps", mapId))
+    
+    if (!snap.exists()) throw new Error("Map not found")
+    
+    const d = snap.data()
+    const coreData = d.data || {}
+    
+    console.log("📂 Raw Map Data:", d)
+    console.log("📍 Trial Info (DB):", {
+        loc: coreData.trialLocation,
+        day: coreData.trialDay,
+        num: coreData.trialNumber
+    })
 
-      if (fullDoc.data.hides) fullDoc.data.hides = [] 
-      
-      mapData.value = fullDoc.data
-      
-      const d = mapData.value
-      if (!d.tunnelBoards) d.tunnelBoards = []
-      if (!d.steps) d.steps = []
-      if (!d.zones) d.zones = []
-      if (!d.notes) d.notes = []
-      if (!d.measurements) d.measurements = []
-      
-    } else {
-      error.value = "Map not found."
+    // 1. Populate Store Data
+    store.mapData = coreData
+    store.mapName = d.name
+    store.sport = d.sport
+    store.ringDimensions = coreData.dimensions || { width: 24, height: 24 }
+    
+    // 2. Populate Metadata (With Fallbacks)
+    // We check coreData first, then root d (just in case), then empty string
+    store.trialLocation = coreData.trialLocation || d.trialLocation || ''
+    store.trialDay = coreData.trialDay || d.trialDay || ''
+    store.trialNumber = coreData.trialNumber || d.trialNumber || ''
+    store.judgeNotes = coreData.judgeNotes || d.judgeNotes || ''
+
+    // 3. Judge Name (From Root or Data)
+    judgeName.value = d.judgeName || coreData.judgeName || 'Unknown Judge'
+
+    // 4. Legacy Custom Items support
+    if (coreData.customItems && !coreData.customWalls) {
+        store.mapData.customWalls = coreData.customItems
     }
+    
+    store.currentMapId = mapId
+    loading.value = false
+    
+    setTimeout(() => { fitToScreen() }, 100)
+
   } catch (e) {
     console.error(e)
-    error.value = "This map is private or deleted."
-  } finally {
+    error.value = e.message || "Could not load map."
     loading.value = false
   }
 })
@@ -184,189 +91,109 @@ onMounted(async () => {
 <template>
   <div class="viewer-container">
     
-    <div v-if="loading" class="state-msg">
-      <div class="spinner"></div>
-      <p>Loading Map...</p>
+    <div v-if="loading" class="state-msg"><div class="spinner"></div>Loading Map...</div>
+    <div v-else-if="error" class="state-msg error">
+      <h3>⚠️ {{ error }}</h3>
+      <router-link to="/dashboard" class="btn-back">Go to Dashboard</router-link>
     </div>
 
-    <div v-else-if="error" class="state-msg error">
-      <h3>⚠️ Error</h3>
-      <p>{{ error }}</p>
-      <button @click="$router.push('/')">Go Home</button>
-    </div>
-    
     <div v-else class="content">
-      
       <div class="view-header">
-        <div class="map-title">
-          <strong>{{ mapData.name || 'Untitled Map' }}</strong>
+        <div class="header-left">
+            <div class="title-row">
+                <h1>{{ store.mapName }}</h1>
+            </div>
+            
+            <div class="meta-row">
+                <span v-if="judgeName" class="meta-item" title="Judge">
+                    ⚖️ Judge: {{ judgeName }}
+                </span>
+                <span v-if="store.trialLocation" class="meta-item" title="Location">
+                    📍 Club: {{ store.trialLocation }}
+                </span>
+                <span v-if="store.trialDay" class="meta-item" title="Date">
+                    📅 Date: {{ store.trialDay }}
+                </span>
+                <span v-if="store.trialNumber" class="meta-item" title="Trial #">
+                    #️⃣ Trial: {{ store.trialNumber }}
+                </span>
+            </div>
         </div>
-        <div class="layer-toggles">
-          <button v-for="i in 3" :key="i" @click="currentLayer = i" :class="{ active: currentLayer === i }">
-            L{{ i }}
-          </button>
+
+        <div class="controls">
+            <button @click="store.showMapStats = !store.showMapStats" :class="{ active: store.showMapStats }" title="Toggle Statistics">
+                📊 Stats
+            </button>
+            <button @click="showNotes = !showNotes" :class="{ active: showNotes }" title="Toggle Judge Notes">
+                📝 Notes
+            </button>
+
+            <div class="vr desktop-only"></div>
+            
+            <div class="layer-pills desktop-only">
+                <button @click="store.currentLayer = 1" :class="{ active: store.currentLayer === 1 }">L1</button>
+                <button @click="store.currentLayer = 2" :class="{ active: store.currentLayer === 2 }">L2</button>
+                <button @click="store.currentLayer = 3" :class="{ active: store.currentLayer === 3 }">L3</button>
+            </div>
+            
+            <button @click="store.multiLayerView = !store.multiLayerView" :class="{ active: store.multiLayerView }" class="desktop-only">
+                {{ store.multiLayerView ? 'Overlay ON' : 'Overlay OFF' }}
+            </button>
         </div>
       </div>
 
-      <div class="canvas-scroll">
-        <v-stage :config="stageConfig">
+      <div class="canvas-wrapper" ref="wrapperRef">
+        
+        <MapLegend v-if="store.showMapStats" class="overlay-box stats-pos" />
+
+        <div v-if="showNotes" class="overlay-box notes-pos">
+            <div class="overlay-header">Judge's Notes</div>
+            <div class="overlay-body" v-if="store.judgeNotes">{{ store.judgeNotes }}</div>
+            <div class="overlay-body empty" v-else>No notes provided.</div>
+        </div>
+
+        <div class="zoom-controls">
+            <button @click="zoom(5)">+</button>
+            <span class="zoom-label">{{ scale }}px</span>
+            <button @click="zoom(-5)">-</button>
+            <button @click="fitToScreen">Fit</button>
+        </div>
+
+        <v-stage ref="stageRef" :config="stageConfig">
           <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
             
-            <v-line v-for="n in mapData.dimensions.width + 1" :key="'v'+n" :config="{ points: [(n-1)*scale, 0, (n-1)*scale, mapData.dimensions.height * scale], stroke: (n-1)%5===0?'#ccc':'#eee', strokeWidth: 1 }" />
-            <v-line v-for="n in mapData.dimensions.height + 1" :key="'h'+n" :config="{ points: [0, (n-1)*scale, mapData.dimensions.width * scale, (n-1)*scale], stroke: (n-1)%5===0?'#ccc':'#eee', strokeWidth: 1 }" />
+            <template v-for="n in store.ringDimensions.width + 1" :key="'v'+n">
+                <v-line v-if="(n - 1) % store.gridStep === 0"
+                :config="{ points: [(n - 1) * scale, 0, (n - 1) * scale, store.ringDimensions.height * scale], stroke: '#999', strokeWidth: 1 }" />
+            </template>
+            <template v-for="n in store.ringDimensions.height + 1" :key="'h'+n">
+                <v-line v-if="(n - 1) % store.gridStep === 0"
+                :config="{ points: [0, (n - 1) * scale, store.ringDimensions.width * scale, (n - 1) * scale], stroke: '#999', strokeWidth: 1 }" />
+            </template>
+            <template v-for="n in store.ringDimensions.width + 1" :key="'lx'+n">
+                <v-text v-if="(n - 1) % store.gridStep === 0" :config="{
+                x: (n - 1) * scale, y: getXAxisY(),
+                text: getGridLabelX(n - 1),
+                fontSize: 12, fill: '#666', align: 'center', width: 30, offsetX: 15
+                }" />
+            </template>
+            <template v-for="n in store.ringDimensions.height + 1" :key="'ly'+n">
+                <v-text v-if="(n - 1) % store.gridStep === 0" :config="{
+                x: getYAxisX(), y: (n - 1) * scale - 6,
+                text: getGridLabelY(n - 1),
+                fontSize: 12, fill: '#666', align: getYAxisAlign(), width: 20
+                }" />
+            </template>
 
-            <v-group v-for="zone in mapData.zones" :key="zone.id" :config="{ x: zone.x * scale, y: zone.y * scale, rotation: zone.rotation }">
-               <v-rect 
-                :config="{ 
-                  width: zone.width * scale, 
-                  height: zone.height * scale, 
-                  stroke: zone.type === 'dead' ? 'red' : 'black', 
-                  strokeWidth: 2, 
-                  dash: [10, 5],
-                  fill: zone.type === 'dead' ? 'rgba(255, 0, 0, 0.3)' : 'rgba(100, 100, 100, 0.5)',
-                }" 
-              />
-              <v-text :config="{ 
-                text: zone.type === 'dead' ? 'DEAD ZONE' : 'OBSTRUCTION', 
-                width: zone.width * scale,
-                height: zone.height * scale,
-                fontSize: 14, 
-                fontStyle: 'bold',
-                fill: zone.type === 'dead' ? '#b71c1c' : '#424242',
-                align: 'center',
-                verticalAlign: 'middle',
-              }" />
+            <v-group>
+                <v-line :config="{ points: [0, 0, store.ringDimensions.width * scale, 0], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.top), y: -getWallStroke(store.wallTypes.top) / 2 }" />
+                <v-line :config="{ points: [0, store.ringDimensions.height * scale, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.bottom), y: getWallStroke(store.wallTypes.bottom) / 2 }" />
+                <v-line :config="{ points: [0, 0, 0, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.left), x: -getWallStroke(store.wallTypes.left) / 2 }" />
+                <v-line :config="{ points: [store.ringDimensions.width * scale, 0, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right), x: getWallStroke(store.wallTypes.right) / 2 }" />
             </v-group>
 
-            <v-group v-for="mat in mapData.dcMats" :key="mat.id" :config="{ x: mat.x * scale, y: mat.y * scale, rotation: mat.rotation, offsetX: (2 * scale) / 2, offsetY: (3 * scale) / 2 }">
-              <v-rect :config="{ width: 2 * scale, height: 3 * scale, stroke: '#ff9800', strokeWidth: 3, fill: 'rgba(255, 152, 0, 0.2)', cornerRadius: 2, dash: [10, 5] }" />
-              <v-text :config="{ text: 'DC', fontSize: 16, fontStyle: 'bold', fill: '#e65100', width: 2 * scale, padding: 0, align: 'center', y: (3 * scale) / 2 - 8 }" />
-            </v-group>
-
-            <v-group v-if="mapData.startBox" :config="{ x: mapData.startBox.x * scale, y: mapData.startBox.y * scale }">
-              <v-rect :config="{ width: 4 * scale, height: 4 * scale, stroke: '#9c27b0', strokeWidth: 4, fill: 'rgba(156, 39, 176, 0.1)', cornerRadius: 2 }" />
-              <v-text :config="{ text: 'START', fontSize: 14, fontStyle: 'bold', fill: '#9c27b0', width: 4 * scale, padding: 5, align: 'center', y: (4 * scale) / 2 - 7 }" />
-            </v-group>
-
-            <v-group v-if="mapData.gate" :config="{ x: mapData.gate.x * scale, y: mapData.gate.y * scale, rotation: mapData.gate.rotation }">
-              <v-rect :config="{ width: 3 * scale, height: 1 * scale, stroke: '#2E7D32', strokeWidth: 3, fill: 'rgba(46, 125, 50, 0.1)', cornerRadius: 2 }" />
-              <v-text :config="{ text: 'GATE', fontSize: 12, fontStyle: 'bold', fill: '#1B5E20', width: 3 * scale, padding: 0, align: 'center', y: (0.5 * scale) - 6 }" />
-            </v-group>
-
-            <v-group v-for="step in mapData.steps" :key="step.id" :config="{ x: step.x * scale, y: step.y * scale, rotation: step.rotation }">
-               <v-rect :config="{ 
-                 width: 2 * scale, 
-                 height: 1.5 * scale, 
-                 fill: '#8D6E63', 
-                 stroke: 'black', 
-                 strokeWidth: 2, 
-                 cornerRadius: 5,
-                 offsetX: (2 * scale) / 2,
-                 offsetY: (1.5 * scale) / 2
-               }" />
-               <v-text :config="{ 
-                 text: 'STEP', 
-                 fontSize: scale * 0.45, 
-                 fontStyle: 'bold',
-                 fill: 'white', 
-                 width: 2 * scale, 
-                 height: 1.5 * scale,
-                 offsetX: (2 * scale) / 2,
-                 offsetY: (1.5 * scale) / 2,
-                 align: 'center', 
-                 verticalAlign: 'middle'
-               }" />
-            </v-group>
-
-            <v-group v-for="tb in mapData.tunnelBoards" :key="tb.id" :config="{ x: tb.x * scale, y: tb.y * scale, rotation: tb.rotation }">
-               <v-rect :config="{ 
-                 width: tb.width * scale, 
-                 height: tb.height * scale, 
-                 fill: 'rgba(139, 69, 19, 0.4)', 
-                 stroke: '#5D4037', 
-                 strokeWidth: 2, 
-                 cornerRadius: 10 
-               }" />
-               <v-text :config="{
-                 text: 'BOARD',
-                 width: tb.width * scale,
-                 height: tb.height * scale,
-                 fontSize: 12,
-                 fill: '#3e2723',
-                 align: 'center',
-                 verticalAlign: 'middle'
-               }" />
-            </v-group>
-
-            <v-group
-              v-for="bale in visibleBales"
-              :key="bale.id"
-              :config="{
-                x: (bale.x * scale) + (1.5 * scale),
-                y: (bale.y * scale) + (0.75 * scale),
-                rotation: bale.rotation,
-                opacity: getOpacity(bale.layer),
-                offsetX: 1.5 * scale,
-                offsetY: 0.75 * scale
-              }"
-            >
-              <v-rect
-                :config="{
-                  ...(() => {
-                     const dims = getBaleDims(bale)
-                     const w = dims.width * scale
-                     const h = dims.height * scale
-                     return { width: w, height: h, x: (1.5 * scale) - (w / 2), y: (0.75 * scale) - (h / 2) }
-                  })(),
-                  fill: bale.orientation === 'flat' ? getBaleColor(bale.layer) : undefined,
-                  fillPatternImage: (bale.orientation === 'tall' ? hatchPattern : (bale.orientation === 'pillar' ? pillarPattern : undefined)),
-                  fillPatternRepeat: 'repeat',
-                  stroke: (bale.orientation === 'flat' ? 'black' : (bale.orientation === 'pillar' ? '#d32f2f' : getBaleColor(bale.layer))),
-                  strokeWidth: (bale.orientation === 'flat' ? 1 : 2),
-                }"
-              />
-              <v-arrow
-                v-if="bale.lean"
-                :config="{
-                  points: (() => {
-                     const dims = getBaleDims(bale)
-                     const w = dims.width * scale
-                     const h = dims.height * scale
-                     const pts = getArrowPoints(w, h, bale.lean)
-                     const offsetX = (1.5 * scale) - (w / 2)
-                     const offsetY = (0.75 * scale) - (h / 2)
-                     return [pts[0]+offsetX, pts[1]+offsetY, pts[2]+offsetX, pts[3]+offsetY]
-                  })(),
-                  pointerLength: 10, pointerWidth: 10, fill: 'black', stroke: 'black', strokeWidth: 4
-                }"
-              />
-            </v-group>
-
-            <v-group v-for="board in mapData.boardEdges" :key="board.id" :config="{ x: board.x * scale, y: board.y * scale, rotation: board.rotation }">
-              <v-rect :config="{ width: board.length * scale, height: 6, offsetX: (board.length * scale) / 2, offsetY: 3, fill: '#2e7d32', cornerRadius: 2 }" />
-              <v-circle :config="{ x: board.x1 * scale - (board.x * scale), y: board.y1 * scale - (board.y * scale), radius: 4, fill: '#1b5e20' }" />
-              <v-circle :config="{ x: board.x2 * scale - (board.x * scale), y: board.y2 * scale - (board.y * scale), radius: 4, fill: '#1b5e20' }" />
-            </v-group>
-
-            <v-group v-for="m in processedMeasurements" :key="m.id">
-                <template v-for="(seg, i) in m.segments" :key="i">
-                  <v-line :config="{
-                    points: [seg.p1.x * scale, seg.p1.y * scale, seg.p2.x * scale, seg.p2.y * scale],
-                    stroke: '#d32f2f',
-                    strokeWidth: 3,
-                    dash: [6, 4]
-                  }" />
-                  <v-label :config="{ x: seg.midX * scale, y: seg.midY * scale }">
-                    <v-tag :config="{ fill: 'white', stroke: '#d32f2f', strokeWidth: 1, cornerRadius: 4, pointerDirection: 'down', pointerWidth: 8, pointerHeight: 6 }" />
-                    <v-text :config="{ text: seg.label, fontSize: 16, fontStyle: 'bold', fill: '#d32f2f', padding: 4 }" />
-                  </v-label>
-                </template>
-             </v-group>
-
-             <v-group v-for="note in mapData.notes" :key="note.id" :config="{ x: note.x * scale, y: note.y * scale }">
-               <v-rect :config="{ width: 150, height: 'auto', fill: '#FFF9C4', stroke: '#FBC02D', strokeWidth: 1, shadowBlur: 2 }" />
-               <v-text :config="{ text: note.text, fontSize: 14, fill: '#333', padding: 5, width: 150 }" />
-             </v-group>
+            <BarnHuntLayer :scale="scale" :showHides="true" :hides="store.hides" :GRID_OFFSET="GRID_OFFSET" :locked="true" />
+            <TunnelRenderer :scale="scale" :isPrinting="false" />
 
           </v-layer>
         </v-stage>
@@ -376,65 +203,97 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.viewer-container {
-  font-family: sans-serif;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background: #f5f5f5;
+.viewer-container { height: 100vh; display: flex; flex-direction: column; background: #f0f0f0; }
+
+.view-header { 
+    background: white; padding: 12px 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+    display: flex; justify-content: space-between; align-items: flex-start; z-index: 10; 
+    flex-wrap: wrap; gap: 10px;
+}
+.header-left { display: flex; flex-direction: column; gap: 4px; min-width: 200px; }
+
+.title-row { display: flex; align-items: center; gap: 10px; }
+.title-row h1 { margin: 0; font-size: 1.4rem; color: #333; }
+.badge { background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+
+.meta-row { display: flex; gap: 10px; font-size: 0.9rem; color: #555; flex-wrap: wrap; margin-top: 4px; }
+.meta-item { display: flex; align-items: center; gap: 5px; background: #f5f5f5; padding: 3px 8px; border-radius: 4px; border: 1px solid #e0e0e0; }
+
+.controls { display: flex; gap: 8px; align-items: center; margin-top: 5px; flex-wrap: wrap; }
+.vr { width: 1px; height: 24px; background: #ddd; margin: 0 5px; }
+
+.controls button {
+    border: 1px solid #ddd; background: white; padding: 6px 12px; cursor: pointer; 
+    font-weight: 600; color: #555; border-radius: 4px;
+}
+.controls button.active { background: #e3f2fd; color: #1976d2; border-color: #1976d2; }
+
+/* Layer Pills Group */
+.layer-pills { display: flex; background: #f5f5f5; border-radius: 4px; padding: 2px; }
+.layer-pills button { border: none; background: none; margin: 0; }
+.layer-pills button.active { background: white; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+
+.canvas-wrapper { 
+    flex: 1; overflow: hidden; position: relative; 
+    background: #e0e0e0; display: flex; justify-content: center; align-items: center;
 }
 
-.state-msg {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #666;
-}
-.state-msg.error { color: #d32f2f; }
-
-/* Simple Spinner */
-.spinner {
-  border: 4px solid #f3f3f3; border-top: 4px solid #3498db;
-  border-radius: 50%; width: 40px; height: 40px;
-  animation: spin 1s linear infinite; margin-bottom: 15px;
-}
-@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-
-.view-header {
-  background: #fff;
-  padding: 10px 20px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  z-index: 10;
+/* --- OVERLAYS --- */
+.overlay-box {
+    position: absolute; right: 20px; z-index: 90;
+    background: white; border-radius: 8px; 
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 1px solid #ddd;
+    overflow: hidden;
 }
 
-.map-title { font-size: 1.1rem; color: #333; }
+/* Stats Position: Top Right */
+.stats-pos { top: 20px; max-width: 220px; }
 
-.layer-toggles { display: flex; gap: 5px; }
-.layer-toggles button {
-  padding: 8px 15px;
-  border: 1px solid #ddd;
-  background: #fff;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
+/* Notes Position: Below Stats (Adjusted top to prevent overlap) */
+.notes-pos { top: 260px; width: 220px; display: flex; flex-direction: column; }
+.overlay-header { background: #f8f9fa; padding: 8px 12px; font-weight: bold; border-bottom: 1px solid #eee; font-size: 0.9rem; }
+.overlay-body { padding: 12px; font-size: 0.9rem; color: #333; line-height: 1.4; white-space: pre-wrap; }
+.overlay-body.empty { color: #999; font-style: italic; }
+
+.zoom-controls {
+    position: absolute; bottom: 20px; right: 20px;
+    background: white; padding: 5px; border-radius: 8px;
+    display: flex; gap: 5px; align-items: center;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 100;
 }
-.layer-toggles button.active {
-  background: #2c3e50;
-  color: white;
-  border-color: #2c3e50;
+.zoom-controls button {
+    width: 30px; height: 30px; cursor: pointer; border: 1px solid #ddd;
+    background: #f9f9f9; border-radius: 4px; display: flex; align-items: center; justify-content: center;
 }
 
-.canvas-scroll {
-  flex: 1;
-  overflow: auto; 
-  -webkit-overflow-scrolling: touch; 
-  display: flex;
-  justify-content: center; 
-  padding: 20px;
+.state-msg { height: 100%; display: flex; align-items: center; justify-content: center; flex-direction: column; color: #666; }
+.spinner { 
+    width: 30px; height: 30px; border: 3px solid #ccc; border-top-color: #2196f3; 
+    border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; 
+}
+
+/* --- MOBILE RESPONSIVENESS --- */
+@media (max-width: 768px) {
+    .desktop-only { display: none !important; }
+    
+    .view-header { flex-direction: column; align-items: stretch; gap: 10px; }
+    .controls { justify-content: space-between; }
+    .controls button { flex: 1; text-align: center; }
+    
+    .overlay-box {
+        position: static; 
+        margin: 10px; 
+        width: auto; max-width: none;
+    }
+    
+    .stats-pos, .notes-pos {
+        position: absolute; 
+        right: 10px; 
+        left: 10px; 
+        width: auto;
+    }
+    .stats-pos { top: 10px; }
+    /* Ensure notes don't overlap zoom controls on mobile */
+    .notes-pos { top: auto; bottom: 70px; }
 }
 </style>
