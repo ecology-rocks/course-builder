@@ -18,6 +18,12 @@ const inProgress = ref([
   'Need to add categories for library of importable objects, so we can add custom rings to it later.'
 ])
 
+const privateInHouse = ref([
+  'make business cards with promo code JUDGE10',
+  'order decals for DTF tea towels for thank yous',
+  
+])
+
 const planned = ref([
   'Desktop Offline App (Late 2026)',
   'Mobile View Optimization',

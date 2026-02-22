@@ -1,14 +1,19 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue' // [UPDATE] Added ref
 import { useMapStore } from '@/stores/mapStore'
 import { useTunnelLogic } from './useTunnelLogic'
 
 const props = defineProps({ scale: Number })
 const store = useMapStore()
+
+// [UPDATE] Destructure new free draw logic
 const { 
   pendingHandle, getBaleHandles, handleHandleClick,
-  snapTargets, handleSnapClick, handleFreeClick, handlePathClick
+  snapTargets, handleSnapClick, handleFreeClick, handlePathClick,
+  freeDrawAnchor, handleFreeEdgeClick
 } = useTunnelLogic(store)
+
+const currentMousePos = ref({ x: 0, y: 0 })
 
 const allHandles = computed(() => {
   return store.mapData.bales
@@ -25,14 +30,36 @@ function onSnapClick(evt, targetId) {
   evt.cancelBubble = true
   handleSnapClick(targetId)
 }
+
+// [UPDATE] Unified Stage Click Handler
 function handleStageClick(e) {
+  const stage = e.target.getStage()
+  const ptr = stage.getRelativePointerPosition()
+  const GRID_OFFSET = 30 
+  const x = (ptr.x - GRID_OFFSET) / props.scale
+  const y = (ptr.y - GRID_OFFSET) / props.scale
+
+  // Case 1: Drawing Tunnel Path (Existing)
   if (store.activeTool === 'tunnel_path' && store.tunnelConfig.activePathId) {
+    handleFreeClick(x, y)
+  }
+  
+  // Case 2: Free Drawing Edges (New)
+  if (store.activeTool === 'tunnel_edges' && store.tunnelConfig.edgeMode === 'free') {
+    handleFreeEdgeClick(x, y)
+  }
+}
+
+// [INSERT] Track mouse for the rubber-band line
+function handleMouseMove(e) {
+  if (store.activeTool === 'tunnel_edges' && freeDrawAnchor.value) {
     const stage = e.target.getStage()
     const ptr = stage.getRelativePointerPosition()
-    const GRID_OFFSET = 30 
-    const x = (ptr.x - GRID_OFFSET) / props.scale
-    const y = (ptr.y - GRID_OFFSET) / props.scale
-    handleFreeClick(x, y)
+    const GRID_OFFSET = 30
+    currentMousePos.value = {
+      x: (ptr.x - GRID_OFFSET) / props.scale,
+      y: (ptr.y - GRID_OFFSET) / props.scale
+    }
   }
 }
 </script>
@@ -40,7 +67,30 @@ function handleStageClick(e) {
 <template>
   <v-group>
     
+    <v-rect 
+      v-if="store.activeTool === 'tunnel_path' || (store.activeTool === 'tunnel_edges' && store.tunnelConfig.edgeMode === 'free')"
+      :config="{ x: -1000, y: -1000, width: 5000, height: 5000, fill: 'transparent' }"
+      @click="handleStageClick"
+      @tap="handleStageClick"
+      @mousemove="handleMouseMove"
+    />
+
     <v-group v-if="store.activeTool === 'tunnel_edges'">
+      <v-line 
+        v-if="freeDrawAnchor"
+        :config="{
+          points: [
+            freeDrawAnchor.x * scale, 
+            freeDrawAnchor.y * scale, 
+            currentMousePos.x * scale, 
+            currentMousePos.y * scale
+          ],
+          stroke: '#2196f3',
+          strokeWidth: 2,
+          dash: [5, 5]
+        }"
+      />
+
       <v-circle
         v-for="handle in allHandles"
         :key="handle.id"
@@ -54,7 +104,8 @@ function handleStageClick(e) {
           stroke: (pendingHandle && pendingHandle.id === handle.id) ? 'white' : '#2196f3',
           strokeWidth: 2,
           hitStrokeWidth: 15,
-          cursor: 'pointer'
+          cursor: 'pointer',
+          opacity: store.tunnelConfig.edgeMode === 'free' ? 0.3 : 1 // Dim handles in free mode
         }"
         @mouseenter="$event.target.scale({x:1.5, y:1.5})"
         @mouseleave="$event.target.scale({x:1, y:1})"
@@ -63,13 +114,6 @@ function handleStageClick(e) {
 
     <v-group v-if="store.activeTool === 'tunnel_path'">
       
-      <v-rect 
-        v-if="store.tunnelConfig.activePathId"
-        :config="{ x: -1000, y: -1000, width: 5000, height: 5000, fill: 'transparent' }"
-        @click="handleStageClick"
-        @tap="handleStageClick"
-      />
-
       <v-rect 
         v-for="target in snapTargets"
         :key="target.id"

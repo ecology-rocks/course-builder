@@ -27,7 +27,11 @@ function getClosestPointOnSegment(p, p1, p2) {
 }
 
 export function useTunnelLogic(store) {
+
+  // ref defionitions
   const pendingHandle = ref(null)
+  const freeDrawAnchor = ref(null)
+
 
   // --- BALE LOGIC ---
   function getBaleDimensions(bale) {
@@ -83,6 +87,38 @@ export function useTunnelLogic(store) {
     }
   }
 
+
+  function handleFreeEdgeClick(x, y) {
+    if (store.activeTool !== 'tunnel_edges') return
+    
+    // Simple Snap to 0.5 grid for sanity, or remove for pure freehand
+    const snap = (v) => Math.round(v * 2) / 2
+    const sx = snap(x)
+    const sy = snap(y)
+
+    if (!freeDrawAnchor.value) {
+      freeDrawAnchor.value = { x: sx, y: sy }
+    } else {
+      // Prevent zero-length lines
+      if (freeDrawAnchor.value.x === sx && freeDrawAnchor.value.y === sy) return
+
+      store.mapData.boardEdges.push({
+        id: crypto.randomUUID(),
+        x1: freeDrawAnchor.value.x,
+        y1: freeDrawAnchor.value.y,
+        x2: sx,
+        y2: sy,
+        layer: store.currentLayer
+      })
+      
+      // If holding Shift, we could chain them, but for now reset
+      freeDrawAnchor.value = null
+    }
+  }
+
+  function cancelFreeDraw() {
+    freeDrawAnchor.value = null
+  }
   // --- PATH LOGIC ---
 
   // 1. Identify "Docking Ports" (Centers of Board Edges)
@@ -157,6 +193,7 @@ export function useTunnelLogic(store) {
             y: (edge.y1 + edge.y2) / 2
           }
         }
+        // Fallback if edge deleted
         return { x: 0, y: 0 }
       }
       return { x: 0, y: 0 }
@@ -237,8 +274,79 @@ export function useTunnelLogic(store) {
     }
   }
 
+  const tunnelGroups = computed(() => {
+    const paths = store.mapData.tunnelPaths
+    const visited = new Set()
+    const groups = []
+
+    // Helper: Check if two paths touch
+    const areConnected = (p1, p2) => {
+      const pts1 = resolvePathPoints(p1)
+      const pts2 = resolvePathPoints(p2)
+      // Check for any shared point (Intersection)
+      return pts1.some(a => 
+        pts2.some(b => Math.abs(a.x - b.x) < 0.1 && Math.abs(a.y - b.y) < 0.1)
+      )
+    }
+
+    // Recursive Cluster Builder
+    const buildCluster = (currentPath, cluster) => {
+      visited.add(currentPath.id)
+      cluster.push(currentPath)
+      
+      paths.forEach(p2 => {
+        if (!visited.has(p2.id) && areConnected(currentPath, p2)) {
+          buildCluster(p2, cluster)
+        }
+      })
+    }
+
+    paths.forEach(p => {
+      if (!visited.has(p.id)) {
+        const cluster = []
+        buildCluster(p, cluster)
+        
+        // Calculate Total Length
+        let totalLen = 0
+        cluster.forEach(subPath => {
+          const pts = resolvePathPoints(subPath)
+          for (let i = 0; i < pts.length - 1; i++) {
+            const dx = pts[i+1].x - pts[i].x
+            const dy = pts[i+1].y - pts[i].y
+            totalLen += Math.sqrt(dx*dx + dy*dy)
+          }
+        })
+
+        groups.push({
+          id: cluster[0].id, // Group ID is just the ID of the first member
+          name: `Tunnel ${groups.length + 1}`,
+          paths: cluster,
+          totalLength: totalLen.toFixed(1)
+        })
+      }
+    })
+
+    return groups
+  })
+
+  function selectGroup(group) {
+    store.selection = group.paths.map(p => p.id)
+  }
+
+  function deleteGroup(group) {
+    const idsToRemove = group.paths.map(p => p.id)
+    store.mapData.tunnelPaths = store.mapData.tunnelPaths.filter(p => !idsToRemove.includes(p.id))
+    store.selection = []
+  }
+
   return {
     pendingHandle,
+    freeDrawAnchor,
+    handleFreeEdgeClick,
+    cancelFreeDraw,
+    tunnelGroups,
+    selectGroup,
+    deleteGroup,
     getBaleHandles,
     handleHandleClick,
     snapTargets,
