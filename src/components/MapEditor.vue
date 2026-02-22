@@ -117,6 +117,10 @@ function handleBlindExitRequest() {
   showSaveModal.value = true
 }
 
+function toggleGridStep() {
+  store.gridStep = (store.gridStep === 1) ? 2 : 1
+}
+
 function resolveExport(newNamePayload) {
   if (newNamePayload) store.mapName = newNamePayload
   store.exportMapToJSON()
@@ -347,8 +351,18 @@ async function handleAdvancedPrint(config) {
       </Transition>
 
       <div class="zoom-controls">
+        <button 
+          class="grid-btn" 
+          @click.stop="toggleGridStep" 
+          title="Toggle between 1ft and 2ft grid lines"
+        >
+          Grid: {{ store.gridStep }}'
+        </button>
+        
+        <div class="control-divider"></div>
+
         <button @click.stop="zoom(5)">+</button>
-        <span>{{ scale }}px</span>
+        <span class="zoom-label">{{ scale }}px</span>
         <button @click.stop="zoom(-5)">-</button>
         <button @click.stop="fitToScreen">Fit</button>
       </div>
@@ -526,17 +540,53 @@ async function handleAdvancedPrint(config) {
   bottom: 20px;
   right: 20px;
   background: white;
-  padding: 5px;
+  padding: 5px 10px; /* Increased padding slightly */
   border-radius: 8px;
   display: flex;
   gap: 5px;
   z-index: 100;
+  align-items: center; /* Ensure vertical centering */
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1); /* Optional polish */
 }
 
 .zoom-controls button {
   width: 30px;
   height: 30px;
   cursor: pointer;
+  border: 1px solid #ddd; /* consistency */
+  background: #f9f9f9;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zoom-controls button:hover {
+  background: #eee;
+}
+
+/* [INSERT] Specific styles for the grid button */
+.grid-btn {
+  width: auto !important; /* Override fixed width */
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #444;
+  white-space: nowrap;
+}
+
+.control-divider {
+  width: 1px;
+  height: 20px;
+  background-color: #ddd;
+  margin: 0 4px;
+}
+
+.zoom-label {
+  font-size: 12px;
+  color: #666;
+  min-width: 40px;
+  text-align: center;
 }
 
 .help-fab {

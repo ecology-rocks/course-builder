@@ -4,7 +4,7 @@ import AppFooter from '@/components/AppFooter.vue'
 
 // --- MANAGE YOUR ROADMAP HERE ---
 const released = ref([
-  { version: 'v260222', date: '2026-02-22', desc: 'Added tunnel manager (beta) and tunnel length stats to printables. Re-added comparison stats to smaller prints. ' },
+  { version: 'v1.1.5', date: '2026-02-22', desc: 'Added tunnel manager (beta) and tunnel length stats to printables. Re-added comparison stats to smaller prints. ' },
   { version: 'v1.1', date: '2026-02-13', desc: 'Redid the blind print flow so that users do not get timed out by their browsers. Fixed hitbox on custom rings. Gave access to blind prints to all users. Fixed anchor bales to appear at corners.'},
   { version: 'v1.0', date: '2026-02-07', desc: 'Adding right click menus and appropriate bottom bar / floating menus. Added individual object customization. ' },
   { version: 'v0.9', date: '2026-01-31', desc: 'Fully legal Barn Hunt maps thanks to beta testers.' },
@@ -16,7 +16,7 @@ const inProgress = ref([
   'Add comparison stats to half and quarter page printables',
   'Rebuild share tool as it does not show custom rings or objects',
   'Need to add wall color customization in custom rings',
-  'Need to add categories for library of importable objects, so we can add custom rings to it later.',
+  'rebuild library (add categories), so we can add custom rings to it later.',
   'Need to add actual administrative functions'
 ])
 
@@ -32,8 +32,6 @@ const planned = ref([
   'Highlighting changed bales w/ comparison tools',
   'Print all or print group for trial sets of maps',
   '3d view - research to see if implementation is possible',
-  'Add measurements (e.g., tunnel path) to statistics with a right click add to menu',
-  'anchor measurements to object vertices',
   'change layer with a right click menu'
 ])
 // -------------------------------
