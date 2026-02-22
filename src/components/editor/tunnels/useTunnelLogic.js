@@ -157,11 +157,6 @@ export function useTunnelLogic(store) {
           { type: 'edge-anchor', targetId: targetId }
         ],
         // [FIX] Use 'custom' instead of 'style'
-        custom: { 
-          strokeColor: 'blue', 
-          strokeWidth: 2, 
-          dash: [10, 5] 
-        }
       })
       store.tunnelConfig.activePathId = newId
     }

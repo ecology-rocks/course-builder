@@ -76,9 +76,12 @@ const detectedCustoms = computed(() => {
       // Handle Tunnel Paths (Line Objects)
       if (isLine) {
         stroke = item.custom?.strokeColor || item.style?.color || 'blue'
-        const d = item.custom?.dash || item.style?.dash || []
+        const d = item.custom?.dash || item.style?.dash || [10, 5]
         if (d.length > 0) dashStyle = (d[0] === 2) ? 'dotted' : 'dashed'
         fill = 'transparent' // Lines don't have fill
+        if (typeLabel === 'Tunnel Path' && stroke === 'blue' && dashStyle === 'dashed') {
+          return
+        }
       } 
       // Handle Standard Objects (Rects)
       else {
