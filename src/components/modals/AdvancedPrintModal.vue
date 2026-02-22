@@ -31,6 +31,7 @@ const config = reactive({
     showFence: true,
     showTunnels: true,     // Boards
     showTunnelPaths: true, // [NEW] Tunnel Paths
+    showTunnelStats: true,
     showTunnelBox: true,
     showGate: true,
     showStep: true,
@@ -326,28 +327,42 @@ function handlePrint() {
             <div class="info-box"><span class="icon">ℹ️</span>Select items to display in the key.</div>
           
           <div class="checkbox-grid">
-            <label class="checkbox-row highlight-row"><input type="checkbox" v-model="config.legend.showTunnelPaths"> <strong>Tunnel Paths</strong></label>
-            
-            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showStats"> Stats</label>
+            <label class="checkbox-row highlight-row"><input type="checkbox" v-model="config.legend.showTunnelStats"> Tunnel Lengths</label>
+            <label class="checkbox-row highlight-row"><input type="checkbox" v-model="config.legend.showStats">Bale Stats</label>
+          </div>
+          <div class="divider"></div>
+          <div class="checkbox-grid">
+            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showTunnelPaths"> Tunnel Paths</label>
+            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showTunnels"> Board Edges</label>
+          </div>
+          <div class="divider"></div>
+          <div class="checkbox-grid">
             <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showBales"> Bales</label>
-            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showHides"> Hides</label>
-            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showWalls"> Walls</label>
-            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showFence"> Fence</label>
-            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showTunnels"> Boards</label>
-            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showTunnelBox"> Tunnel Box</label>
-            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showGate"> Gate</label>
-            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showStep"> Step</label>
             <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showLeaners"> Leaners</label>
             <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showAnchors"> Anchors</label>
+            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showHides"> Hides</label>
+          </div>
+          <div class="divider"></div>
+          <div class="checkbox-grid">
+            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showWalls"> Walls</label>
+            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showFence"> Fence</label>
+            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showGate"> Gate</label>
+</div>
+          <div class="divider"></div>
+          <div class="checkbox-grid">
+            <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showStep"> Step</label>
             <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showStartBox"> Start Box</label>
             <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showDCMat"> DC Mat</label>
+                        <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showTunnelBox"> Support Boards</label>
+</div>
+          <div class="divider"></div>
+          <div class="checkbox-grid">
             <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showObstruction"> Obstruction</label>
             <label class="checkbox-row"><input type="checkbox" v-model="config.legend.showDeadZone"> Dead Zone</label>
           </div>
 
           <div v-if="detectedCustoms.length > 0" class="custom-section">
             <div class="divider"></div>
-            <p class="help-text">Custom Styles:</p>
             <div class="checkbox-grid">
               <label v-for="c in detectedCustoms" :key="c.id" class="checkbox-row">
                 <input type="checkbox" v-model="config.legend.customItems[c.id]">

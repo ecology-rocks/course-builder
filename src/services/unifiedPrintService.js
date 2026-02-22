@@ -1,4 +1,5 @@
 import { nextTick } from "vue";
+import { useTunnelLogic } from "@/components/editor/tunnels/useTunnelLogic";
 
 export function useUnifiedPrinter(
   store,
@@ -84,6 +85,7 @@ export function useUnifiedPrinter(
     .pillar { background: linear-gradient(to bottom right, transparent 46%, black 47%, black 53%, transparent 54%), linear-gradient(to bottom left, transparent 46%, black 47%, black 53%, transparent 54%); background-color: #fff; }
     .anchor { border: 2px solid #d32f2f; color: #d32f2f; font-weight: bold; text-align: center; line-height: 8px; font-size: 10px; border-radius: 2px; background: white; }
     .tunnel { height: 4px; background: #2e7d32; border: none; }
+    .tunnelpath { width: 20px; height: 0;  border-bottom: 2px dashed blue; border-top: 0px; display: inline-block; vertical-align: middle; margin-right: 4px;  }
     .tunnelbox { height: 6px; background: #8B4513 border: 1px solid brown; }
     .gate { border: 1px solid black; height: 4px; }
     .step { background: #8D6E63; border: 1px solid black;}
@@ -106,10 +108,34 @@ export function useUnifiedPrinter(
     if (!config.legend) return "";
     const l = config.legend;
     let html = '<div class="legend-sidebar">';
+
     const section = (title, content) =>
       content
         ? `<div class="legend-section"><h4>${title}</h4><div class="legend-grid">${content}</div></div>`
         : "";
+
+    if (l.showTunnelStats) {
+      // Reuse the logic from the editor to get the grouped lengths
+      const { tunnelGroups } = useTunnelLogic(store);
+      const groups = tunnelGroups.value;
+
+      if (groups && groups.length > 0) {
+        let rows = "";
+        groups.forEach((g) => {
+          // Simple row: "Tunnel 1 ....... 15.0'"
+          rows += `
+             <div class="legend-item" style="justify-content: space-between; border-bottom: 1px dotted #eee;">
+               <span>${g.name}</span>
+               <strong>${g.totalLength}'</strong>
+             </div>`;
+        });
+        // Use a single-column grid for this section so it reads like a list
+        html += `<div class="legend-section">
+                   <h4>Tunnels</h4>
+                   <div style="display:flex; flex-direction:column; gap:4px;">${rows}</div>
+                 </div>`;
+      }
+    }
 
     if (l.showStats) {
       const inv = store.inventory;
@@ -167,7 +193,7 @@ export function useUnifiedPrinter(
 
     // [NEW] Tunnel Path
     if (l.showTunnelPaths)
-      f += `<div class="legend-item"><span class="symbol tunnel"></span> Tunnel</div>`;
+      f += `<div class="legend-item"><span class="symbol tunnelpath"></span>T-Path</div>`;
 
     if (l.showTunnels)
       // Existing Board Tunnels
@@ -208,11 +234,29 @@ export function useUnifiedPrinter(
     const l = config.legend;
     let items = [];
 
-if (l.showStats) {
+
+    if (l.showTunnelStats) {
+      const { tunnelGroups } = useTunnelLogic(store);
+      const groups = tunnelGroups.value;
+      
+      if (groups && groups.length > 0) {
+        groups.forEach((g, i) => {
+           // Format: "T1: 15 ft"
+           items.push(
+             `<div class="mini-item" style="font-weight:bold; border:1px solid #ddd; padding:0 3px; border-radius:3px; background:#f9f9f9;">
+                T${i+1}: ${g.totalLength} ft
+              </div>`
+           );
+        });
+      }
+    }
+
+
+    if (l.showStats) {
       const inv = store.inventory;
       // Add Total Count
       items.push(
-        `<div class="mini-item" style="border-right:1px solid #ccc; padding-right:5px; margin-right:2px;"><strong>Tot: ${inv.total}</strong></div>`
+        `<div class="mini-item" style="border-right:1px solid #ccc; padding-right:5px; margin-right:2px;"><strong>Tot: ${inv.total}</strong></div>`,
       );
 
       const diffs = store.differentials;
@@ -220,7 +264,7 @@ if (l.showStats) {
         const totalSign = diffs.totalNet > 0 ? "+" : "";
         // Add Net Change
         items.push(
-          `<div class="mini-item"><strong>Net: ${totalSign}${diffs.totalNet}</strong></div>`
+          `<div class="mini-item"><strong>Net: ${totalSign}${diffs.totalNet}</strong></div>`,
         );
 
         // Add Per-Layer Diffs
@@ -230,7 +274,7 @@ if (l.showStats) {
             const sign = d.net > 0 ? "+" : "";
             const mv = d.moved > 0 ? `(${d.moved}mv)` : "";
             items.push(
-              `<div class="mini-item">L${layer}: ${sign}${d.net}${mv}</div>`
+              `<div class="mini-item">L${layer}: ${sign}${d.net}${mv}</div>`,
             );
           }
         });
@@ -271,7 +315,7 @@ if (l.showStats) {
 
     if (l.showTunnelPaths)
       items.push(
-        `<div class="mini-item"><span class="mini-symbol tunnel"></span>Tun</div>`,
+        `<div class="mini-item"><span class="mini-symbol tunnelpath"></span>Tun</div>`,
       );
     if (l.showTunnels)
       items.push(
@@ -477,8 +521,7 @@ if (l.showStats) {
         .filter(Boolean)
         .join(" • ");
       const metaJudge = userStore.judgeName || "";
-      const metaClub =
-        store.trialLocation || userStore.clubName || "";
+      const metaClub = store.trialLocation || userStore.clubName || "";
 
       let pagesHtml = "";
 
