@@ -43,12 +43,6 @@ defineExpose({
 })
 
 
-// [OLD] Legacy Handler
-function onPrintConfirm(config) {
-  emit('print', config)
-  showPrintModal.value = false
-}
-
 // [NEW] Advanced Handler
 function onAdvancedPrintConfirm(config) {
   emit('advanced-print', config)
@@ -152,7 +146,7 @@ function handleSave() {
 
       <div class="secondary-actions">
         <button @click="showLoadModal = true">📂 Load</button>
-        <!--button v-if="userStore.isPro" @click="showShareModal = true">🔗 Share</button-->
+        <button @click="showShareModal = true">🔗 Share</button>
         <button @click="showLibraryModal = true">📖 Lib</button>
       </div>
 

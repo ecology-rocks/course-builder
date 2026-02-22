@@ -5,12 +5,7 @@ import { useUserStore } from '@/stores/userStore'
 import { useAutosave } from 'services/autosaveService'
 import { useRouter } from 'vue-router'
 
-// [KEEP] Legacy Printers
-import { usePrinter } from 'services/printerService'
-import { useBlindPrinter } from '@/services/blindPrinterService'
 import { useUnifiedPrinter } from '@/services/unifiedPrintService'
-
-// --- COMPOSABLES ---
 import { useKeyboardShortcuts } from '@/components/editor/logic/useKeyboardShortcuts'
 import { useCanvasControls } from '@/components/editor/logic/useCanvasControls'
 import { useGridSystem } from '@/components/editor/logic/useGridSystem'
@@ -18,6 +13,7 @@ import { useExportTools } from '@/components/editor/logic/useExportTools'
 import { useStageInteraction } from '@/components/editor/logic/useStageInteraction'
 import { useContextMenu } from '@/components/editor/logic/useContextMenu'
 import { useCustomWalls } from '@/components/editor/walls/useCustomWalls'
+import { libraryService } from '@/services/libraryService'
 
 // Sub-Layers & Components
 import EditorSidebar from './editor/EditorSidebar.vue'
@@ -35,6 +31,7 @@ import AdvancedPrintModal from '@/components/modals/AdvancedPrintModal.vue'
 import TunnelManager from './editor/tunnels/TunnelManager.vue'
 import TunnelEditorLayer from './editor/tunnels/TunnelEditorLayer.vue'
 import TunnelRenderer from './editor/tunnels/TunnelRenderer.vue'
+import SaveToLibraryModal from '@/components/modals/SaveToLibraryModal.vue'
 
 // Context Menus
 import StageContextMenu from './editor/StageContextMenu.vue'
@@ -69,6 +66,7 @@ const pendingBlindExit = ref(false)
 const isNewMap = computed(() => !store.currentMapId)
 const pendingHomeExit = ref(false)
 const showAdvancedPrintModal = ref(false)
+const showLibrarySaveModal = ref(false)
 
 const { getNearestSnapPoint, getAngleSnapPoint } = useCustomWalls(store)
 
@@ -80,8 +78,6 @@ const { handleSaveMap, handleLibrarySave } = useExportTools(store, stageRef, sca
 const { selectionRect, handleStageMouseDown, handleStageMouseMove, handleStageMouseUp, handleDragStart } = useStageInteraction(store, scale, GRID_OFFSET)
 const { contextMenu, handleStageContextMenu, closeContextMenu } = useContextMenu(store)
 
-const { handlePrint: printLogic } = usePrinter(store, userStore, stageRef, scale)
-const { printBlinds } = useBlindPrinter(store, userStore, stageRef, scale)
 const { generatePrintJob } = useUnifiedPrinter(store, userStore, stageRef, scale, showHides)
 
 useKeyboardShortcuts(store, handleSaveMap)
@@ -109,6 +105,94 @@ function resolvePostPrint(action, payload) {
     if (confirm("Are you sure you want to clear the map? Any unsaved changes will be lost.")) {
       store.reset()
     }
+  }
+}
+
+async function handleLibrarySaveConfirm({ name, category }) {
+  try {
+    const stage = stageRef.value.getStage()
+    
+    // --- 1. SMART SCREENSHOT LOGIC ---
+    let cropConfig = {}
+    
+    const isSubset = ['tunnel', 'sequence'].includes(category)
+    const hasSelection = store.selection.length > 0
+    
+    if (isSubset && hasSelection) {
+      // Calculate bounds of selection
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity
+      
+      const checkBounds = (obj) => {
+        if (!store.selection.includes(obj.id)) return
+        const padding = 2 
+        minX = Math.min(minX, obj.x - padding); minY = Math.min(minY, obj.y - padding)
+        maxX = Math.max(maxX, obj.x + padding + 3); maxY = Math.max(maxY, obj.y + padding + 3)
+      }
+
+      store.bales.forEach(checkBounds)
+      store.tunnelBoards.forEach(checkBounds)
+      store.dcMats.forEach(checkBounds)
+      // Add other arrays if needed
+
+      if (minX !== Infinity) {
+        cropConfig = {
+          x: (minX * scale.value) + GRID_OFFSET,
+          y: (minY * scale.value) + GRID_OFFSET,
+          width: (maxX - minX) * scale.value,
+          height: (maxY - minY) * scale.value
+        }
+      }
+    } else {
+      // Full Ring Snapshot
+      cropConfig = {
+        x: GRID_OFFSET, 
+        y: GRID_OFFSET,
+        width: store.ringDimensions.width * scale.value,
+        height: store.ringDimensions.height * scale.value
+      }
+    }
+
+    const screenshotData = stage.toDataURL({
+      ...cropConfig,
+      pixelRatio: 0.5,
+      mimeType: 'image/jpeg',
+      quality: 0.7
+    })
+
+    // --- 2. DATA PAYLOAD ---
+    const itemData = {
+      name,
+      sport: store.sport || 'barnhunt',
+      type: category,
+      // [FIX] Must match 'thumbnail' expected by libraryService.js
+      thumbnail: screenshotData, 
+      data: {
+        bales: store.bales || [],
+        tunnelBoards: store.tunnelBoards || [],
+        startBox: store.startBox,
+        gate: store.gate,
+        dcMats: store.dcMats || [],
+        steps: store.steps || [],
+        zones: store.zones || [],
+        customWalls: store.customWalls || [],
+        tunnelPaths: store.tunnelPaths || [],
+        dimensions: category === 'ring' ? store.ringDimensions : undefined
+      }
+    }
+
+    // Clean undefineds
+    Object.keys(itemData.data).forEach(key => itemData.data[key] === undefined && delete itemData.data[key])
+
+    // --- 3. SAVE ---
+    await libraryService.addToLibrary(userStore.user, itemData)
+    
+    store.showNotification("Saved to Library!", "success")
+    showLibrarySaveModal.value = false
+
+  } catch (e) {
+    console.error(e)
+    alert("Failed to save: " + e.message)
+    // Don't close modal on error so they can try again
   }
 }
 
@@ -308,23 +392,6 @@ async function handleBatchPrint() {
   showAdvancedPrintModal.value = true
 }
 
-async function handlePrint(options) {
-  isPrinting.value = true
-  const orientation = options.orientation || 'landscape'
-  showHides.value = options.withHides
-  await nextTick()
-
-  try {
-    await printLogic(options, orientation)
-    setTimeout(() => { showPostPrintModal.value = true }, 500)
-  } catch (e) {
-    console.error(e)
-  } finally {
-    isPrinting.value = false
-    setTimeout(() => { showHides.value = true }, 2000)
-  }
-}
-
 async function handleAdvancedPrint(config) {
   isPrinting.value = true
   try {
@@ -338,8 +405,8 @@ async function handleAdvancedPrint(config) {
 
 <template>
   <div class="editor-container" @click="handleGlobalClick">
-    <EditorSidebar ref="sidebarRef" v-if="!isBlindMode && !store.isTunnelMode" @print="handlePrint"
-      @advanced-print="handleAdvancedPrint" @save-map="requestSave" @save-library="handleLibrarySave"
+    <EditorSidebar ref="sidebarRef" v-if="!isBlindMode && !store.isTunnelMode"
+      @advanced-print="handleAdvancedPrint" @save-map="requestSave" @save-library="showLibrarySaveModal = true"
       @blind-setup="handleOpenBlindManager" @go-home="handleGoHome" />
 
     <div class="canvas-wrapper" ref="wrapperRef" :class="{ 'is-anchor-mode': store.activeTool === 'anchor' }">
@@ -472,6 +539,11 @@ async function handleAdvancedPrint(config) {
     <BlindManager v-if="isBlindMode" ref="blindManagerRef" @close="isBlindMode = false" @print="handleBatchPrint"
       @save="handleBlindSave" @exit-request="handleBlindExitRequest" />
     <TunnelManager v-if="store.isTunnelMode" @close="handleTunnelExitRequest" />
+    <SaveToLibraryModal 
+  v-if="showLibrarySaveModal" 
+  @close="showLibrarySaveModal = false" 
+  @confirm="handleLibrarySaveConfirm" 
+/>
 
     <AdvancedPrintModal v-if="showAdvancedPrintModal" @close="showAdvancedPrintModal = false"
       @confirm="handleAdvancedPrint" />
