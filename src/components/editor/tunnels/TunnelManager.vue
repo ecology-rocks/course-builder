@@ -16,14 +16,6 @@ const activeTool = computed({
   set: (val) => store.setTool(val)
 })
 
-const edgeMode = computed({
-  get: () => store.tunnelConfig.edgeMode || 'snap',
-  set: (val) => {
-    store.tunnelConfig.edgeMode = val
-    cancelFreeDraw() // Clear pending lines when switching
-  }
-})
-
 const selectedGroup = computed(() => {
   if (store.selection.length === 0) return null
   return tunnelGroups.value.find(g =>
@@ -75,16 +67,6 @@ function isSelected(id) {
         </button>
       </div>
 
-      <div v-if="activeTool === 'tunnel_edges'" class="sub-tool-options">
-        <label>
-          <input type="radio" value="snap" v-model="edgeMode">
-          Snap to Bales
-        </label>
-        <label>
-          <input type="radio" value="free" v-model="edgeMode">
-          Free Draw
-        </label>
-      </div>
       <div class="options-panel">
         <label class="checkbox-row">
           <input type="checkbox" v-model="store.tunnelConfig.showGuardLines" />
@@ -120,8 +102,7 @@ function isSelected(id) {
 
     <div class="top-status">
       <span v-if="activeTool === 'tunnel_edges'">
-        Setting Edges: <strong>{{ edgeMode === 'snap' ? 'Click Bale Handles' : 'Click Anywhere (Start -> End)'
-          }}</strong>
+        Setting Edges: <strong>Click Anywhere (Start -> End)</strong>
       </span>
       <span v-else>
         Mode: <strong>Drawing Tunnel Path</strong>

@@ -84,6 +84,16 @@ function formatLength(feet) {
 
 // --- COMPUTED STATE ---
 
+// [NEW] Render Board Edges
+const renderedEdges = computed(() => {
+  return store.mapData.boardEdges
+    .filter(e => e.layer === store.currentLayer)
+    .map(e => ({
+      id: e.id,
+      points: [e.x1 * props.scale, e.y1 * props.scale, e.x2 * props.scale, e.y2 * props.scale]
+    }))
+})
+
 const renderedTunnels = computed(() => {
   return store.mapData.tunnelPaths
     .filter(p => p.layer === store.currentLayer)
@@ -171,6 +181,17 @@ function onContextMenu(evt, pathId) {
 
 <template>
   <v-group>
+    
+    <v-line 
+      v-for="edge in renderedEdges"
+      :key="edge.id"
+      :config="{
+        points: edge.points,
+        stroke: '#2e7d32', // tunnel green
+        lineCap: 'round'
+      }"
+    />
+
     <v-group v-for="t in renderedTunnels" :key="t.id">
       
       <v-line 

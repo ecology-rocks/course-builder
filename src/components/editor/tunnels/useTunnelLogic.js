@@ -36,7 +36,6 @@ function getDistToSegment(p, p1, p2) {
 export function useTunnelLogic(store) {
 
   // ref defionitions
-  const pendingHandle = ref(null)
   const freeDrawAnchor = ref(null)
 
 
@@ -51,47 +50,6 @@ export function useTunnelLogic(store) {
     else if (bale.orientation === 'pillar') { width = rawW; height = rawH; }
     else { width = rawL; height = rawW; }
     return { width, height }
-  }
-
-  function getBaleHandles(bale) {
-    const { width, height } = getBaleDimensions(bale)
-    const cx = bale.x + width / 2
-    const cy = bale.y + height / 2
-    const INSET = 0.5
-
-    const dx = Math.max(0.1, width / 2 - INSET)
-    const dy = Math.max(0.1, height / 2 - INSET)
-
-    const localPoints = [
-      { x: cx - dx, y: cy - dy },
-      { x: cx + dx, y: cy - dy },
-      { x: cx + dx, y: cy + dy },
-      { x: cx - dx, y: cy + dy },
-    ]
-
-    return localPoints.map((p, idx) => ({
-      ...rotatePoint(p.x, p.y, cx, cy, bale.rotation || 0),
-      id: `${bale.id}_h${idx}`,
-      baleId: bale.id
-    }))
-  }
-
-  function handleHandleClick(handlePoint) {
-    if (store.activeTool !== 'tunnel_edges') return
-    if (!pendingHandle.value) {
-      pendingHandle.value = handlePoint
-    } else {
-      if (pendingHandle.value.id === handlePoint.id) return
-      store.mapData.boardEdges.push({
-        id: crypto.randomUUID(),
-        x1: pendingHandle.value.x,
-        y1: pendingHandle.value.y,
-        x2: handlePoint.x,
-        y2: handlePoint.y,
-        layer: store.currentLayer // New edges get a layer
-      })
-      pendingHandle.value = null
-    }
   }
 
 
@@ -373,15 +331,12 @@ export function useTunnelLogic(store) {
   }
 
   return {
-    pendingHandle,
     freeDrawAnchor,
     handleFreeEdgeClick,
     cancelFreeDraw,
     tunnelGroups,
     selectGroup,
     deleteGroup,
-    getBaleHandles,
-    handleHandleClick,
     snapTargets,
     handleSnapClick,
     handleFreeClick,

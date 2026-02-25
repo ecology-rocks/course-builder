@@ -60,11 +60,15 @@ const inProgress = ref([
 
 const privateInHouse = ref([
   'make business cards with promo code JUDGE10',
+  'make sure that people can cancel, and that downgrades work appropriately'
 ])
 
 const planned = ref([
   'Desktop Offline App (Late 2026)',
   '3d view - research to see if implementation is possible',
+  'random hides generator',
+  'procedurally generated courses',
+  
 ])
 </script>
 
