@@ -330,6 +330,21 @@ export function useTunnelLogic(store) {
     return null
   }
 
+  function updatePathPoint(pathId, pointIndex, x, y) {
+    const path = store.mapData.tunnelPaths.find(p => p.id === pathId)
+    if (!path || !path.points[pointIndex]) return
+
+    // Convert to static point at new location
+    // We snap to 0.5 grid here for consistency
+    const snap = (v) => Math.round(v * 2) / 2
+    
+    path.points[pointIndex] = {
+      type: 'static',
+      x: snap(x),
+      y: snap(y)
+    }
+  }
+
   return {
     freeDrawAnchor,
     handleFreeEdgeClick,
@@ -344,6 +359,7 @@ export function useTunnelLogic(store) {
     handlePathClick,
     selectPath,
     deletePath,
-    findPathAtPoint
+    findPathAtPoint,
+    updatePathPoint,
   }
 }

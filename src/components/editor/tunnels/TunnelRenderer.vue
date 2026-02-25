@@ -10,7 +10,8 @@ const props = defineProps({
 })
 
 const store = useMapStore()
-const { resolvePathPoints, selectPath, handlePathClick } = useTunnelLogic(store)
+// [UPDATE] Import updatePathPoint
+const { resolvePathPoints, selectPath, handlePathClick, updatePathPoint } = useTunnelLogic(store)
 
 // --- MATH HELPERS (Keep existing) ---
 function getIntersection(p1, p2, p3, p4) {
@@ -84,7 +85,6 @@ function formatLength(feet) {
 
 // --- COMPUTED STATE ---
 
-// [NEW] Render Board Edges
 const renderedEdges = computed(() => {
   return store.mapData.boardEdges
     .filter(e => e.layer === store.currentLayer)
@@ -125,6 +125,17 @@ const renderedTunnels = computed(() => {
         rightGuard = rawRight.flatMap(p => [p.x * props.scale, p.y * props.scale])
       }
 
+      // [NEW] Calculate Draggable Handles (Exclude Start/End)
+      let handles = []
+      if (isSelected && !props.isPrinting) {
+         // Map original points to scale, slice off first and last
+         handles = pts.map((p, index) => ({
+           x: p.x * props.scale,
+           y: p.y * props.scale,
+           index
+         })).slice(1, -1) // Remove first and last
+      }
+
       return {
         id: path.id,
         flatPoints,
@@ -135,7 +146,8 @@ const renderedTunnels = computed(() => {
         width: path.custom?.strokeWidth || 2, 
         isSelected,
         leftGuard,
-        rightGuard
+        rightGuard,
+        handles // [NEW] Pass handles to template
       }
     })
 })
@@ -176,6 +188,22 @@ function onContextMenu(evt, pathId) {
     x: containerRect.left + evt.target.getStage().getPointerPosition().x + 10,
     y: containerRect.top + evt.target.getStage().getPointerPosition().y + 10
   }
+}
+
+// [NEW] Handle Drag End
+function onHandleDragEnd(evt, pathId, index) {
+  const stage = evt.target.getStage()
+  // target.x() is relative to the group, but we aren't grouped by position,
+  // we are in a group at (0,0). So x() is the stage coord relative to group.
+  
+  const newX = evt.target.x() / props.scale
+  const newY = evt.target.y() / props.scale
+  
+  updatePathPoint(pathId, index, newX, newY)
+}
+
+function onHandleClick(evt) {
+    evt.cancelBubble = true
 }
 </script>
 
@@ -254,6 +282,24 @@ function onContextMenu(evt, pathId) {
            }" />
         </v-label>
       </v-group>
+
+      <v-circle 
+        v-for="h in t.handles"
+        :key="`${t.id}-pt-${h.index}`"
+        :config="{
+          x: h.x,
+          y: h.y,
+          radius: 6,
+          fill: 'white',
+          stroke: '#fa8c16',
+          strokeWidth: 2,
+          draggable: true
+        }"
+        @dragend="onHandleDragEnd($event, t.id, h.index)"
+        @click="onHandleClick"
+        @mouseenter="$event.target.scale({x:1.5, y:1.5})"
+        @mouseleave="$event.target.scale({x:1, y:1})"
+      />
 
     </v-group>
   </v-group>
