@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue' 
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 import { useTunnelLogic } from './useTunnelLogic'
 
@@ -8,10 +8,24 @@ const store = useMapStore()
 
 const { 
   snapTargets, handleSnapClick, handleFreeClick, handlePathClick,
-  freeDrawAnchor, handleFreeEdgeClick, findPathAtPoint,
+  freeDrawAnchor, handleFreeEdgeClick, findPathAtPoint, cancelFreeDraw
 } = useTunnelLogic(store)
 
 const currentMousePos = ref({ x: 0, y: 0 })
+
+// [NEW] Global Escape Key Handler
+function handleGlobalKey(e) {
+  if (e.key === 'Escape') {
+    // If we are currently drawing a board edge (anchor is set), cancel it
+    if (freeDrawAnchor.value) {
+       e.preventDefault()
+       cancelFreeDraw()
+    }
+  }
+}
+// [NEW] Attach/Detach Listeners
+onMounted(() => window.addEventListener('keydown', handleGlobalKey))
+onUnmounted(() => window.removeEventListener('keydown', handleGlobalKey))
 
 // Handlers with Stop Propagation
 function onHandleClick(evt, handle) {
