@@ -9,6 +9,10 @@ const props = defineProps({
   opacity: {
     type: Number,
     default: 1
+  },
+  isGhost: {
+    type: Boolean,
+    default: false
   }
 })
 const emit = defineEmits(['dragstart', 'dragmove', 'dragend', 'contextmenu', 'click'])
@@ -23,6 +27,27 @@ defineExpose({
 
 // Safe scale access
 const s = computed(() => props.scale || 1)
+
+// --- COMPARISON LOGIC [NEW] ---
+const comparisonState = computed(() => {
+  // [UPDATE] Check the toggle first
+  if (!store.showComparison) return null
+
+  if (props.isGhost) return 'removed'
+  if (!store.comparisonMapName) return null
+
+  // ... existing logic ...
+  const prev = store.previousBales.find(b => b.id === props.bale.id)
+  if (!prev) return 'added'
+
+  const hasMoved = prev.x !== props.bale.x || prev.y !== props.bale.y
+  const hasRotated = prev.rotation !== props.bale.rotation
+  const hasChangedType = prev.orientation !== props.bale.orientation || prev.lean !== props.bale.lean
+  
+  if (hasMoved || hasRotated || hasChangedType) return 'changed'
+  
+  return null
+})
 
 // --- DIMENSIONS & CENTER ---
 const dims = computed(() => {
@@ -203,10 +228,20 @@ const fillColor = computed(() => {
   return store.baleColors[props.bale.layer] || '#ccc'
 })
 
-const boxDash = computed(() => props.bale.custom?.borderStyle === 'dashed' ? [10, 5] : null)
+const boxDash = computed(() => {
+  if (comparisonState.value === 'removed') return [10, 5] // Dashed for removed
+  return props.bale.custom?.borderStyle === 'dashed' ? [10, 5] : null
+})
 
 const strokeColor = computed(() => {
-  if (store.selection.includes(props.bale.id)) return '#00a1ff'
+  if (store.selection.includes(props.bale.id)) return '#00a1ff' // Selection Blue priority
+  
+  // Comparison Colors
+  if (comparisonState.value === 'added') return '#00e676'   // Bright Green
+  if (comparisonState.value === 'changed') return '#ff9100' // Orange
+  if (comparisonState.value === 'removed') return '#ff1744' // Red
+
+  // Default / Custom
   if (props.bale.custom?.strokeColor) return props.bale.custom.strokeColor
   if (props.bale.isAnchor) return '#d32f2f'
   return 'black'
@@ -214,9 +249,15 @@ const strokeColor = computed(() => {
 
 const strokeWidth = computed(() => {
   if (store.selection.includes(props.bale.id)) return 3
+  if (comparisonState.value) return 4 // Make changes THICK and visible
   if (props.bale.custom?.strokeColor) return 2
   if (props.bale.isAnchor) return 2
   return 1
+})
+
+const opacityValue = computed(() => {
+  if (props.isGhost) return props.opacity * 0.5 // Make ghosts transparent
+  return props.opacity
 })
 
 const shadowBlur = computed(() => store.selection.includes(props.bale.id) ? 10 : 0)
@@ -270,13 +311,13 @@ function baleDragBoundFunc(pos) {
     ref="groupRef"
     :config="{
       id: bale.id,
-      draggable: store.activeTool !== 'board' && store.activeTool !== 'hide' && store.activeTool !== 'anchor', 
+      draggable: !isGhost && store.activeTool !== 'board' && store.activeTool !== 'hide' && store.activeTool !== 'anchor', 
       dragBoundFunc: baleDragBoundFunc,
-      listening: (bale.layer === store.currentLayer || store.selection.includes(bale.id)) && store.activeTool !== 'board' && store.activeTool !== 'hide',
+      listening: !isGhost && (bale.layer === store.currentLayer || store.selection.includes(bale.id)) && store.activeTool !== 'board' && store.activeTool !== 'hide',
       x: ((bale.x || 0) * s) + (halfW * s),
       y: ((bale.y || 0) * s) + (halfH * s),
       rotation: bale.rotation || 0,
-      opacity: props.opacity,
+      opacity: opacityValue,
       offsetX: halfW * s,
       offsetY: halfH * s
     }"

@@ -45,6 +45,29 @@ const objectRefs = ref({})
 const dragStartPos = ref({})
 
 // --- COMPUTED ---
+
+// src/components/editor/BarnHuntLayer.vue
+
+const removedBales = computed(() => {
+  // [UPDATE] Check the toggle first
+  if (!store.showComparison) return [] 
+  
+  if (!store.comparisonMapName || !store.previousBales) return []
+
+  // ... existing logic ...
+  const currentIds = new Set(store.bales.map(b => b.id))
+  const ghosts = store.previousBales.filter(b => !currentIds.has(b.id))
+
+  if (store.multiLayerView) {
+    if (typeof store.multiLayerView === 'number') {
+      return ghosts.filter(b => b.layer <= store.multiLayerView)
+    }
+    return ghosts
+  }
+  return ghosts.filter(b => b.layer === store.currentLayer)
+})
+
+
 const displayedHides = computed(() => {
   if (props.locked) {
     return props.hides
@@ -355,6 +378,17 @@ function handleDragEnd(e, id) {
     <GateObject v-if="store.gate" :gate="store.gate" :scale="scale" :ringDimensions="store.ringDimensions"
       :ref="(el) => setRef(el, store.gate?.id)" @dragstart="handleDragStart($event, store.gate?.id)"
       @dragmove="handleDragMove($event, store.gate?.id)" @dragend="handleDragEnd($event, store.gate?.id)" />
+
+
+      <BaleObject 
+      v-for="bale in removedBales" 
+      :key="'ghost-'+bale.id" 
+      :bale="bale" 
+      :scale="scale"
+      :is-ghost="true"
+      :opacity="store.multiLayerView && bale.layer !== store.currentLayer ? store.layerOpacity : 1"
+    />
+
 
     <BaleObject v-for="bale in visibleBales" :key="bale.id" :bale="bale" :scale="scale"
       :opacity="store.multiLayerView && bale.layer !== store.currentLayer ? store.layerOpacity : 1"

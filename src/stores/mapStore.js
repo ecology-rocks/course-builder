@@ -74,6 +74,7 @@ export const useMapStore = defineStore("map", () => {
   const isTunnelMode = ref(false);
   const tunnelConfig = ref({ showGuardLines: false, activePathId: null });
   const activeTunnelMenu = ref(null);
+  const showComparison = ref(true);
 
   const wallTypes = ref({ top: "fence", right: "fence", bottom: "fence", left: "fence" });
   const gridStartCorner = ref("top-left");
@@ -137,6 +138,7 @@ export const useMapStore = defineStore("map", () => {
     baleConfig.value = { length: 3, width: 1.5, height: 1 };
     dcMatConfig.value = { width: 2, height: 3 };
     activeMeasurement.value = null;
+    showComparison.value = true;
     if (domainModules?.closeNoteEditor) domainModules.closeNoteEditor();
   }
 
@@ -379,6 +381,7 @@ export const useMapStore = defineStore("map", () => {
     selectedBaleId,
     selection,
     setTool,
+    showComparison,
     showMapStats,
     showNotification,
     sport,

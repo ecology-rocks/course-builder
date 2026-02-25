@@ -120,7 +120,11 @@ function handleSave() {
     <div class="sidebar-section">
       <label class="checkbox-row">
         <input type="checkbox" v-model="store.multiLayerView" />
-        <span>Overlay All Layers</span>
+        <span>Overlay All</span>
+      </label>
+      <label v-if="store.comparisonMapName" class="checkbox-row" title="Toggle change highlighting" style="margin-top: 8px;">
+        <input type="checkbox" v-model="store.showComparison" />
+        <span style="color: #e65100; font-weight: 600;">Show Changes</span>
       </label>
 
       <div v-if="store.multiLayerView" class="opacity-control">

@@ -98,7 +98,7 @@ function handleLean() {
       <div class="tool-grid">
         
         <button class="tool-btn action-btn span-full" @click="$emit('blind-setup')" title="Create and manage multiple blinds and hides.">🏆 Blinds / Hides </button>
-          <button @click="startTunnelMode" class="span-full">🚇 Tunnels ✨Beta✨</button>
+          <button @click="startTunnelMode" class="span-full">🚇 Tunnel Manager</button>
 
       </div>
     </div>
@@ -113,14 +113,6 @@ function handleLean() {
           <IconPath class="tool-icon" /> Path
         </button>
         <button @click="store.setTool('note')" :class="{ active: store.activeTool === 'note' }" class="span-full">📝 Note (N) </button>
-      </div>
-    </div>
-
-    <div class="tool-section">
-      <h3>Legacy Tools</h3>
-      <div class="tool-grid">
-        <button @click="store.setTool('hide')" :class="{ active: store.activeTool === 'hide' }" title="Use for one blind only.">🐀 Quick Hide</button>
-        <button @click="store.setTool('board')" :class="{ active: store.activeTool === 'board' }">➖ Board Line</button>
       </div>
     </div>
 

@@ -87,6 +87,9 @@ export function useUnifiedPrinter(
     .tunnel { height: 4px; background: #2e7d32; border: none; }
     .tunnelpath { width: 20px; height: 0;  border-bottom: 2px dashed blue; border-top: 0px; display: inline-block; vertical-align: middle; margin-right: 4px;  }
     .tunnelbox { height: 6px; background: #8B4513 border: 1px solid brown; }
+    .comp-add { border: 3px solid #00e676; background: rgba(0,230,118,0.1); }
+    .comp-change {border: 3px solid #ff9100; background: rgba(255,145,0,0.1);}
+    .comp-del {border: 3px dashed #ff1744; background: rgba(255,23,68,0.1);}
     .gate { border: 1px solid black; height: 4px; }
     .step { background: #8D6E63; border: 1px solid black;}
     .start { border: 1px solid black; background: #eee; }
@@ -168,6 +171,23 @@ export function useUnifiedPrinter(
         `;
       }
       html += section("Counts", statsContent);
+    }
+    if (l.showComparison){
+      html +=  section(
+        "Comparisons", `
+          <div class="legend-item">
+            <span class="comp-add"></span>
+            <span>Added</span>
+          </div>
+          <div class="legend-item">
+            <span class="comp-change"></span>
+            <span>Changed</span>
+          </div>
+          <div class="legend-item">
+            <span class="comp-del"></span>
+            <span>Removed</span>
+          </div>
+      `)
     }
     if (l.showBales) {
       html += section(
@@ -304,6 +324,23 @@ export function useUnifiedPrinter(
         });
       }
     }
+
+if(l.showComparison) {
+  items.push(
+    `<div style="margin-top: 4px; display: flex; gap: 8px; font-size: 10px; flex-wrap: wrap;">
+                 <div style="display:flex; align-items:center; gap:2px;">
+                    <span style="width:10px; height:10px; border: 2px solid #00e676; display:inline-block;"></span> Added
+                 </div>
+                 <div style="display:flex; align-items:center; gap:2px;">
+                    <span style="width:10px; height:10px; border: 2px solid #ff9100; display:inline-block;"></span> Changed
+                 </div>
+                 <div style="display:flex; align-items:center; gap:2px;">
+                    <span style="width:10px; height:10px; border: 2px dashed #ff1744; display:inline-block;"></span> Removed
+                 </div>
+              </div>
+              `
+  )
+}
 
     // Bales
     if (l.showBales) {

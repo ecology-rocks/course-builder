@@ -41,6 +41,7 @@ const config = reactive({
     showDCMat: true,
     showObstruction: true,
     showDeadZone: true,
+    showComparison: false,
     customItems: {} 
   }
 })
@@ -384,6 +385,7 @@ function handlePrint() {
           <div class="checkbox-grid">
             <label class="checkbox-row highlight-row"><input type="checkbox" v-model="config.legend.showTunnelStats"> Tunnel Lengths</label>
             <label class="checkbox-row highlight-row"><input type="checkbox" v-model="config.legend.showStats">Bale Stats</label>
+            <label class="checkbox-row highlight-row"><input type="checkbox" v-model="config.legend.showComparison" />Show Bale Changes</label>
           </div>
           <div class="divider"></div>
           <div class="checkbox-grid">

@@ -54,8 +54,7 @@ const inProgress = ref([
   'Change layer with a right click menu',
   'Highlight changed bales w/ comparison tools',
   'Mobile view optimization',
-  'Print or print group from Dashboard',
-  'remove handles from tunnels and just do some robust snapping'
+  'Print or print group from Dashboard'
 ])
 
 const privateInHouse = ref([
