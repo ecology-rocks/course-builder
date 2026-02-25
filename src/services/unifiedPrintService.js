@@ -14,6 +14,7 @@ export function useUnifiedPrinter(
       arr.slice(i * size, i * size + size),
     );
 
+  // [REFACTOR] All Styles moved here
   const getCss = (orientation = "landscape") => `
     @media print { 
       @page { size: ${orientation}; margin: 0; } 
@@ -22,8 +23,8 @@ export function useUnifiedPrinter(
     html, body { margin: 0; padding: 0; width: 100%; height: 100%; }
     body { font-family: 'Segoe UI', Tahoma, sans-serif; color: #333; background: white; }
     
+    /* Layout & Structure */
     .sidebar-wrapper { width: 180px; flex-shrink: 0; border-left: 1px solid #ccc; padding-left: 15px; display: flex; flex-direction: column; box-sizing: border-box; }
-    .legend-sidebar { width: 100%; border-left: none; padding-left: 0; font-size: 11px; }
     .judge-notes-section { margin-top: 15px; padding-top: 10px; border-top: 2px solid #333; width: 100%; overflow-wrap: break-word; box-sizing: border-box; }
     .judge-notes-section h3 { margin: 0 0 4px 0; font-size: 14px; text-transform: uppercase; font-weight: 800; color: #000; }
     .notes-content { font-size: 12px; line-height: 1.3; white-space: pre-wrap; font-family: 'Segoe UI', Tahoma, sans-serif; }
@@ -40,6 +41,7 @@ export function useUnifiedPrinter(
     .map-container { flex: 1; display: flex; justify-content: center; align-items: flex-start; min-height: 0; overflow: hidden; }
     img.map-img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid #eee; }
     
+    /* Grid Layout */
     .grid-container { display: grid; height: 100%; width: 100%; padding: 15px; gap: 15px; box-sizing: border-box; }
     .half-grid { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
     .quarter-grid { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
@@ -52,29 +54,37 @@ export function useUnifiedPrinter(
     .ch-title { font-weight: bold; font-size: 14px; }
     .ch-sub { font-size: 12px; color: #666; }
     .ch-meta { display: flex; justify-content: space-between; font-size: 10px; color: #444; margin-top: 2px; }
+    .ch-meta-bold { font-weight: bold; }
 
+    /* Legends */
+    .legend-sidebar { width: 100%; border-left: none; padding-left: 0; font-size: 11px; }
     .legend-section { margin-bottom: 12px; }
     .legend-section h4 { margin: 0 0 4px 0; font-size: 11px; text-transform: uppercase; color: #666; border-bottom: 1px solid #eee; }
     .legend-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
     .legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; line-height: 1.2; }
     
+    /* Sidebar Specific Helpers */
+    .legend-row-header { justify-content: space-between; font-weight: bold; margin-top: 5px; background: #f5f5f5; padding: 2px; }
+    .legend-row-detail { justify-content: space-between; padding-left: 10px; border-bottom: 1px dotted #eee; }
+    .legend-col { display: flex; flex-direction: column; gap: 2px; }
+    .legend-stat-net { grid-column: span 2; border-top: 1px solid #eee; margin-top: 4px; padding-top: 4px; font-weight: bold; }
+
+    /* Compact / Mini Legend */
     .mini-legend { display: flex; flex-wrap: wrap; gap: 4px 8px; border-top: 1px solid #eee; padding-top: 5px; margin-top: 5px; justify-content: center; }
     .mini-item { display: flex; align-items: center; gap: 3px; font-size: 9px; white-space: nowrap; }
+    .mini-item-box { border: 1px solid #ddd; padding: 0 3px; border-radius: 3px; background: #f9f9f9; font-weight: bold; }
+    .mini-item-sub { color: #555; }
+    .mini-item-divider { border-right: 1px solid #ccc; padding-right: 5px; margin-right: 2px; }
     .mini-symbol { width: 10px; height: 10px; border: 1px solid #333; display: inline-block; vertical-align: middle; }
 
-    /* [NEW] Line Symbol for Legend */
-    .line-symbol { 
-  width: 20px; 
-  height: 0; 
-  border-bottom-width: 2px; 
-  border-top: none; border-left: none; border-right: none;
-  display: inline-block; 
-  vertical-align: middle; 
-}
-/* Ensure dots don't look like a solid line */
-.line-symbol[style*="dotted"] {
-  border-bottom-width: 4px; /* Slightly thicker for better visibility of dots */
-}
+    /* Comparison Legend (Compact) */
+    .comp-mini-container { margin-top: 4px; display: flex; gap: 8px; font-size: 10px; flex-wrap: wrap; }
+    .comp-mini-item { display: flex; align-items: center; gap: 2px; }
+    .comp-swatch-mini { width: 10px; height: 10px; display: inline-block; }
+    
+    /* Symbols & Swatches */
+    .line-symbol { width: 20px; height: 0; border-bottom-width: 2px; border-top: none; border-left: none; border-right: none; display: inline-block; vertical-align: middle; }
+    .line-symbol[style*="dotted"] { border-bottom-width: 4px; }
 
     .symbol { display: inline-block; width: 16px; height: 10px; border: 1px solid black; position: relative; flex-shrink: 0; }
     .l1 { background: ${store.baleColors[1] || "#e6c200"}; }
@@ -87,9 +97,17 @@ export function useUnifiedPrinter(
     .tunnel { height: 4px; background: #2e7d32; border: none; }
     .tunnelpath { width: 20px; height: 0;  border-bottom: 2px dashed blue; border-top: 0px; display: inline-block; vertical-align: middle; margin-right: 4px;  }
     .tunnelbox { height: 6px; background: #8B4513 border: 1px solid brown; }
+    
+    /* Comparison Styles */
     .comp-add { border: 3px solid #00e676; background: rgba(0,230,118,0.1); }
-    .comp-change {border: 3px solid #ff9100; background: rgba(255,145,0,0.1);}
-    .comp-del {border: 3px dashed #ff1744; background: rgba(255,23,68,0.1);}
+    .comp-change { border: 3px solid #ff9100; background: rgba(255,145,0,0.1); }
+    .comp-del { border: 3px dashed #ff1744; background: rgba(255,23,68,0.1); }
+    
+    /* Comparison Mini Swatches (Borders match above but thinner for small scale) */
+    .c-add-mini { border: 2px solid #00e676; }
+    .c-chg-mini { border: 2px solid #ff9100; }
+    .c-del-mini { border: 2px dashed #ff1744; }
+
     .gate { border: 1px solid black; height: 4px; }
     .step { background: #8D6E63; border: 1px solid black;}
     .start { border: 1px solid black; background: #eee; }
@@ -105,6 +123,12 @@ export function useUnifiedPrinter(
     .hide-empty { background: white; color: black; }
     .hide-rat-under { color: black; stroke-width: 2; border-style: dashed; }
     .leaner { border: none; font-size: 12px; font-weight: bold; width: auto; height: auto; }
+
+    /* Loading Screen */
+    .loading-container { font-family: sans-serif; text-align: center; padding-top: 50px; }
+    .spinner { width: 40px; height: 40px; border: 4px solid #ccc; border-top-color: #333; border-radius: 50%; margin: 20px auto; animation: spin 1s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .error-msg { color: red; }
   `;
 
   function buildSidebarLegend(config) {
@@ -126,7 +150,7 @@ export function useUnifiedPrinter(
         groups.forEach((g) => {
           // Row 1: Name and Total
           rows += `
-             <div class="legend-item" style="justify-content: space-between; font-weight:bold; margin-top:5px; background:#f5f5f5; padding:2px;">
+             <div class="legend-item legend-row-header">
                <span>${g.name}</span>
                <span>${g.totalLength}'</span>
              </div>`;
@@ -135,7 +159,7 @@ export function useUnifiedPrinter(
           if (g.segments && g.segments.length > 0) {
              g.segments.forEach(seg => {
                rows += `
-                 <div class="legend-item" style="justify-content: space-between; padding-left:10px; border-bottom:1px dotted #eee;">
+                 <div class="legend-item legend-row-detail">
                    <span>${seg.label}</span>
                    <span>${seg.dist}'</span>
                  </div>`
@@ -145,7 +169,7 @@ export function useUnifiedPrinter(
         
         html += `<div class="legend-section">
                    <h4>Tunnels</h4>
-                   <div style="display:flex; flex-direction:column; gap:2px;">${rows}</div>
+                   <div class="legend-col">${rows}</div>
                  </div>`;
       }
     }
@@ -164,7 +188,7 @@ export function useUnifiedPrinter(
         };
         const totalSign = diffs.totalNet > 0 ? "+" : "";
         statsContent += `
-          <div style="grid-column: span 2; border-top: 1px solid #eee; margin-top: 4px; padding-top: 4px; font-weight: bold;">
+          <div class="legend-stat-net">
             Changes: ${totalSign}${diffs.totalNet} Net
           </div>
           ${fmt(1)}${fmt(2)}${fmt(3)}
@@ -172,23 +196,25 @@ export function useUnifiedPrinter(
       }
       html += section("Counts", statsContent);
     }
+    
     if (l.showComparison){
-      html +=  section(
+      html += section(
         "Comparisons", `
           <div class="legend-item">
-            <span class="comp-add"></span>
+            <span class="symbol comp-add"></span>
             <span>Added</span>
           </div>
           <div class="legend-item">
-            <span class="comp-change"></span>
+            <span class="symbol comp-change"></span>
             <span>Changed</span>
           </div>
           <div class="legend-item">
-            <span class="comp-del"></span>
+            <span class="symbol comp-del"></span>
             <span>Removed</span>
           </div>
       `)
     }
+
     if (l.showBales) {
       html += section(
         "Bales",
@@ -198,15 +224,12 @@ export function useUnifiedPrinter(
     if (l.customItems && l.customDefinitions) {
       let c = "";
       l.customDefinitions.forEach((def) => {
-        // ONLY show in Custom if it differs from the default 'blue-dashed' tunnel
         if (l.customItems[def.id]) {
           if (def.isLine) {
             const stroke = def.style.strokeColor || "#333";
             const dash = def.style.dashStyle || "solid";
-            // Skip if it matches default tunnel style to avoid duplication
             const rawWidth = def.style.strokeWidth || 2;
             const legWidth = Math.max(1, rawWidth / 2); 
-
             if (stroke === "blue" && dash === "dashed") return;
             c += `<div class="legend-item"><span class="line-symbol" style="border-color:${stroke}; border-style:${dash}; border-bottom-width:${legWidth}px"></span> ${def.label}</div>`;
           } else {
@@ -218,39 +241,21 @@ export function useUnifiedPrinter(
       });
       html += section("Custom", c);
     }
+    
     let f = "";
-    if (l.showWalls)
-      f += `<div class="legend-item"><span class="symbol wall"></span> Wall</div>`;
-    if (l.showFence)
-      f += `<div class="legend-item"><span class="symbol fence"></span> Fence</div>`;
-
-    // [NEW] Tunnel Path
-    if (l.showTunnelPaths)
-      f += `<div class="legend-item"><span class="symbol tunnelpath"></span>T-Path</div>`;
-
-    if (l.showTunnels)
-      // Existing Board Tunnels
-      f += `<div class="legend-item"><span class="symbol" style="background:#5D4037; height:4px; border:none;"></span> Board</div>`;
-    if (l.showTunnelBox)
-      f += `<div class="legend-item"><span class="symbol tunnelbox"></span> T-Box</div>`;
-    if (l.showGate)
-      f += `<div class="legend-item"><span class="symbol gate"></span> Gate</div>`;
-    if (l.showStep)
-      f += `<div class="legend-item"><span class="symbol step"></span> Step</div>`;
-    if (l.showLeaners)
-      f += `<div class="legend-item"><span class="symbol leaner">→</span> Lean</div>`;
-    if (l.showAnchors)
-      f += `<div class="legend-item"><span class="symbol anchor">⚓</span> Anchor</div>`;
-    if (l.showStartBox)
-      f += `<div class="legend-item"><span class="symbol start"></span> Start</div>`;
-    if (l.showDCMat)
-      f += `<div class="legend-item"><span class="symbol dc"></span> DC Mat</div>`;
-    if (l.showObstruction)
-      f += `<div class="legend-item"><span class="symbol obstruction"></span> Obstr.</div>`;
-    if (l.showDeadZone)
-      f += `<div class="legend-item"><span class="symbol dead-zone"></span> Dead Z.</div>`;
-    if (l.showTunnelPaths)
-      f += `<div class="legend-item"><span class="symbol tunnel"></span> Tunnel</div>`;
+    if (l.showWalls) f += `<div class="legend-item"><span class="symbol wall"></span> Wall</div>`;
+    if (l.showFence) f += `<div class="legend-item"><span class="symbol fence"></span> Fence</div>`;
+    if (l.showTunnelPaths) f += `<div class="legend-item"><span class="symbol tunnelpath"></span>T-Path</div>`;
+    if (l.showTunnels) f += `<div class="legend-item"><span class="symbol board"></span>Board</div>`;
+    if (l.showTunnelBox) f += `<div class="legend-item"><span class="symbol tunnel"></span> T-Edge</div>`;
+    if (l.showGate) f += `<div class="legend-item"><span class="symbol gate"></span> Gate</div>`;
+    if (l.showStep) f += `<div class="legend-item"><span class="symbol step"></span> Step</div>`;
+    if (l.showLeaners) f += `<div class="legend-item"><span class="symbol leaner">→</span> Lean</div>`;
+    if (l.showAnchors) f += `<div class="legend-item"><span class="symbol anchor">⚓</span> Anchor</div>`;
+    if (l.showStartBox) f += `<div class="legend-item"><span class="symbol start"></span> Start</div>`;
+    if (l.showDCMat) f += `<div class="legend-item"><span class="symbol dc"></span> DC Mat</div>`;
+    if (l.showObstruction) f += `<div class="legend-item"><span class="symbol obstruction"></span> Obstr.</div>`;
+    if (l.showDeadZone) f += `<div class="legend-item"><span class="symbol dead-zone"></span> Dead Z.</div>`;
     html += section("Features", f);
 
     if (l.showHides) {
@@ -267,27 +272,19 @@ export function useUnifiedPrinter(
     const l = config.legend;
     let items = [];
 
-
     if (l.showTunnelStats) {
       const { tunnelGroups } = useTunnelLogic(store);
       const groups = tunnelGroups.value;
       
       if (groups && groups.length > 0) {
         groups.forEach((g) => {
-           // 1. Total Length (Bold)
            items.push(
-             `<div class="mini-item" style="font-weight:bold; border:1px solid #ddd; padding:0 3px; border-radius:3px; background:#f9f9f9;">
-                ${g.name}: ${g.totalLength}'
-              </div>`
+             `<div class="mini-item mini-item-box">${g.name}: ${g.totalLength}'</div>`
            );
-
-           // 2. Segments (Standard)
            if (g.segments && g.segments.length > 0) {
              g.segments.forEach(seg => {
                items.push(
-                 `<div class="mini-item" style="color:#555;">
-                    ${seg.label}: ${seg.dist}'
-                  </div>`
+                 `<div class="mini-item mini-item-sub">${seg.label}: ${seg.dist}'</div>`
                );
              });
            }
@@ -295,23 +292,19 @@ export function useUnifiedPrinter(
       }
     }
 
-
     if (l.showStats) {
       const inv = store.inventory;
-      // Add Total Count
       items.push(
-        `<div class="mini-item" style="border-right:1px solid #ccc; padding-right:5px; margin-right:2px;"><strong>Tot: ${inv.total}</strong></div>`,
+        `<div class="mini-item mini-item-divider"><strong>Tot: ${inv.total}</strong></div>`,
       );
 
       const diffs = store.differentials;
       if (diffs) {
         const totalSign = diffs.totalNet > 0 ? "+" : "";
-        // Add Net Change
         items.push(
           `<div class="mini-item"><strong>Net: ${totalSign}${diffs.totalNet}</strong></div>`,
         );
 
-        // Add Per-Layer Diffs
         [1, 2, 3].forEach((layer) => {
           const d = diffs[layer];
           if (d && (d.net !== 0 || d.moved > 0)) {
@@ -325,115 +318,53 @@ export function useUnifiedPrinter(
       }
     }
 
-if(l.showComparison) {
-  items.push(
-    `<div style="margin-top: 4px; display: flex; gap: 8px; font-size: 10px; flex-wrap: wrap;">
-                 <div style="display:flex; align-items:center; gap:2px;">
-                    <span style="width:10px; height:10px; border: 2px solid #00e676; display:inline-block;"></span> Added
-                 </div>
-                 <div style="display:flex; align-items:center; gap:2px;">
-                    <span style="width:10px; height:10px; border: 2px solid #ff9100; display:inline-block;"></span> Changed
-                 </div>
-                 <div style="display:flex; align-items:center; gap:2px;">
-                    <span style="width:10px; height:10px; border: 2px dashed #ff1744; display:inline-block;"></span> Removed
-                 </div>
-              </div>
-              `
-  )
-}
+    if(l.showComparison) {
+      items.push(
+        `<div class="comp-mini-container">
+             <div class="comp-mini-item">
+                <span class="comp-swatch-mini c-add-mini"></span> Add
+             </div>
+             <div class="comp-mini-item">
+                <span class="comp-swatch-mini c-chg-mini"></span> Chngd
+             </div>
+             <div class="comp-mini-item">
+                <span class="comp-swatch-mini c-del-mini"></span> Rmvd
+             </div>
+          </div>`
+      )
+    }
 
     // Bales
     if (l.showBales) {
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol l1"></span>L1</div>`,
-      );
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol l2"></span>L2</div>`,
-      );
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol l3"></span>L3</div>`,
-      );
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol flat"></span>Flat</div>`,
-      );
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol tall"></span>Tall</div>`,
-      );
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol pillar"></span>Pil</div>`,
-      );
+      items.push(`<div class="mini-item"><span class="mini-symbol l1"></span>L1</div>`);
+      items.push(`<div class="mini-item"><span class="mini-symbol l2"></span>L2</div>`);
+      items.push(`<div class="mini-item"><span class="mini-symbol l3"></span>L3</div>`);
+      items.push(`<div class="mini-item"><span class="mini-symbol flat"></span>Flat</div>`);
+      items.push(`<div class="mini-item"><span class="mini-symbol tall"></span>Tall</div>`);
+      items.push(`<div class="mini-item"><span class="mini-symbol pillar"></span>Pil</div>`);
     }
 
     // Features
-    if (l.showWalls)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol wall"></span>Wall</div>`,
-      );
-    if (l.showFence)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol fence"></span>Fen</div>`,
-      );
-
-    if (l.showTunnelPaths)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol tunnelpath"></span>Tun</div>`,
-      );
-    if (l.showTunnels)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol board"></span>Brd</div>`,
-      );
-
-    if (l.showTunnelBox)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol tunnelbox"></span>TBox</div>`,
-      );
-    if (l.showGate)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol gate"></span>Gt</div>`,
-      );
-    if (l.showStep)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol step"></span>Stp</div>`,
-      );
-    if (l.showLeaners)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol leaner">→</span>Ln</div>`,
-      );
-    if (l.showAnchors)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol anchor">⚓</span>Anc</div>`,
-      );
-    if (l.showStartBox)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol start"></span>Sta</div>`,
-      );
-    if (l.showDCMat)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol dc"></span>DC</div>`,
-      );
-    if (l.showObstruction)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol obstruction"></span>Obs</div>`,
-      );
-    if (l.showDeadZone)
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol dead-zone"></span>Ded</div>`,
-      );
+    if (l.showWalls) items.push(`<div class="mini-item"><span class="mini-symbol wall"></span>Wall</div>`);
+    if (l.showFence) items.push(`<div class="mini-item"><span class="mini-symbol fence"></span>Fen</div>`);
+    if (l.showTunnelPaths) items.push(`<div class="mini-item"><span class="mini-symbol tunnelpath"></span>Tun</div>`);
+    if (l.showTunnels) items.push(`<div class="mini-item"><span class="mini-symbol board"></span>Brd</div>`);
+    if (l.showTunnelBox) items.push(`<div class="mini-item"><span class="mini-symbol tunnel"></span>TEdge</div>`);
+    if (l.showGate) items.push(`<div class="mini-item"><span class="mini-symbol gate"></span>Gt</div>`);
+    if (l.showStep) items.push(`<div class="mini-item"><span class="mini-symbol step"></span>Stp</div>`);
+    if (l.showLeaners) items.push(`<div class="mini-item"><span class="mini-symbol leaner">→</span>Ln</div>`);
+    if (l.showAnchors) items.push(`<div class="mini-item"><span class="mini-symbol anchor">⚓</span>Anc</div>`);
+    if (l.showStartBox) items.push(`<div class="mini-item"><span class="mini-symbol start"></span>Sta</div>`);
+    if (l.showDCMat) items.push(`<div class="mini-item"><span class="mini-symbol dc"></span>DC</div>`);
+    if (l.showObstruction) items.push(`<div class="mini-item"><span class="mini-symbol obstruction"></span>Obs</div>`);
+    if (l.showDeadZone) items.push(`<div class="mini-item"><span class="mini-symbol dead-zone"></span>Ded</div>`);
 
     // Hides
     if (l.showHides) {
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol hide-rat" style="border-radius:50%">R</span>R</div>`,
-      );
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol hide-litter" style="border-radius:50%">L</span>L</div>`,
-      );
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol hide-empty" style="border-radius:50%">E</span>E</div>`,
-      );
-      items.push(
-        `<div class="mini-item"><span class="mini-symbol hide-rat-under" style="border-radius:50%; border-style:dashed"></span>Under</div>`,
-      );
+      items.push(`<div class="mini-item"><span class="mini-symbol hide-rat" style="border-radius:50%">R</span>R</div>`);
+      items.push(`<div class="mini-item"><span class="mini-symbol hide-litter" style="border-radius:50%">L</span>L</div>`);
+      items.push(`<div class="mini-item"><span class="mini-symbol hide-empty" style="border-radius:50%">E</span>E</div>`);
+      items.push(`<div class="mini-item"><span class="mini-symbol hide-rat-under" style="border-radius:50%; border-style:dashed"></span>Under</div>`);
     }
 
     // Custom Items
@@ -443,7 +374,6 @@ if(l.showComparison) {
           if (def.isLine) {
             const stroke = def.style.strokeColor || "#333";
             const dash = def.style.dashStyle || "solid";
-
             const rawWidth = def.style.strokeWidth || 2;
             const legWidth = Math.max(1, rawWidth / 2);
             if (stroke === "blue" && dash === "dashed") return;
@@ -644,7 +574,7 @@ if(l.showComparison) {
                         <div class="ch-sub">${p.title}</div>
                       </div>
                       <div class="ch-meta">
-                         <div style="font-weight:bold">${metaCombined}</div>
+                         <div class="ch-meta-bold">${metaCombined}</div>
                          <div>${metaJudge} • ${metaClub}</div>
                       </div>
                     </div>
@@ -681,7 +611,7 @@ if(l.showComparison) {
       return { success: true };
     } catch (e) {
       console.error(e);
-      win.document.body.innerHTML = `<h3 style="color:red">Error: ${e.message}</h3>`;
+      win.document.body.innerHTML = `<h3 class="error-msg">Error: ${e.message}</h3>`;
       return { success: false, error: e.message };
     } finally {
       store.currentLayer = originalLayer;

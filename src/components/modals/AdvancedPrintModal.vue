@@ -41,7 +41,7 @@ const config = reactive({
     showDCMat: true,
     showObstruction: true,
     showDeadZone: true,
-    showComparison: false,
+    showComparison: true,
     customItems: {} 
   }
 })
