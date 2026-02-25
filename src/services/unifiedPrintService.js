@@ -115,24 +115,34 @@ export function useUnifiedPrinter(
         : "";
 
     if (l.showTunnelStats) {
-      // Reuse the logic from the editor to get the grouped lengths
       const { tunnelGroups } = useTunnelLogic(store);
       const groups = tunnelGroups.value;
 
       if (groups && groups.length > 0) {
         let rows = "";
         groups.forEach((g) => {
-          // Simple row: "Tunnel 1 ....... 15.0'"
+          // Row 1: Name and Total
           rows += `
-             <div class="legend-item" style="justify-content: space-between; border-bottom: 1px dotted #eee;">
+             <div class="legend-item" style="justify-content: space-between; font-weight:bold; margin-top:5px; background:#f5f5f5; padding:2px;">
                <span>${g.name}</span>
-               <strong>${g.totalLength}'</strong>
+               <span>${g.totalLength}'</span>
              </div>`;
+          
+          // Row 2+: Segments
+          if (g.segments && g.segments.length > 0) {
+             g.segments.forEach(seg => {
+               rows += `
+                 <div class="legend-item" style="justify-content: space-between; padding-left:10px; border-bottom:1px dotted #eee;">
+                   <span>${seg.label}</span>
+                   <span>${seg.dist}'</span>
+                 </div>`
+             })
+          }
         });
-        // Use a single-column grid for this section so it reads like a list
+        
         html += `<div class="legend-section">
                    <h4>Tunnels</h4>
-                   <div style="display:flex; flex-direction:column; gap:4px;">${rows}</div>
+                   <div style="display:flex; flex-direction:column; gap:2px;">${rows}</div>
                  </div>`;
       }
     }
@@ -243,13 +253,24 @@ export function useUnifiedPrinter(
       const groups = tunnelGroups.value;
       
       if (groups && groups.length > 0) {
-        groups.forEach((g, i) => {
-           // Format: "T1: 15 ft"
+        groups.forEach((g) => {
+           // 1. Total Length (Bold)
            items.push(
              `<div class="mini-item" style="font-weight:bold; border:1px solid #ddd; padding:0 3px; border-radius:3px; background:#f9f9f9;">
-                T${i+1}: ${g.totalLength} ft
+                ${g.name}: ${g.totalLength}'
               </div>`
            );
+
+           // 2. Segments (Standard)
+           if (g.segments && g.segments.length > 0) {
+             g.segments.forEach(seg => {
+               items.push(
+                 `<div class="mini-item" style="color:#555;">
+                    ${seg.label}: ${seg.dist}'
+                  </div>`
+               );
+             });
+           }
         });
       }
     }

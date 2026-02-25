@@ -1,6 +1,73 @@
 // src/components/editor/tunnels/useTunnelLogic.js
 import { ref, computed } from 'vue'
 
+
+// [INSERT] At the top of the file, add this graph helper
+// [REPLACE] The existing buildGraph function
+function buildGraph(paths, resolveFn) {
+  const adj = new Map()
+  const addNode = (pt) => {
+    const key = `${pt.x.toFixed(2)},${pt.y.toFixed(2)}`
+    if (!adj.has(key)) adj.set(key, { ...pt, neighbors: [] })
+    return key
+  }
+
+  // 1. Collect all points from all paths
+  const allPoints = []
+  paths.forEach(p => {
+    const pts = resolveFn(p)
+    pts.forEach(pt => allPoints.push(pt))
+  })
+
+  // 2. Iterate every segment of every path and split at intersections
+  paths.forEach(p => {
+    const pts = resolveFn(p)
+    for (let i = 0; i < pts.length - 1; i++) {
+      const pStart = pts[i]
+      const pEnd = pts[i+1]
+      
+      // Find all points that lie on this segment
+      const pointsOnSegment = []
+      
+      allPoints.forEach(pt => {
+        // Use a small epsilon for "on segment" check
+        // getDistToSegment is available from the scope below
+        if (getDistToSegment(pt, pStart, pEnd) < 0.1) {
+           pointsOnSegment.push(pt)
+        }
+      })
+      
+      // Sort points linearly from Start to End
+      const dx = pEnd.x - pStart.x
+      const dy = pEnd.y - pStart.y
+      
+      pointsOnSegment.sort((a, b) => {
+        const projA = (a.x - pStart.x) * dx + (a.y - pStart.y) * dy
+        const projB = (b.x - pStart.x) * dx + (b.y - pStart.y) * dy
+        return projA - projB
+      })
+
+      // Add edges between consecutive points
+      for (let k = 0; k < pointsOnSegment.length - 1; k++) {
+        const u = pointsOnSegment[k]
+        const v = pointsOnSegment[k+1]
+        
+        const dist = Math.sqrt((u.x - v.x)**2 + (u.y - v.y)**2)
+        if (dist < 0.1) continue // Skip duplicates
+
+        const ku = addNode(u)
+        const kv = addNode(v)
+        
+        // Add bidirectional edge
+        adj.get(ku).neighbors.push({ key: kv, dist })
+        adj.get(kv).neighbors.push({ key: ku, dist })
+      }
+    }
+  })
+  
+  return adj
+}
+
 // --- MATH HELPERS ---
 function rotatePoint(px, py, cx, cy, angleDeg) {
   const rad = angleDeg * (Math.PI / 180)
@@ -233,45 +300,60 @@ export function useTunnelLogic(store) {
     }
   }
 
-  const tunnelGroups = computed(() => {
+  function findPathDist(startPt, endPt, graph) {
+  const startKey = `${startPt.x.toFixed(2)},${startPt.y.toFixed(2)}`
+  const endKey = `${endPt.x.toFixed(2)},${endPt.y.toFixed(2)}`
+  if (!graph.has(startKey) || !graph.has(endKey)) return 0
+
+  // Dijkstra
+  const dists = new Map(); dists.set(startKey, 0)
+  const queue = [startKey]
+  
+  while(queue.length) {
+    queue.sort((a,b) => (dists.get(a)||Infinity) - (dists.get(b)||Infinity))
+    const u = queue.shift()
+    if (u === endKey) return dists.get(u)
+
+    const neighbors = graph.get(u).neighbors
+    for(const n of neighbors) {
+      const alt = dists.get(u) + n.dist
+      if (alt < (dists.get(n.key) || Infinity)) {
+        dists.set(n.key, alt)
+        queue.push(n.key)
+      }
+    }
+  }
+  return 0
+}
+
+// [REPLACE] The tunnelGroups computed property
+const tunnelGroups = computed(() => {
     const paths = store.mapData.tunnelPaths
     const visited = new Set()
     const groups = []
 
-    // Helper: Check if p1 connects to p2 (Vertex-to-Vertex OR Vertex-to-Segment)
+    // 1. Cluster paths (Keep existing clustering logic)
     const areConnected = (p1, p2) => {
-      const pts1 = resolvePathPoints(p1)
-      const pts2 = resolvePathPoints(p2)
-      const THRESHOLD = 0.15 // Slightly larger than strict equality
-
-      // Check if any point in pts1 is on the LINE of pts2
-      const p1TouchingP2 = pts1.some(pt => {
+      const pts1 = resolvePathPoints(p1); const pts2 = resolvePathPoints(p2)
+      const THRESHOLD = 0.15 
+      return pts1.some(pt => {
         for (let i = 0; i < pts2.length - 1; i++) {
           if (getDistToSegment(pt, pts2[i], pts2[i+1]) < THRESHOLD) return true
         }
         return false
-      })
-      if (p1TouchingP2) return true
-
-      // Check if any point in pts2 is on the LINE of pts1
-      const p2TouchingP1 = pts2.some(pt => {
-        for (let i = 0; i < pts1.length - 1; i++) {
+      }) || pts2.some(pt => {
+         for (let i = 0; i < pts1.length - 1; i++) {
           if (getDistToSegment(pt, pts1[i], pts1[i+1]) < THRESHOLD) return true
         }
         return false
       })
-      return p2TouchingP1
     }
 
-    // Recursive Cluster Builder
     const buildCluster = (currentPath, cluster) => {
       visited.add(currentPath.id)
       cluster.push(currentPath)
-      
       paths.forEach(p2 => {
-        if (!visited.has(p2.id) && areConnected(currentPath, p2)) {
-          buildCluster(p2, cluster)
-        }
+        if (!visited.has(p2.id) && areConnected(currentPath, p2)) buildCluster(p2, cluster)
       })
     }
 
@@ -280,21 +362,74 @@ export function useTunnelLogic(store) {
         const cluster = []
         buildCluster(p, cluster)
         
+        // --- Portal & Segment Logic ---
+        
+        // 1. Calculate Total Length (Sum of lines)
         let totalLen = 0
         cluster.forEach(subPath => {
           const pts = resolvePathPoints(subPath)
           for (let i = 0; i < pts.length - 1; i++) {
-            const dx = pts[i+1].x - pts[i].x
-            const dy = pts[i+1].y - pts[i].y
-            totalLen += Math.sqrt(dx*dx + dy*dy)
+             totalLen += Math.sqrt((pts[i+1].x - pts[i].x)**2 + (pts[i+1].y - pts[i].y)**2)
           }
         })
+
+        // 2. Identify Portals (Board Edges)
+        const portalIds = new Set()
+        cluster.forEach(subPath => {
+          if(!subPath.points) return
+          subPath.points.forEach(pt => {
+            if(pt.type === 'edge-anchor' && pt.targetId) portalIds.add(pt.targetId)
+          })
+        })
+
+        const portals = Array.from(portalIds).map((eid, idx) => {
+          const edge = store.mapData.boardEdges.find(e => e.id === eid)
+          if(!edge) return null
+          
+          // Position label at 25% of the line to avoid the center snap handle
+          const t = 0.25 
+          return {
+            id: eid,
+            label: String.fromCharCode(65 + idx), // A, B, C...
+            x: edge.x1 + (edge.x2 - edge.x1) * t,
+            y: edge.y1 + (edge.y2 - edge.y1) * t,
+            rawX: (edge.x1 + edge.x2) / 2, // Keep center for graph calculation
+            rawY: (edge.y1 + edge.y2) / 2
+          }
+        }).filter(Boolean)
+
+        // 3. Build Graph & Calculate Pairwise Distances
+        const segments = []
+        if(portals.length > 1) {
+           const graph = buildGraph(cluster, resolvePathPoints)
+           
+           for(let i=0; i<portals.length; i++) {
+             for(let j=i+1; j<portals.length; j++) {
+               const pA = portals[i]; const pB = portals[j]
+               
+               // We must use the raw center points for the graph traversal
+               // because the graph nodes are built from the path endpoints (which are centered on edges)
+               const start = { x: pA.rawX, y: pA.rawY }
+               const end = { x: pB.rawX, y: pB.rawY }
+
+               const dist = findPathDist(start, end, graph)
+               if(dist > 0) {
+                 segments.push({
+                   label: `${pA.label}-${pB.label}`,
+                   dist: dist.toFixed(1)
+                 })
+               }
+             }
+           }
+        }
 
         groups.push({
           id: cluster[0].id,
           name: `Tunnel ${groups.length + 1}`,
           paths: cluster,
-          totalLength: totalLen.toFixed(1)
+          totalLength: totalLen.toFixed(1),
+          portals,
+          segments
         })
       }
     })

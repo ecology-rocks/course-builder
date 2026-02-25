@@ -11,7 +11,19 @@ const props = defineProps({
 
 const store = useMapStore()
 // [UPDATE] Import updatePathPoint
-const { resolvePathPoints, selectPath, handlePathClick, updatePathPoint } = useTunnelLogic(store)
+const { resolvePathPoints, selectPath, handlePathClick, updatePathPoint, tunnelGroups } = useTunnelLogic(store)
+
+// [NEW] Computed for Portal Labels
+const portalLabels = computed(() => {
+  // Only show labels for active layer tunnels
+  return tunnelGroups.value
+    .flatMap(g => g.portals)
+    .map(p => ({
+      ...p,
+      x: p.x * props.scale,
+      y: p.y * props.scale
+    }))
+})
 
 // --- MATH HELPERS (Keep existing) ---
 function getIntersection(p1, p2, p3, p4) {
@@ -303,4 +315,14 @@ function onHandleClick(evt) {
 
     </v-group>
   </v-group>
+  <v-group v-for="p in portalLabels" :key="p.id" :config="{ x: p.x, y: p.y }">
+       <v-circle :config="{ radius: 10, fill: '#5d4037' }" />
+       <v-text :config="{
+         text: p.label,
+         fontSize: 14,
+         fill: 'white',
+         fontStyle: 'bold',
+         offsetX: 5, offsetY: 7
+       }" />
+    </v-group>
 </template>

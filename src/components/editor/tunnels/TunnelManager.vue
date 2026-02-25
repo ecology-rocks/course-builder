@@ -88,9 +88,15 @@ function isSelected(id) {
         <div v-for="group in tunnelGroups" :key="group.id" class="tunnel-item"
           :class="{ active: isGroupSelected(group) }" @click="selectGroup(group)">
           <div class="tunnel-info">
-            <span class="tunnel-name">{{ group.name }}</span>
-            <span class="tunnel-meta">{{ group.totalLength }} ft</span>
-          </div>
+  <span class="tunnel-name">{{ group.name }}</span>
+  <span class="tunnel-meta">Total: {{ group.totalLength }} ft</span>
+  
+  <div v-if="group.segments && group.segments.length > 0" class="tunnel-segments">
+    <div v-for="seg in group.segments" :key="seg.label">
+       {{ seg.label }}: <b>{{ seg.dist }}'</b>
+    </div>
+  </div>
+</div>
           <button class="btn-delete" @click.stop="deleteGroup(group)">🗑️</button>
         </div>
       </div>
@@ -342,5 +348,13 @@ function isSelected(id) {
   color: #333;
   pointer-events: auto;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.tunnel-segments {
+  margin-top: 4px;
+  font-size: 11px;
+  color: #444;
+  padding-left: 8px;
+  border-left: 2px solid #eee;
 }
 </style>
