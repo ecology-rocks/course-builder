@@ -8,10 +8,22 @@ const store = useMapStore()
 
 const { 
   snapTargets, handleSnapClick, handleFreeClick, handlePathClick,
-  freeDrawAnchor, handleFreeEdgeClick, findPathAtPoint, cancelFreeDraw
+  freeDrawAnchor, handleFreeEdgeClick, findPathAtPoint, cancelFreeDraw,
+  resolvePathPoints
 } = useTunnelLogic(store)
 
 const currentMousePos = ref({ x: 0, y: 0 })
+
+const activePathLastPoint = computed(() => {
+  if (store.activeTool === 'tunnel_path' && store.tunnelConfig.activePathId) {
+    const path = store.mapData.tunnelPaths.find(p => p.id === store.tunnelConfig.activePathId)
+    if (path && path.points && path.points.length > 0) {
+      const pts = resolvePathPoints(path)
+      return pts[pts.length - 1]
+    }
+  }
+  return null
+})
 
 // [NEW] Global Escape Key Handler
 function handleGlobalKey(e) {
@@ -68,13 +80,15 @@ function handleStageClick(e) {
 
 // Track mouse for the rubber-band line
 function handleMouseMove(e) {
-  if (store.activeTool === 'tunnel_edges' && freeDrawAnchor.value) {
+  if ((store.activeTool === 'tunnel_edges' && freeDrawAnchor.value) || 
+      (store.activeTool === 'tunnel_path' && store.tunnelConfig.activePathId)) {
     const stage = e.target.getStage()
     const ptr = stage.getRelativePointerPosition()
     const GRID_OFFSET = 30
+    const snap = (v) => Math.round(v * 6) / 6
     currentMousePos.value = {
-      x: (ptr.x - GRID_OFFSET) / props.scale,
-      y: (ptr.y - GRID_OFFSET) / props.scale
+      x: snap((ptr.x - GRID_OFFSET) / props.scale),
+      y: snap((ptr.y - GRID_OFFSET) / props.scale)
     }
   }
 }
@@ -103,7 +117,8 @@ function handleMouseMove(e) {
           ],
           stroke: '#2196f3',
           strokeWidth: 2,
-          dash: [5, 5]
+          dash: [5, 5],
+          listening: false
         }"
       />
     </v-group>
@@ -127,6 +142,22 @@ function handleMouseMove(e) {
         }"
         @mouseenter="$event.target.scale({x:1.3, y:1.3})"
         @mouseleave="$event.target.scale({x:1, y:1})"
+      />
+
+      <v-line 
+        v-if="activePathLastPoint"
+        :config="{
+          points: [
+            activePathLastPoint.x * scale, 
+            activePathLastPoint.y * scale, 
+            currentMousePos.x * scale, 
+            currentMousePos.y * scale
+          ],
+          stroke: '#ff00ff',
+          strokeWidth: 2,
+          dash: [5, 5],
+          listening: false
+        }"
       />
     </v-group>
 

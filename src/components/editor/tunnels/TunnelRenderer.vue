@@ -173,8 +173,9 @@ function onLineClick(evt, pathId) {
     const stage = evt.target.getStage()
     const ptr = stage.getRelativePointerPosition()
     const GRID_OFFSET = 30
-    const rawX = (ptr.x - GRID_OFFSET) / props.scale
-    const rawY = (ptr.y - GRID_OFFSET) / props.scale
+    const snap = (v) => Math.round(v * 6) / 6
+    const rawX = snap((ptr.x - GRID_OFFSET) / props.scale)
+    const rawY = snap((ptr.y - GRID_OFFSET) / props.scale)
 
     // 2. Find the target path object
     const targetPath = store.mapData.tunnelPaths.find(p => p.id === pathId)
@@ -212,6 +213,15 @@ function onHandleDragEnd(evt, pathId, index) {
   const newY = evt.target.y() / props.scale
   
   updatePathPoint(pathId, index, newX, newY)
+}
+
+function snapDragBound(pos) {
+  const GRID_OFFSET = 30
+  const snap = (v) => Math.round(v * 6) / 6
+  return {
+    x: snap((pos.x - GRID_OFFSET) / props.scale) * props.scale + GRID_OFFSET,
+    y: snap((pos.y - GRID_OFFSET) / props.scale) * props.scale + GRID_OFFSET
+  }
 }
 
 function onHandleClick(evt) {
@@ -305,7 +315,8 @@ function onHandleClick(evt) {
           fill: 'white',
           stroke: '#fa8c16',
           strokeWidth: 2,
-          draggable: true
+          draggable: true,
+          dragBoundFunc: snapDragBound
         }"
         @dragend="onHandleDragEnd($event, t.id, h.index)"
         @click="onHandleClick"

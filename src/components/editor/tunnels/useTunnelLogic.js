@@ -124,7 +124,7 @@ export function useTunnelLogic(store) {
     if (store.activeTool !== 'tunnel_edges') return
     
     // Simple Snap to 0.5 grid for sanity, or remove for pure freehand
-    const snap = (v) => Math.round(v * 2) / 2
+    const snap = (v) => Math.round(v * 6) / 6
     const sx = snap(x)
     const sy = snap(y)
 
@@ -196,12 +196,13 @@ export function useTunnelLogic(store) {
   }
 
   // 3. Free Click Logic
-  function handleFreeClick(x, y) {
+function handleFreeClick(x, y) {
     if (store.activeTool !== 'tunnel_path' || !store.tunnelConfig.activePathId) return
 
+    const snap = (v) => Math.round(v * 6) / 6
     const path = store.mapData.tunnelPaths.find(p => p.id === store.tunnelConfig.activePathId)
     if (path) {
-      path.points.push({ type: 'static', x, y })
+      path.points.push({ type: 'static', x: snap(x), y: snap(y) })
     }
   }
 
@@ -471,7 +472,7 @@ const tunnelGroups = computed(() => {
 
     // Convert to static point at new location
     // We snap to 0.5 grid here for consistency
-    const snap = (v) => Math.round(v * 2) / 2
+    const snap = (v) => Math.round(v * 6) / 6
     
     path.points[pointIndex] = {
       type: 'static',
