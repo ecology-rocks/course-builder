@@ -422,7 +422,7 @@ function handleDragEnd(e, id) {
   <v-group :config="{ listening: !props.locked }">
   <StepMarker v-for="step in store.steps" :key="step.id" :step="step" :scale="scale"
     :isSelected="store.selection.includes(step.id)" :ref="(el) => setRef(el, step.id)" @select="handleSelect"
-    @update="(id, attrs) => store.updateStep(id, attrs)" @dragstart="handleDragStart($event, step.id)"
+    @update="(attrs) => store.updateStep(attrs.id, attrs)" @dragstart="handleDragStart($event, step.id)"
     @dragmove="handleDragMove($event, step.id)" @dragend="handleDragEnd($event, step.id)"
     @contextmenu="handleStepContextMenu" :opacity="store.currentLayer > 1 ? store.layerOpacity : 1"
     @rotate="store.rotateStep" />

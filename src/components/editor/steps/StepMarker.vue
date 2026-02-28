@@ -63,6 +63,16 @@ function handleKeyUp(e) {
   if (e.key === 'Control' || e.metaKey) isCtrlPressed.value = false
 }
 
+function handleDragEnd(e) {
+  const node = e.target
+  emit('update', {
+    id: props.step.id,
+    x: node.x() / props.scale,
+    y: node.y() / props.scale
+  })
+  emit('dragend', e)
+}
+
 function handleContextMenu(e) {
   // Prevent the browser menu
   e.evt.preventDefault()
@@ -140,11 +150,12 @@ function handleTransformEnd() {
   }
 
   // [UPDATED] Smart Update Logic
-  const updates = {
+const updates = {
     x: group.x() / props.scale,
     y: group.y() / props.scale,
     rotation: normalizedRotation
   }
+  console.log('[DEBUG StepMarker] Transform ended. Emitting updates:', updates)
 
   // If custom width exists, update it. Otherwise update standard width.
   if (props.step.custom?.width != null) {
