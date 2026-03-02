@@ -59,6 +59,11 @@ onMounted(async () => {
     store.mapName = d.name
     store.sport = d.sport
     store.ringDimensions = coreData.dimensions || { width: 24, height: 24 }
+
+    // [FIX] Populate missing global visual configs
+    if (coreData.baleConfig) store.baleConfig = coreData.baleConfig
+    if (coreData.baleColors) store.baleColors = coreData.baleColors
+    if (coreData.wallTypes) store.wallTypes = coreData.wallTypes
     
     // 2. Populate Metadata (With Fallbacks)
     // We check coreData first, then root d (just in case), then empty string
