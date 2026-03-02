@@ -159,7 +159,7 @@ function handleSave() {
       </button>
 
       <div v-if="showMoreMenu" class="more-menu">
-        <button v-if="isAdmin" @click="emit('save-library')">📚 Save to Library</button>
+        <button v-if="isPro" @click="emit('save-library')">📚 Save to Library</button>
         <button @click="triggerFileUpload">⬆ Import JSON</button>
         <button @click="store.exportMapToJSON()">⬇ Export JSON</button>
         <button @click="store.realignGrid()">📏 Realign All to Grid</button>
