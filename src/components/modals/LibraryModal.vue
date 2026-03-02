@@ -11,29 +11,42 @@ const userStore = useUserStore()
 const items = ref([])
 const loading = ref(true)
 const isAdmin = userStore.user?.email === 'reallyjustsam@gmail.com'
+
+// Filter states
 const activeTab = ref('all')
+const searchQuery = ref('')
+const showPublicItems = ref(true)
 
 const filteredItems = computed(() => {
-  if (activeTab.value === 'all') return items.value
-
-  // Normalizes types (e.g. "tunnel" matches "Tunnels" tab)
   return items.value.filter(item => {
+    // 1. Toggle Filter
+    if (!showPublicItems.value && item.isPublic) return false
+
+    // 2. Tab Filter
     const type = (item.type || '').toLowerCase()
-    if (activeTab.value === 'tunnel') return type.includes('tunnel')
-    if (activeTab.value === 'ring') return type.includes('ring')
-    if (activeTab.value === 'pattern') return type.includes('pattern') || type.includes('sequence')
-    return false
+    let matchesTab = false
+    if (activeTab.value === 'all') matchesTab = true
+    else if (activeTab.value === 'tunnel') matchesTab = type.includes('tunnel')
+    else if (activeTab.value === 'ring') matchesTab = type.includes('ring')
+    else if (activeTab.value === 'pattern') matchesTab = type.includes('pattern') || type.includes('sequence')
+    
+    if (!matchesTab) return false
+
+    // 3. Search Text Filter
+    if (searchQuery.value) {
+      if (!item.name.toLowerCase().includes(searchQuery.value.toLowerCase())) return false
+    }
+
+    return true
   })
 })
 
 onMounted(async () => {
-  items.value = await libraryService.getLibraryItems(store.sport)
+  items.value = await libraryService.getLibraryItems(store.sport, userStore.user?.email)
   loading.value = false
 })
 
 function handleImport(item) {
-  // We re-use the "Merge" function you built earlier!
-  // We just need to wrap the raw data in JSON
   const jsonString = JSON.stringify(item.data)
   store.mergeMapFromJSON(jsonString)
   emit('close')
@@ -51,6 +64,18 @@ async function handleDelete(id) {
     <div class="modal">
       <header>
         <h2>📚 Map Library </h2>
+        <div class="header-controls">
+          <input 
+            v-model="searchQuery" 
+            type="text" 
+            placeholder="Search items..." 
+            class="search-input"
+          />
+          <label class="toggle-label">
+            <input type="checkbox" v-model="showPublicItems" />
+            Show Public
+          </label>
+        </div>
         <button @click="$emit('close')" class="close-btn">×</button>
       </header>
       <div class="tabs">
@@ -76,7 +101,7 @@ async function handleDelete(id) {
           </div>
           <div class="card-actions">
             <button @click="handleImport(item)" class="btn-primary">➕ Add to Map</button>
-            <button v-if="isAdmin" @click="handleDelete(item.id)" class="btn-danger">🗑️</button>
+            <button v-if="isAdmin || item.createdBy === userStore.user?.email" @click="handleDelete(item.id)" class="btn-danger">🗑️</button>
           </div>
         </div>
       </div>
@@ -85,6 +110,24 @@ async function handleDelete(id) {
 </template>
 
 <style scoped>
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.search-input {
+  padding: 6px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9rem;
+  color: #555;
+  cursor: pointer;
+}
 .tabs { display: flex; gap: 10px; padding: 10px 20px; border-bottom: 1px solid #eee; background: #fafafa; }
 .tabs button { 
   background: none; border: none; padding: 8px 12px; cursor: pointer; 

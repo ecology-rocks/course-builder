@@ -1,13 +1,18 @@
 <script setup>
 import { ref } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
+import { useUserStore } from '@/stores/userStore'
 
 const emit = defineEmits(['close', 'confirm'])
 const mapStore = useMapStore()
+const userStore = useUserStore()
+
+const isAdmin = userStore.user?.email === 'reallyjustsam@gmail.com'
 
 // Local State
 const name = ref(mapStore.mapName || 'Untitled Item')
 const selectedCategory = ref('tunnel') 
+const isPublic = ref(isAdmin) // Default to public if admin, false otherwise
 const isSaving = ref(false)
 const error = ref(null)
 
@@ -24,11 +29,11 @@ function handleSave() {
     return
   }
   
-  // Just emit the data. The Parent (MapEditor) handles the screenshot & saving.
   isSaving.value = true
   emit('confirm', { 
     name: name.value, 
-    category: selectedCategory.value 
+    category: selectedCategory.value,
+    isPublic: isPublic.value
   })
 }
 </script>
@@ -65,6 +70,13 @@ function handleSave() {
         </div>
       </div>
 
+      <div v-if="isAdmin" class="form-group checkbox-group">
+          <label>
+            <input type="checkbox" v-model="isPublic" />
+            Save as Public Library Item
+          </label>
+        </div>
+
       <div class="modal-footer">
         <button class="btn-cancel" @click="$emit('close')">Cancel</button>
         <button class="btn-save" @click="handleSave" :disabled="isSaving">
@@ -76,6 +88,8 @@ function handleSave() {
 </template>
 
 <style scoped>
+.checkbox-group { display: flex; align-items: center; }
+
 .modal-overlay { 
   position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
   background: rgba(0,0,0,0.5); z-index: 3000;
