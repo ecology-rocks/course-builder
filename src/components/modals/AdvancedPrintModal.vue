@@ -21,6 +21,7 @@ const config = reactive({
   copies: 1, 
   
   layers: { 1: true, 2: false, 3: false },
+  blinds: { showRandoms: true },
   hides: { mode: 'none' },
 
   legend: {
@@ -230,6 +231,7 @@ function handlePrint() {
     overlayAll: config.overlayAll,
     copies: config.copies,
     hides: { mode: config.hides.mode },
+    blinds: { showRandoms: config.blinds.showRandoms },
     legend: { ...config.legend, customDefinitions: detectedCustoms.value },
     selectedBlindIds: selectedBlindIds.value,
     judgeNotes: store.judgeNotes
@@ -374,7 +376,14 @@ function handlePrint() {
               <label v-for="blind in availableBlinds" :key="blind.id" class="blind-item">
                 <input type="checkbox" v-model="selectedBlindIds" :value="blind.id">
                 <span class="blind-name">{{ blind.name }}</span>
-                <span class="blind-info">{{ blind.randoms.join('-') }}</span>
+                <span class="blind-info" v-if="config.blinds.showRandoms">{{ blind.randoms.join('-') }}</span>
+              </label>
+            </div>
+            
+            <div class="sub-group" style="margin-top: 15px;">
+              <label class="checkbox-row">
+                <input type="checkbox" v-model="config.blinds.showRandoms">
+                <strong>Print Random Numbers</strong>
               </label>
             </div>
         </div>

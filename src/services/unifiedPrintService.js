@@ -492,9 +492,18 @@ export function useUnifiedPrinter(
         for (const blind of blinds) {
           store.hides = blind.hides;
           const img = await captureStage(40);
+          
+          const showRandoms = config.blinds && config.blinds.showRandoms !== false;
+          const randomsText = showRandoms && blind.randoms && blind.randoms.length 
+            ? `Randoms: ${blind.randoms.join(" - ")}` 
+            : '';
+
+          // Append randoms to the title so the mapName can take the main header slot
+          const titleText = randomsText ? `${blind.name} (${randomsText})` : blind.name;
+
           capturedPages.push({
-            title: blind.name,
-            subTitle: `Randoms: ${blind.randoms.join(" - ")}`,
+            title: titleText,
+            subTitle: store.mapName,
             img,
           });
         }
@@ -529,11 +538,13 @@ export function useUnifiedPrinter(
 
             return `
           <div class="print-page">
-            ${watermark}
-            <div class="header">
-              <div class="title-block">
-                <h1>${p.subTitle}</h1> <h2>${fullSubHeader}</h2> </div>
-              <div class="meta-block">
+                ${watermark}
+                <div class="header">
+                  <div class="title-block">
+                    ${p.subTitle ? `<h1>${p.subTitle}</h1>` : ''} 
+                    <h2>${fullSubHeader}</h2> 
+                  </div>
+                  <div class="meta-block">
                 <strong>Judge:</strong> ${metaJudge}<br>
                 <strong>Club:</strong> ${metaClub}
               </div>
@@ -568,11 +579,11 @@ export function useUnifiedPrinter(
                  .map(
                    (p) => `
                  <div class="grid-item">
-                    <div class="compact-header">
-                      <div class="ch-top">
-                        <div class="ch-title">${p.subTitle}</div>
-                        <div class="ch-sub">${p.title}</div>
-                      </div>
+                        <div class="compact-header">
+                          <div class="ch-top">
+                            ${p.subTitle ? `<div class="ch-title">${p.subTitle}</div>` : ''}
+                            <div class="ch-sub">${p.title}</div>
+                          </div>
                       <div class="ch-meta">
                          <div class="ch-meta-bold">${metaCombined}</div>
                          <div>${metaJudge} • ${metaClub}</div>

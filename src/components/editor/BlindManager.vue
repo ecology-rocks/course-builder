@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue' 
+import { computed, ref } from 'vue' 
 import { useMapStore } from '@/stores/mapStore'
 import { useBlindManager } from './logic/useBlindManager'
 import { useUserStore } from '@/stores/userStore'
@@ -17,8 +17,11 @@ const {
   handleCanvasClick, 
   copyFromPrevious,
   addNewBlind,
-  removeBlind 
+  removeBlind,
+  regenerateRandoms 
 } = useBlindManager(store)
+
+const showRandoms = ref(true)
 
 defineExpose({ currentDisplayHides, handleCanvasClick })
 
@@ -77,6 +80,11 @@ function handleCloseAttempt() {
       </div>
 
       <div class="blind-list">
+        <div class="ui-toggles" style="padding-bottom: 10px;">
+          <label style="font-size: 12px; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+            <input type="checkbox" v-model="showRandoms"> Show Randoms
+          </label>
+        </div>
         <div 
           v-for="(blind, idx) in store.mapData.blinds" 
           :key="blind.id"
@@ -86,12 +94,16 @@ function handleCloseAttempt() {
         >
           <div class="blind-info">
             <span class="name">{{ blind.name }}</span>
-            <span class="randoms" v-if="blind.randoms.length">{{ blind.randoms.join('-') }}</span>
+            <span class="randoms" v-if="showRandoms && blind.randoms.length">{{ blind.randoms.join('-') }}</span>
           </div>
           <span class="count-badge" :class="{ 'has-hides': blind.hides.length > 0 }">
             {{ blind.hides.length }}
           </span>
-
+<button 
+            class="btn-regen-randoms" 
+            @click.stop="regenerateRandoms(idx)" 
+            title="Regenerate Randoms"
+          >🎲</button>
           <button 
             class="btn-remove-blind" 
             @click.stop="removeBlind(idx)" 
@@ -154,7 +166,7 @@ function handleCloseAttempt() {
         <span v-if="userStore.isPro">💾 Save & Return</span>
         <span v-else>✅ Return (In-Memory)</span>
       </button>
-          <button type="button" class="btn-print" @click.prevent="emit('print')">🖨️ Print Batch</button>
+          <button type="button" class="btn-print" @click.prevent="emit('print', { showRandoms })">🖨️ Print Batch</button>
         </div>
       </div>
     </div>
@@ -171,7 +183,20 @@ function handleCloseAttempt() {
 .sidebar-header { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; background: #f8f9fa; }
 .close-icon { background: none; border: none; font-size: 24px; cursor: pointer; color: #999; }
 .blind-list { flex: 1; overflow-y: auto; padding: 10px; }
-
+.btn-regen-randoms {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 0 4px;
+  opacity: 0.5;
+}
+.btn-regen-randoms:hover {
+  opacity: 1;
+}
 .blind-item { position: relative; padding: 10px; border: 1px solid #eee; border-radius: 6px; margin-bottom: 8px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; transition: all 0.2s; padding-right: 25px; }
 .blind-item:hover { background: #f5f5f5; }
 .blind-item.active { background: #e3f2fd; border-color: #2196f3; }

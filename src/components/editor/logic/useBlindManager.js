@@ -83,6 +83,13 @@ export function useBlindManager(store) {
     activeBlindIndex.value = store.mapData.blinds.length - 1
   }
 
+function regenerateRandoms(index) {
+    const blind = store.mapData.blinds[index]
+    if (blind) {
+      blind.randoms = Array(5).fill(0).map(() => Math.floor(Math.random() * 5) + 1)
+    }
+  }
+
   // Remove a blind by index
   function removeBlind(index) {
     if (store.mapData.blinds.length <= 1) {
@@ -115,6 +122,7 @@ export function useBlindManager(store) {
     handleCanvasClick,
     copyFromPrevious,
     addNewBlind,
-    removeBlind
+    removeBlind,
+    regenerateRandoms,
   }
 }

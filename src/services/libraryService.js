@@ -1,52 +1,73 @@
-// src/services/libraryService.js
 import { db } from '@/firebase'
-import { collection, addDoc, getDocs, query, orderBy, where, deleteDoc, doc } from 'firebase/firestore'
+import { collection, addDoc, getDocs, query, orderBy, where, deleteDoc, doc, getDoc } from 'firebase/firestore'
 
 const ADMIN_EMAIL = 'reallyjustsam@gmail.com'
 
 export const libraryService = {
-  // 1. GET ALL ITEMS (For everyone)
-  async getLibraryItems(sport) {
+  async getLibraryItems(sport, userEmail) {
     try {
-      // Fetch items for the specific sport (or all if not specified)
-      const q = query(
+      // 1. Fetch public items
+      const publicQuery = query(
         collection(db, "library_items"), 
         where("sport", "==", sport),
-        orderBy("createdAt", "desc")
+        where("isPublic", "==", true)
       )
-      const snapshot = await getDocs(q)
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      const publicSnap = await getDocs(publicQuery)
+      const publicItems = publicSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+      // 2. Fetch user's private items
+      let privateItems = []
+      if (userEmail) {
+        const privateQuery = query(
+          collection(db, "library_items"), 
+          where("sport", "==", sport),
+          where("createdBy", "==", userEmail),
+          where("isPublic", "==", false)
+        )
+        const privateSnap = await getDocs(privateQuery)
+        privateItems = privateSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      }
+
+      // Merge and sort descending by creation date
+      const allItems = [...publicItems, ...privateItems]
+      return allItems.sort((a, b) => {
+        const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0
+        const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0
+        return timeB - timeA
+      })
     } catch (e) {
       console.error("Error fetching library:", e)
       return []
     }
   },
 
-  // 2. ADD ITEM (Admin Only)
   async addToLibrary(user, itemData) {
-    if (!user || user.email !== ADMIN_EMAIL) {
-      throw new Error("Unauthorized: Only Sam can add to the library.")
-    }
+    if (!user) throw new Error("Must be logged in to save to library.")
 
-    // Clean data before saving
     const payload = {
       name: itemData.name,
       sport: itemData.sport,
       thumbnail: itemData.thumbnail || null,
-      type: itemData.type || 'tunnel', // 'tunnel', 'sequence', etc.
-      data: itemData.data, // The JSON blob of bales/boards
+      type: itemData.type || 'tunnel',
+      data: itemData.data,
       createdAt: new Date(),
-      createdBy: user.email
+      createdBy: user.email,
+      isPublic: itemData.isPublic || false
     }
 
     const docRef = await addDoc(collection(db, "library_items"), payload)
     return docRef.id
   },
 
-  // 3. DELETE ITEM (Admin Only)
   async deleteItem(user, itemId) {
-    if (!user || user.email !== ADMIN_EMAIL) {
-      throw new Error("Unauthorized.")
+    if (!user) throw new Error("Must be logged in.")
+
+    if (user.email !== ADMIN_EMAIL) {
+      const itemRef = doc(db, "library_items", itemId)
+      const itemSnap = await getDoc(itemRef)
+      if (itemSnap.exists() && itemSnap.data().createdBy !== user.email) {
+        throw new Error("Unauthorized: You can only delete your own items.")
+      }
     }
     await deleteDoc(doc(db, "library_items", itemId))
   }
