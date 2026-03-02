@@ -18,9 +18,9 @@ const error = ref(null)
 
 const categories = [
   { id: 'tunnel', label: 'Tunnel' },
-  { id: 'ring', label: 'Full Ring' },
+  { id: 'ring', label: 'Custom Ring' },
   { id: 'sequence', label: 'Sequence / Pattern' },
-  { id: 'setup', label: 'Course Setup' }
+  { id: 'course', label: 'Whole Course' }
 ]
 
 function handleSave() {

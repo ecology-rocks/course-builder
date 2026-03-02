@@ -28,7 +28,9 @@ const filteredItems = computed(() => {
     if (activeTab.value === 'all') matchesTab = true
     else if (activeTab.value === 'tunnel') matchesTab = type.includes('tunnel')
     else if (activeTab.value === 'ring') matchesTab = type.includes('ring')
-    else if (activeTab.value === 'pattern') matchesTab = type.includes('pattern') || type.includes('sequence')
+    else if (activeTab.value === 'pattern') matchesTab = type.includes('pattern')
+    else if (activeTab.value === 'course') matchesTab = type.includes('course')
+  
     
     if (!matchesTab) return false
 
@@ -83,6 +85,7 @@ async function handleDelete(id) {
         <button :class="{ active: activeTab === 'ring' }" @click="activeTab = 'ring'">Rings</button>
         <button :class="{ active: activeTab === 'tunnel' }" @click="activeTab = 'tunnel'">Tunnels</button>
         <button :class="{ active: activeTab === 'pattern' }" @click="activeTab = 'pattern'">Patterns</button>
+        <button :class="{ active: activeTab === 'course' }" @click="activeTab = 'course'">Courses</button>
       </div>
       <div v-if="loading" class="loading">Loading library...</div>
 

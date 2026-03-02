@@ -108,7 +108,7 @@ function resolvePostPrint(action, payload) {
   }
 }
 
-async function handleLibrarySaveConfirm({ name, category }) {
+async function handleLibrarySaveConfirm({ name, category, isPublic }) {
   try {
     const stage = stageRef.value.getStage()
     const isSubset = ['tunnel', 'sequence', 'setup'].includes(category)
@@ -279,7 +279,8 @@ async function handleLibrarySaveConfirm({ name, category }) {
       sport: store.sport || 'barnhunt',
       type: category,
       thumbnail: screenshotData,
-      data: dataPayload
+      data: dataPayload,
+      isPublic: isPublic
     }
 
     await libraryService.addToLibrary(userStore.user, finalItem)
