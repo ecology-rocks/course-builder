@@ -33,6 +33,10 @@ const props = defineProps({
   GRID_OFFSET: {
     type: Number,
     default: 0
+  },
+  isMobile: { // [NEW]
+    type: Boolean,
+    default: false
   }
 })
 const store = useMapStore()
@@ -445,7 +449,7 @@ function handleDragEnd(e, id) {
     <MeasurementObject v-if="store.activeMeasurement" :measurement="store.activeMeasurement" :scale="scale" />
   </v-group>
 
-  <v-label v-if="activeMeasurementTip" :config="{
+  <v-label v-if="activeMeasurementTip && !props.isMobile" :config="{
      x: activeMeasurementTip.x * scale,
      y: activeMeasurementTip.y * scale,
      offsetY: 40 

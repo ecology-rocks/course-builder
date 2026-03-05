@@ -21,10 +21,10 @@ function addZone(x, y, type) {
   }
 
   // [NEW] Added rotation logic
-  function rotateZone(id) {
+  function rotateZone(id, amount = 45) {
     const z = state.zones.value.find(i => i.id === id)
     if (z) {
-      z.rotation = (z.rotation + 45) % 360
+      z.rotation = (z.rotation + amount) % 360
     }
   }
 

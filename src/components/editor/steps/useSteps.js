@@ -31,7 +31,7 @@ function updateStep(id, attrs) {
     }
   }
 
-function rotateStep(id) {
+function rotateStep(id, amount = 15) {
     const step = state.steps.value.find(s => s.id === id)
     if (step) {
       console.log('[DEBUG useSteps] rotateStep (context menu) called for', id)
@@ -42,7 +42,7 @@ function rotateStep(id) {
       const h = step.custom?.height != null ? step.custom.height : step.height
       
       const r1 = (step.rotation || 0) * (Math.PI / 180)
-      const r2 = ((step.rotation || 0) + 15) % 360 * (Math.PI / 180)
+      const r2 = ((step.rotation || 0) + amount) % 360 * (Math.PI / 180)
 
       // 1. Calculate the current absolute center of the shape
       const cx = step.x + (w / 2) * Math.cos(r1) - (h / 2) * Math.sin(r1)
@@ -53,7 +53,7 @@ function rotateStep(id) {
       step.y = cy - (w / 2) * Math.sin(r2) - (h / 2) * Math.cos(r2)
       
       // 3. Apply the rotation
-      step.rotation = (step.rotation + 15) % 360
+      step.rotation = (step.rotation + amount) % 360
       console.log('[DEBUG useSteps] After rotation:', step.x, step.y, step.rotation)
       if (snapshot) snapshot()
     }

@@ -9,6 +9,7 @@ import Privacy from 'views/Privacy.vue'
 import About from 'views/About.vue'
 import Roadmap from 'views/Roadmap.vue'
 import Admin from 'views/Admin.vue'
+import MobileMapEditor from 'components/MobileMapEditor.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -20,6 +21,7 @@ const router = createRouter({
     { path: '/', name: 'home', component: Home },
     { path: '/dashboard', name: 'dashboard', component: Dashboard },
     { path: '/editor', name: 'editor', component: MapEditor },
+    { path: '/mobile-editor', name: 'mobile-editor', component: MobileMapEditor },
     { path: '/view/:id', name: 'map-view', component: MapView },
     { path: '/settings', name: 'settings', component: Settings },
     { path: '/terms', name: 'terms', component: Terms },     // <--- NEW

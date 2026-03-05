@@ -22,10 +22,10 @@ function addTunnelBoard(x, y) {
     if (snapshot) snapshot()
   }
 
-  function rotateTunnelBoard(id) {
+  function rotateTunnelBoard(id, amount = 45) {
     const b = state.tunnelBoards.value.find(i => i.id === id)
     if (b) {
-      b.rotation = (b.rotation || 0) + 45
+      b.rotation = (b.rotation || 0) + amount
       if (snapshot) snapshot()
     }
   }

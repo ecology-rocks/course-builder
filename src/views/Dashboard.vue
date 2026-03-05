@@ -29,6 +29,11 @@ const isSidebarOpen = ref(false)
 const showMoveModal = ref(false)
 const mapToMove = ref(null)
 
+function getEditorRoute() {
+  // 768px is the standard tablet/mobile breakpoint you used for your CSS
+  return window.innerWidth <= 768 ? '/mobile-editor' : '/editor'
+}
+
 function toggleSidebar() {
   isSidebarOpen.value = !isSidebarOpen.value
 }
@@ -138,17 +143,15 @@ function formatDate(timestamp) {
 }
 
 function createNewMap(sportType) {
-  // 2. Reset & Configure
   mapStore.reset()
   mapStore.sport = 'barnhunt' 
   mapStore.ringDimensions = { width: 24, height: 24 }
-
-  router.push('/editor')
+  router.push(getEditorRoute()) // [UPDATED]
 }
 
 async function openMap(map) {
   mapStore.loadMapFromData(map.id, map)
-  router.push('/editor')
+  router.push(getEditorRoute()) // [UPDATED]
 }
 
 // --- Delete Logic ---
@@ -169,20 +172,15 @@ async function confirmDelete() {
 function printMap(map) {
   mapStore.loadMapFromData(map.id, map)
   mapStore.pendingPrintRequest = true
-  router.push('/editor')
+  router.push(getEditorRoute()) // [UPDATED]
 }
 
 function copyToNewMap(map) {
-  // 1. Deep clone to detach from original
   const newMap = JSON.parse(JSON.stringify(map))
-  
-  // 2. Reset ID so it is treated as a NEW map upon saving
   newMap.id = null
   newMap.name = `Copy of ${newMap.name}`
-  
-  // 3. Load into store (passing null as ID) and redirect
   mapStore.loadMapFromData(null, newMap)
-  router.push('/editor')
+  router.push(getEditorRoute()) // [UPDATED]
 }
 
 async function handleDeleteFolder(id) {
@@ -251,6 +249,9 @@ watch(() => userStore.justRegistered, (isNew) => {
     userStore.justRegistered = false // Reset immediately so it doesn't persist
   }
 })
+
+
+
 </script>
 
 <template>

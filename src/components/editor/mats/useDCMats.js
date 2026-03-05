@@ -32,11 +32,11 @@ export function useDCMats(state, snapshot) {
     if (snapshot) snapshot()
   }
 
-  function rotateDCMat(id) {
+  function rotateDCMat(id, amount = 45) {
     snapshot()
     const mat = state.dcMats.value.find(m => m.id === id)
     if (mat) {
-      mat.rotation = (mat.rotation + 45) % 360
+      mat.rotation = (mat.rotation + amount) % 360
     }
   }
 
