@@ -100,6 +100,7 @@ export const useMapStore = defineStore("map", () => {
   const activeHideMenu = ref(null);
   const showCustomizationModal = ref(false);
   const editingCustomObject = ref(null);
+  const pendingPrintRequest = ref(false);
 
   // Menus
   const activeDCMatMenu = ref(null);
@@ -212,6 +213,7 @@ export const useMapStore = defineStore("map", () => {
     judgeNotes,
     mapName,
     nextNumber,
+    pendingPrintRequest,
     previousBales,
     previousClassCount,
     ringDimensions,
@@ -374,6 +376,7 @@ export const useMapStore = defineStore("map", () => {
     multiLayerView,
     nextNumber,
     notification,
+    pendingPrintRequest,
     previousBales,
     previousClassCount,
     realignGrid,

@@ -144,7 +144,11 @@ async function confirmDelete() {
   }
 }
 
-
+function printMap(map) {
+  mapStore.loadMapFromData(map.id, map)
+  mapStore.pendingPrintRequest = true
+  router.push('/editor')
+}
 
 function copyToNewMap(map) {
   // 1. Deep clone to detach from original
@@ -358,6 +362,7 @@ watch(() => userStore.justRegistered, (isNew) => {
                 </div>
                 <div class="actions">
                   <button @click="openMap(map)">Edit</button>
+                  <button @click="printMap(map)">Print</button>
                   <button @click="copyToNewMap(map)">Copy</button>
                   <button @click="requestDelete(map.id)" class="btn-danger">Delete</button>
                 </div>

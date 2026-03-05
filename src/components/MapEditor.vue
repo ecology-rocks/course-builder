@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick, computed } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { useMapStore } from 'stores/mapStore'
 import { useUserStore } from '@/stores/userStore'
 import { useAutosave } from 'services/autosaveService'
@@ -502,6 +502,16 @@ async function handleAdvancedPrint(config) {
     isPrinting.value = false
   }
 }
+
+onMounted(() => {
+  if (store.pendingPrintRequest) {
+    store.pendingPrintRequest = false
+    // Slight delay to ensure stage rendering is ready before the modal takes over
+    setTimeout(() => {
+      showAdvancedPrintModal.value = true
+    }, 100)
+  }
+})
 </script>
 
 <template>
