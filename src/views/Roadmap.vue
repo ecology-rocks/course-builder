@@ -66,6 +66,7 @@ const privateInHouse = ref([
 const planned = ref([
   'Desktop Offline App (Late 2026)',
   '3d view - research to see if implementation is possible',
+  'validation for each course level',
   'random hides generator',
   'procedurally generated courses',
   

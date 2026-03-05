@@ -25,6 +25,28 @@ const folderToEdit = ref(null)
 const showDeleteModal = ref(false)
 const mapToDeleteId = ref(null)
 
+const isSidebarOpen = ref(false)
+const showMoveModal = ref(false)
+const mapToMove = ref(null)
+
+function toggleSidebar() {
+  isSidebarOpen.value = !isSidebarOpen.value
+}
+
+function openMoveModal(map) {
+  mapToMove.value = map
+  showMoveModal.value = true
+}
+
+async function confirmMove(targetFolderId) {
+  if (mapToMove.value) {
+    await mapStore.moveMap(mapToMove.value.id, targetFolderId)
+    localMaps.value = await mapStore.loadUserMaps()
+    showMoveModal.value = false
+    mapToMove.value = null
+  }
+}
+
 const folderTree = computed(() => {
   const raw = mapStore.folders
   
@@ -239,7 +261,10 @@ watch(() => userStore.justRegistered, (isNew) => {
       </div>
     </Transition>
     <nav class="navbar">
-      <div class="logo"><router-link to="/" class="logo">🐾 K9CourseBuilder</router-link></div>
+      <div class="nav-left">
+        <button class="hamburger-btn" @click="toggleSidebar">☰</button>
+        <div class="logo"><router-link to="/" class="logo">🐾 K9CourseBuilder</router-link></div>
+      </div>
       <div class="nav-links">
         <button v-if="userStore.user" @click="router.push('/settings')" class="btn-outline">⚙️ Settings</button>
         <button v-if="userStore.user" @click="handleLogout" class="btn-outline">Logout</button>
@@ -251,8 +276,9 @@ watch(() => userStore.justRegistered, (isNew) => {
     </div>
 
     <div v-else class="dashboard-content">
-      
-      <aside class="sidebar">
+
+      <div class="sidebar-overlay" v-if="isSidebarOpen" @click="isSidebarOpen = false"></div>
+      <aside class="sidebar" :class="{ 'is-open': isSidebarOpen }">
         <div class="sidebar-header">
           <h3>Folders</h3>
           <button @click="triggerCreateFolder" class="btn-icon">+</button>
@@ -363,6 +389,7 @@ watch(() => userStore.justRegistered, (isNew) => {
                 <div class="actions">
                   <button @click="openMap(map)">Edit</button>
                   <button @click="printMap(map)">Print</button>
+                  <button @click="openMoveModal(map)">Move</button>
                   <button @click="copyToNewMap(map)">Copy</button>
                   <button @click="requestDelete(map.id)" class="btn-danger">Delete</button>
                 </div>
@@ -396,11 +423,109 @@ watch(() => userStore.justRegistered, (isNew) => {
       @rename="onFolderRename" 
     />
 
+
+    <div v-if="showMoveModal" class="modal-overlay" @click.self="showMoveModal = false">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Move Map</h3>
+          <button class="close-btn" @click="showMoveModal = false">×</button>
+        </div>
+        <div class="modal-body" style="text-align: left;">
+          <p>Select destination for <strong>{{ mapToMove?.name }}</strong>:</p>
+          <ul class="folder-list">
+            <li @click="confirmMove(null)" class="folder-item">
+              📂 All / Unfiled
+            </li>
+            <li 
+              v-for="folder in folderTree" 
+              :key="folder.id" 
+              class="folder-item"
+              :style="{ paddingLeft: (10 + folder.depth * 15) + 'px' }"
+              @click="confirmMove(folder.id)"
+            >
+              📁 {{ folder.name }}
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <style scoped>
 /* (Styles same as previous) */
+
+/* Navigation layout updates */
+.nav-left { display: flex; align-items: center; gap: 15px; }
+.hamburger-btn { display: none; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #2c3e50; padding: 0; }
+
+/* Sidebar Overlay */
+.sidebar-overlay { display: none; }
+
+/* Move Modal Styles */
+.folder-list { list-style: none; padding: 0; margin: 15px 0 0 0; max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 6px; }
+.folder-item { padding: 12px; border-bottom: 1px solid #eee; cursor: pointer; transition: background 0.2s; }
+.folder-item:last-child { border-bottom: none; }
+.folder-item:hover { background: #f5f5f5; }
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .hamburger-btn { display: block; }
+  
+  .sidebar {
+    position: fixed;
+    left: -280px;
+    top: 61px; /* Just below navbar */
+    height: calc(100vh - 61px);
+    width: 260px;
+    z-index: 1000;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.15);
+  }
+  
+  .sidebar.is-open { left: 0; }
+  
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    top: 61px; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 999;
+  }
+  
+  .main-area { padding: 20px; }
+  
+  .sport-grid { flex-direction: column; }
+  .sport-card { max-width: 100%; height: 90px; flex-direction: row; gap: 15px; justify-content: flex-start; padding-left: 20px; }
+  .sport-card .emoji { margin-bottom: 0; font-size: 2rem; }
+  
+  .grid { justify-content: center; }
+  .map-card { width: 100%; max-width: 350px; }
+  
+  /* Wrap buttons nicely on smaller cards */
+  .actions { flex-wrap: wrap; }
+  .actions button { flex: 1 1 30%; }
+
+  .navbar { 
+    padding: 10px 15px; 
+  }
+  
+  .logo { 
+    font-size: 1rem; 
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 5px;
+  }
+
+  .btn-outline {
+    margin-left: 0;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+    white-space: nowrap; /* Prevents the text from awkwardly wrapping */
+  }
+}
 
 .info-box {
   background: #e3f2fd; /* Light Blue */
@@ -497,12 +622,15 @@ watch(() => userStore.justRegistered, (isNew) => {
 .map-info { padding: 15px; }
 .map-info h4 { margin: 0 0 5px 0; font-size: 1rem; }
 .meta { font-size: 0.8rem; color: #666; display: flex; justify-content: space-between; margin-bottom: 10px; }
-.actions { display: flex; gap: 10px; }
-.actions button { flex: 1; padding: 5px; cursor: pointer; background: white; border: 1px solid #ccc; border-radius: 4px; font-size: 0.8rem; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.actions button { flex: 1 1 45%; padding: 6px 4px; cursor: pointer; background: white; border: 1px solid #ccc; border-radius: 4px; font-size: 0.8rem; }
 .actions .btn-danger { color: #d32f2f; border-color: #ef9a9a; }
 .actions .btn-danger:hover { background: #ffebee; }
 .empty-state { text-align: center; color: #999; margin-top: 40px; font-style: italic; }
-
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); display: flex; align-items: center; justify-content: center; z-index: 3000; }
+.modal-content { background: white; padding: 24px; border-radius: 12px; width: 400px; max-width: 90vw; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+.modal-header h3 { margin: 0; font-size: 1.25rem; color: #333; }
 .drag-handle {
   cursor: grab;
   padding: 8px;
