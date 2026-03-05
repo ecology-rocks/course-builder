@@ -11,11 +11,19 @@
           <button class="close-btn" @click="$emit('cancel')">×</button>
         </div>
 
-        <div class="modal-body">
+       <div class="modal-body">
           <p v-if="allowDiscard" class="warning-text">You are leaving the editor. Save your changes?</p>
           <p v-else>You are editing an existing map.</p>
           
           <p class="highlight-text">"{{ mapName }}"</p>
+
+          <div class="folder-selection">
+            <label>Location:</label>
+            <select v-model="selectedFolderId" class="folder-select">
+              <option value="">📁 (Unorganized)</option>
+              <option v-for="f in store.folders" :key="f.id" :value="f.id">📁 {{ f.name }}</option>
+            </select>
+          </div>
         </div>
 
         <div class="action-grid">
@@ -57,6 +65,14 @@
             @keyup.enter="confirmSave"
             placeholder="Enter map name..."
           />
+
+          <div class="folder-selection">
+            <label>Save to:</label>
+            <select v-model="selectedFolderId" class="folder-select">
+              <option value="">📁 (Unorganized)</option>
+              <option v-for="f in store.folders" :key="f.id" :value="f.id">📁 {{ f.name }}</option>
+            </select>
+          </div>
         </div>
 
         <div class="footer-actions">
@@ -86,7 +102,9 @@
 
 <script setup>
 import { ref, nextTick, onMounted } from 'vue'
+import { useMapStore } from '@/stores/mapStore'
 
+const store = useMapStore()
 const props = defineProps({
   mapName: { type: String, default: 'Untitled Map' },
   isNewMap: { type: Boolean, default: false },
@@ -99,8 +117,10 @@ const emit = defineEmits(['cancel', 'overwrite', 'save-as-new', 'discard', 'expo
 const step = ref(1)
 const newName = ref('')
 const nameInput = ref(null)
+const selectedFolderId = ref(store.currentFolderId || '')
 
 onMounted(() => {
+  store.loadUserFolders()
   if (props.isNewMap) {
     step.value = 2
     newName.value = props.mapName === 'Untitled Map' ? '' : props.mapName
@@ -114,8 +134,16 @@ function goToRename() {
   nextTick(() => nameInput.value?.focus())
 }
 
+function handleOverwrite() {
+  // [NEW] Update store with selected folder before emitting
+  store.currentFolderId = selectedFolderId.value || null
+  emit('overwrite')
+}
+
 function confirmSave() {
   if (!newName.value.trim()) return
+  // [NEW] Update store with selected folder before emitting
+  store.currentFolderId = selectedFolderId.value || null
   emit('save-as-new', newName.value)
 }
 
@@ -173,4 +201,34 @@ function handleExport() {
   padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px;
 }
 .btn-discard:hover { background: #ffebee; }
+
+/* 3. Add these styles to the <style scoped> block */
+
+/* [NEW] Folder Selection Styles */
+.folder-selection { 
+  margin-top: 20px; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  gap: 12px; 
+}
+.folder-selection label { 
+  font-weight: bold; 
+  color: #555; 
+  font-size: 0.95rem; 
+}
+.folder-select { 
+  padding: 8px 12px; 
+  border-radius: 6px; 
+  border: 1px solid #ccc; 
+  font-size: 0.95rem; 
+  background: #f9f9f9; 
+  color: #333; 
+  cursor: pointer; 
+  outline: none;
+  min-width: 180px;
+}
+.folder-select:focus { 
+  border-color: #2196f3; 
+}
 </style>
