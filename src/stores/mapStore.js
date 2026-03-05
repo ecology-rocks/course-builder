@@ -109,6 +109,7 @@ export const useMapStore = defineStore("map", () => {
   const activeTunnelBoxMenu = ref(null);
   const activeBaleMenu = ref(null);
   const activeNoteMenu = ref(null);
+  const activeGateMenu = ref(null);
   const activeWallMenu = ref(null);
   const activeWall = ref(null);
 
@@ -233,6 +234,7 @@ export const useMapStore = defineStore("map", () => {
     activeNoteMenu,
     activeWall,
     activeWallMenu,
+    activeGateMenu,
     reset,
   };
 
@@ -272,6 +274,7 @@ export const useMapStore = defineStore("map", () => {
     stateRefs.activeBaleMenu.value = null;
     stateRefs.activeHideMenu.value = null;
     stateRefs.activeTunnelMenu.value = null;
+    stateRefs.activeGateMenu.value = null;
   }
 
   const selectionLogic = useSelectionLogic(stateRefs, historyModule.snapshot, deps);
@@ -401,6 +404,7 @@ export const useMapStore = defineStore("map", () => {
     activeStartBoxMenu,
     activeBaleMenu,
     activeNoteMenu,
+    activeGateMenu,
     baleColors,
     ...domainModules,
     ...stats,

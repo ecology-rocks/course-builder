@@ -45,6 +45,7 @@ import BaleContextMenu from './editor/bales/BaleContextMenu.vue'
 import NoteContextMenu from './editor/annotations/NoteContextMenu.vue'
 import WallContextMenu from './editor/walls/WallContextMenu.vue'
 import TunnelContextMenu from './editor/tunnels/TunnelContextMenu.vue' // [NEW] Import this
+import GateContextMenu from './editor/gates/GateContextMenu.vue'
 
 // Setup
 const store = useMapStore()
@@ -436,7 +437,8 @@ function handleGlobalClick(e) {
     store.activeZoneMenu ||
     store.activeNoteMenu ||
     store.activeWallMenu ||
-    store.activeTunnelMenu // [NEW] Add tunnel menu to global close logic
+    store.activeTunnelMenu ||
+    store.activeGateMenu 
 
   if (isAnyItemMenuOpen) {
     store.setTool('select')
@@ -476,7 +478,9 @@ watch(
     store.activeTunnelBoxMenu,
     store.activeZoneMenu,
     store.activeNoteMenu,
-    store.activeTunnelMenu // [NEW] Add watcher
+    store.activeTunnelMenu,
+    store.activeGateMenu,
+    store.activeWallMenu 
   ],
   (menus) => {
     if (menus.some(m => m !== null)) {
@@ -623,6 +627,11 @@ async function handleAdvancedPrint(config) {
 
     <TunnelContextMenu v-if="store.activeTunnelMenu" v-bind="store.activeTunnelMenu" :id="store.activeTunnelMenu.id"
       @close="store.activeTunnelMenu = null"/>
+      <GateContextMenu 
+      v-if="store.activeGateMenu" 
+      v-bind="store.activeGateMenu" 
+      @close="store.activeGateMenu = null" 
+    />
 
     <SaveConfirmationModal v-if="showSaveModal" :mapName="store.mapName" :isNewMap="isNewMap"
       :allowDiscard="pendingHomeExit || pendingBlindExit" @cancel="onSaveModalCancel"

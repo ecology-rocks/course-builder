@@ -63,16 +63,6 @@ function handleKeyUp(e) {
   if (e.key === 'Control' || e.metaKey) isCtrlPressed.value = false
 }
 
-function handleDragEnd(e) {
-  const node = e.target
-  emit('update', {
-    id: props.step.id,
-    x: node.x() / props.scale,
-    y: node.y() / props.scale
-  })
-  emit('dragend', e)
-}
-
 function handleContextMenu(e) {
   // Prevent the browser menu
   e.evt.preventDefault()

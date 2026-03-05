@@ -17,6 +17,16 @@ const strokeWidth = computed(() => isSelected.value ? 3 : 2)
 
 // --- HANDLERS ---
 
+
+function handleContextMenu(e) {
+  e.cancelBubble = true
+  if (e.evt) e.evt.preventDefault()
+  store.activeGateMenu = { id: props.gate.id, x: e.evt.clientX, y: e.evt.clientY }
+}
+
+const gateWidth = computed(() => props.gate.width || 3)
+
+
 // [FIX 1] Stop Mousedown propagation immediately so the Stage doesn't try to "Place" a new gate
 function handleMouseDown(e) {
   e.cancelBubble = true
@@ -176,19 +186,20 @@ function dragBoundFunc(pos) {
     @dragstart="handleDragStart"
     @dragmove="handleDragMove"
     @dragend="handleDragEnd"
+    @contextmenu="handleContextMenu"
   >
     <v-rect :config="{ 
-      width: 3 * scale, 
+      width: gateWidth * scale, 
       height: 30, 
-      offsetX: (3 * scale) / 2, 
+      offsetX: (gateWidth * scale) / 2, 
       offsetY: 15, 
       fill: 'transparent'
     }" />
 
     <v-rect :config="{ 
-      width: 3 * scale, 
+      width: gateWidth * scale, 
       height: 6, 
-      offsetX: (3 * scale) / 2, 
+      offsetX: (gateWidth * scale) / 2, 
       offsetY: 3, 
       fill: 'white', 
       stroke: strokeColor, 
