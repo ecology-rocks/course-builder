@@ -443,6 +443,30 @@ export function useBales(state, snapshot, notifications) {
     }
   }
 
+  function setBaleLayer(id, layerNum) {
+    const targets = state.selection.value.includes(id) ? state.selection.value : [id]
+    
+    // Check if any selected items are anchors and trying to move off layer 1
+    const movingAnchorOffLayer1 = targets.some(tid => {
+        const b = state.bales.value.find(item => item.id === tid);
+        return b && b.isAnchor && layerNum !== 1;
+    });
+
+    if (movingAnchorOffLayer1) {
+        notifications.show("Anchor bales must remain on Layer 1.", "error");
+        return; // Reject the whole operation if an anchor is included
+    }
+
+    let modified = false;
+    state.bales.value.forEach(b => {
+      if (targets.includes(b.id)) {
+        b.layer = layerNum
+        modified = true;
+      }
+    })
+    if (modified && snapshot) snapshot();
+  }
+
   return {
     getBaleRect,
     addBale,
@@ -454,6 +478,7 @@ export function useBales(state, snapshot, notifications) {
     toggleAnchor,
     setComparisonBales,
     realignBales, 
+    setBaleLayer,
     setBaleOrientation,
     setLean,
     addAnchor,

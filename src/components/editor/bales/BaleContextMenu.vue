@@ -39,6 +39,11 @@ const canToggleAnchor = computed(() => {
   return true
 })
 
+
+function setLayer(layerNum) {
+  store.setBaleLayer(props.id, layerNum)
+  emit('close')
+}
 // 3. Actions (Using EXISTING store methods only)
 function rotate(amt) {
   store.rotateBale(props.id, amt)
@@ -111,6 +116,22 @@ function openCustomizer() {
       <button @click="store.setLean(id, 'left')" :disabled="isAnchor">Left</button>
       <button @click="store.setLean(id, 'right')" :disabled="isAnchor">Right</button>
       <button @click="store.setLean(id, null)" :disabled="isAnchor">None</button>
+    </div>
+
+    <div class="section-label">Layer</div>
+    <div class="type-row">
+      <button 
+        @click="setLayer(1)" 
+        :class="{ active: currentBale?.layer === 1 }"
+      >1</button>
+      <button 
+        @click="setLayer(2)" 
+        :class="{ active: currentBale?.layer === 2 }"
+      >2</button>
+      <button 
+        @click="setLayer(3)" 
+        :class="{ active: currentBale?.layer === 3 }"
+      >3</button>
     </div>
 
     <div class="section-label">Rotate</div>
