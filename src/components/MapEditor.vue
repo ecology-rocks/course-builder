@@ -20,7 +20,6 @@ import EditorSidebar from './editor/EditorSidebar.vue'
 import SelectionBar from './editor/SelectionBar.vue'
 import BarnHuntLayer from './editor/BarnHuntLayer.vue'
 import MapLegend from './editor/MapLegend.vue'
-import EditNoteModal from 'modals/EditNoteModal.vue'
 import HelpModal from 'modals/HelpModal.vue'
 import CustomizationModal from 'modals/CustomizationModal.vue'
 import TournamentSetupModal from 'modals/TournamentSetupModal.vue'
@@ -521,7 +520,7 @@ onMounted(() => {
       @blind-setup="handleOpenBlindManager" @go-home="handleGoHome" />
 
     <div class="canvas-wrapper" ref="wrapperRef" :class="{ 'is-anchor-mode': store.activeTool === 'anchor' }">
-      <EditNoteModal v-if="store.editingNoteId" />
+      
       <Transition name="fade">
         <div v-if="store.notification" class="toast-notification" :class="store.notification.type">
           {{ store.notification.message }}

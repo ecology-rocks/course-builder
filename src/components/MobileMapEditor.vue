@@ -7,6 +7,8 @@ import { useUnifiedPrinter } from '@/services/unifiedPrintService'
 import { useCanvasControls } from '@/components/editor/logic/useCanvasControls'
 import { useStageInteraction } from '@/components/editor/logic/useStageInteraction'
 import BarnHuntLayer from '@/components/editor/BarnHuntLayer.vue'
+import TunnelRenderer from '@/components/editor/tunnels/TunnelRenderer.vue'
+import TunnelEditorLayer from '@/components/editor/tunnels/TunnelEditorLayer.vue'
 import CourseSettingsModal from '@/components/modals/CourseSettingsModal.vue'
 import AdvancedPrintModal from '@/components/modals/AdvancedPrintModal.vue'
 import MobileStatsModal from '@/components/modals/MobileStatsModal.vue'
@@ -19,6 +21,7 @@ import ShareMapModal from '@/components/modals/ShareMapModal.vue'
 import LoadMapModal from '@/components/modals/LoadMapModal.vue'
 import LibraryModal from '@/components/modals/LibraryModal.vue'
 import BugReportModal from '@/components/common/BugReportModal.vue'
+import MobileTunnelManager from '@/components/editor/tunnels/MobileTunnelManager.vue'
 // Import matching SVG icons
 import IconLine from '@/assets/icons/measure-line.svg?component'
 import IconPath from '@/assets/icons/measure-path.svg?component'
@@ -219,7 +222,7 @@ function resolveSave(action, newNamePayload) {
                             <button @click="showLoadModal = true; showMoreMenu = false">📂 Load</button>
                             <button @click="showShareModal = true; showMoreMenu = false">🔗 Share</button>
                             <button @click="showLibraryModal = true; showMoreMenu = false">📖 Library</button>
-                            <button @click="store.realignBales(); showMoreMenu = false">📏 Realign Grid</button>
+                            <button @click="store.isTunnelMode = true; showMoreMenu = false">🚇 Tunnel Builder</button>
                             <button @click="showBugReportModal = true; showMoreMenu = false">🐞 Report Bug</button>
                         </div>
                     </div>
@@ -296,10 +299,20 @@ function resolveSave(action, newNamePayload) {
                     <BarnHuntLayer :scale="scale" :showHides="true" :hides="store.hides" :GRID_OFFSET="GRID_OFFSET"
                         :locked="false" :isMobile="true" />
 
+
+
                     <v-rect v-if="selectionRect"
                         :config="{ x: (selectionRect.x * scale), y: (selectionRect.y * scale), width: selectionRect.w * scale, height: selectionRect.h * scale, fill: 'rgba(0, 161, 255, 0.3)', stroke: '#00a1ff' }" />
-
                 </v-layer>
+
+                <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
+                    <v-group>
+                        <TunnelRenderer :scale="scale" />
+                    </v-group>
+                    <TunnelEditorLayer v-if="store.isTunnelMode" :scale="scale" />
+                </v-layer>
+
+
             </v-stage>
         </main>
 
@@ -456,6 +469,7 @@ function resolveSave(action, newNamePayload) {
                     <span class="tool-label">{{ tool.label }}</span>
                 </button>
             </nav>
+            <MobileTunnelManager v-if="store.isTunnelMode" @close="store.isTunnelMode = false" />
             <CourseSettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
 
             <AdvancedPrintModal v-if="showAdvancedPrintModal" @close="showAdvancedPrintModal = false"

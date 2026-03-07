@@ -13,6 +13,8 @@ const {
 } = useTunnelLogic(store)
 
 const currentMousePos = ref({ x: 0, y: 0 })
+let lastEventTime = 0
+
 
 const activePathLastPoint = computed(() => {
   if (store.activeTool === 'tunnel_path' && store.tunnelConfig.activePathId) {
@@ -44,35 +46,50 @@ function onHandleClick(evt, handle) {
   evt.cancelBubble = true 
   handleHandleClick(handle)
 }
+
 function onSnapClick(evt, targetId) {
+  const now = Date.now()
+  if (now - lastEventTime < 300) return; // Increased to cover the 300ms mobile tap delay
+  lastEventTime = now;
+
   evt.cancelBubble = true
   handleSnapClick(targetId)
 }
 
+
 // Unified Stage Click Handler
 function handleStageClick(e) {
+  const now = Date.now()
+  if (now - lastEventTime < 300) return; // Increased to cover the 300ms mobile tap delay
+  lastEventTime = now;
+
+  // Block the click from bubbling down to the Stage or other elements
+  e.cancelBubble = true;
+  if (e.evt && e.evt.preventDefault) {
+      e.evt.preventDefault();
+  }
+
   const stage = e.target.getStage()
-  const ptr = stage.getRelativePointerPosition()
-  const GRID_OFFSET = 30 
-  const x = (ptr.x - GRID_OFFSET) / props.scale
-  const y = (ptr.y - GRID_OFFSET) / props.scale
+  const ptr = stage.getPointerPosition() 
+  
+  if (!ptr) return; 
+
+  const layerOffset = e.target.getLayer()?.x() || 20 
+  
+  const x = (ptr.x - layerOffset) / props.scale
+  const y = (ptr.y - layerOffset) / props.scale
   currentMousePos.value = { x, y }
 
   // Case 1: Drawing Tunnel Path
   if (store.activeTool === 'tunnel_path' && store.tunnelConfig.activePathId) {
-    // A. Check if we clicked on an EXISTING path first
     const targetPath = findPathAtPoint(x, y)
-    
     if (targetPath) {
-      // It's a merge/branch!
       handlePathClick(targetPath, x, y)
     } else {
-      // It's a free point
       handleFreeClick(x, y)
     }
   }
-  
-  // Case 2: Free Drawing Edges (Simplified condition)
+  // Case 2: Free Drawing Edges
   else if (store.activeTool === 'tunnel_edges') {
     handleFreeEdgeClick(x, y)
   }
@@ -83,12 +100,15 @@ function handleMouseMove(e) {
   if ((store.activeTool === 'tunnel_edges' && freeDrawAnchor.value) || 
       (store.activeTool === 'tunnel_path' && store.tunnelConfig.activePathId)) {
     const stage = e.target.getStage()
-    const ptr = stage.getRelativePointerPosition()
-    const GRID_OFFSET = 30
+    const ptr = stage.getPointerPosition()
+    if (!ptr) return;
+
+    const layerOffset = e.target.getLayer()?.x() || 20
     const snap = (v) => Math.round(v * 6) / 6
+    
     currentMousePos.value = {
-      x: snap((ptr.x - GRID_OFFSET) / props.scale),
-      y: snap((ptr.y - GRID_OFFSET) / props.scale)
+      x: snap((ptr.x - layerOffset) / props.scale),
+      y: snap((ptr.y - layerOffset) / props.scale)
     }
   }
 }
@@ -99,10 +119,13 @@ function handleMouseMove(e) {
     
     <v-rect 
       v-if="store.activeTool === 'tunnel_path' || store.activeTool === 'tunnel_edges'"
-      :config="{ x: -1000, y: -1000, width: 5000, height: 5000, fill: 'transparent' }"
+      :config="{ x: -1000, y: -1000, width: 5000, height: 5000, fill: 'rgba(0,0,0,0)' }"
       @click="handleStageClick"
       @tap="handleStageClick"
+      @mousedown="handleStageClick"
+      @touchstart="handleStageClick"
       @mousemove="handleMouseMove"
+      @touchmove="handleMouseMove"
     />
 
     <v-group v-if="store.activeTool === 'tunnel_edges'">
@@ -129,6 +152,8 @@ function handleMouseMove(e) {
         :key="target.id"
         @click="onSnapClick($event, target.id)"
         @tap="onSnapClick($event, target.id)"
+        @mousedown="onSnapClick($event, target.id)"
+        @touchstart.passive="onSnapClick($event, target.id)"
         :config="{
           x: target.x * scale,
           y: target.y * scale,
