@@ -73,7 +73,8 @@ const removedBales = computed(() => {
 
 
 const displayedHides = computed(() => {
-  if (props.locked) {
+  // Respect the hides prop if the map is locked OR if we are actively in the Blind Manager
+  if (props.locked || store.isBlindMode) {
     return props.hides
   }
   return store.hides

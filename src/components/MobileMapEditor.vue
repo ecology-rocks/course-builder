@@ -22,6 +22,8 @@ import LoadMapModal from '@/components/modals/LoadMapModal.vue'
 import LibraryModal from '@/components/modals/LibraryModal.vue'
 import BugReportModal from '@/components/common/BugReportModal.vue'
 import MobileTunnelManager from '@/components/editor/tunnels/MobileTunnelManager.vue'
+import MobileBlindManager from '@/components/editor/MobileBlindManager.vue'
+import BlindEditorLayer from '@/components/editor/BlindEditorLayer.vue' // ADD THIS
 // Import matching SVG icons
 import IconLine from '@/assets/icons/measure-line.svg?component'
 import IconPath from '@/assets/icons/measure-path.svg?component'
@@ -43,6 +45,7 @@ const showShareModal = ref(false)
 const showLoadModal = ref(false)
 const showLibraryModal = ref(false)
 const showBugReportModal = ref(false)
+const blindManagerRef = ref(null)
 
 const { scale, stageConfig, zoom, fitToScreen } = useCanvasControls(store, wrapperRef, GRID_OFFSET)
 const { getNearestSnapPoint, getAngleSnapPoint } = useCustomWalls(store)
@@ -50,6 +53,14 @@ const { getWallStroke, getGridLabelX, getGridLabelY, getXAxisY, getYAxisX, getYA
 const { selectionRect, handleStageMouseDown, handleStageMouseMove, handleStageMouseUp, handleDragStart } = useStageInteraction(store, scale, GRID_OFFSET)
 const { generatePrintJob } = useUnifiedPrinter(store, userStore, stageRef, scale, null)
 const { handleSaveMap } = useExportTools(store, stageRef, scale, GRID_OFFSET)
+
+
+const displayHides = computed(() => {
+    if (store.isBlindMode && store.mapData.blinds && store.mapData.blinds.length > 0) {
+        return store.mapData.blinds[store.activeBlindIndex || 0].hides.map(h => ({...h}))
+    }
+    return store.hides
+})
 
 const selectionContext = computed(() => {
     if (store.selection.length !== 1) return null
@@ -97,6 +108,9 @@ const isStep = computed(() => selectionContext.value?.type === 'step')
 const isZone = computed(() => selectionContext.value?.type === 'zone')
 const isStartBox = computed(() => selectionContext.value?.type === 'startBox')
 
+let lastBlindClickTime = 0
+
+
 const canToggleAnchor = computed(() => {
     if (!isBale.value) return false
     const b = selectionContext.value.data
@@ -141,15 +155,13 @@ function handleAdvancedPrint(config) {
 
 // 2. Replace the old `tools` array with this computed property:
 const allTools = [
-    { id: 'select', icon: '👆', label: 'Select (V)' },
-    { id: 'bale', isComponent: true, icon: IconBale, label: 'Bale' },
-    { id: 'type', icon: '📐', label: 'Orient' },
-    { id: 'lean', icon: '↗️', label: 'Lean' },
-    { id: 'step', icon: '🪜', label: 'Step' },
-    { id: 'tunnelboard', icon: '🟥', label: 'Board' },
+    { id: 'select', icon: '👆', label: 'Select' },
     { id: 'wall', icon: '🧱', label: 'Ring Shape', layer1Only: true },
     { id: 'gate', icon: '🚪', label: 'Gate', layer1Only: true },
     { id: 'startbox', icon: '🏁', label: 'Start', layer1Only: true },
+    { id: 'bale', isComponent: true, icon: IconBale, label: 'Bale' },
+    { id: 'step', icon: '🪜', label: 'Step' },
+    { id: 'tunnelboard', icon: '🟥', label: 'Board' },
     { id: 'dcmat', icon: '🟨', label: 'DC Mat', layer1Only: true },
     { id: 'dead', icon: '🚫', label: 'Dead Zone', layer1Only: true },
     { id: 'obstruction', icon: '🧱', label: 'Obstruction', layer1Only: true },
@@ -223,6 +235,7 @@ function resolveSave(action, newNamePayload) {
                             <button @click="showShareModal = true; showMoreMenu = false">🔗 Share</button>
                             <button @click="showLibraryModal = true; showMoreMenu = false">📖 Library</button>
                             <button @click="store.isTunnelMode = true; showMoreMenu = false">🚇 Tunnel Builder</button>
+                            <button @click="store.isBlindMode = true; showMoreMenu = false">📋 Blind Manager</button>
                             <button @click="showBugReportModal = true; showMoreMenu = false">🐞 Report Bug</button>
                         </div>
                     </div>
@@ -254,9 +267,14 @@ function resolveSave(action, newNamePayload) {
                 <button @click.stop="zoom(-5)">-</button>
                 <button @click.stop="fitToScreen">Fit</button>
             </div>
-            <v-stage ref="stageRef" :config="stageConfig" @mousedown="handleStageMouseDown"
-                @touchstart="handleStageMouseDown" @mousemove="handleStageMouseMove" @touchmove="handleStageMouseMove"
-                @mouseup="handleStageMouseUp" @touchend="handleStageMouseUp" @dragstart="handleDragStart">
+            <v-stage ref="stageRef" :config="stageConfig" 
+                @mousedown="e => { if(!store.isBlindMode) handleStageMouseDown(e) }"
+                @touchstart="e => { if(!store.isBlindMode) handleStageMouseDown(e) }" 
+                @mousemove="handleStageMouseMove" 
+                @touchmove="handleStageMouseMove"
+                @mouseup="e => { if(!store.isBlindMode) handleStageMouseUp(e) }" 
+                @touchend="e => { if(!store.isBlindMode) handleStageMouseUp(e) }" 
+                @dragstart="handleDragStart">
                 <v-layer :config="{ x: GRID_OFFSET, y: GRID_OFFSET }">
 
                     <template v-for="n in store.ringDimensions.width + 1" :key="'v'+n">
@@ -296,7 +314,7 @@ function resolveSave(action, newNamePayload) {
                             :config="{ points: [store.ringDimensions.width * scale, 0, store.ringDimensions.width * scale, store.ringDimensions.height * scale], stroke: 'black', strokeWidth: getWallStroke(store.wallTypes.right), x: getWallStroke(store.wallTypes.right) / 2, listening: false }" />
                     </v-group>
 
-                    <BarnHuntLayer :scale="scale" :showHides="true" :hides="store.hides" :GRID_OFFSET="GRID_OFFSET"
+                    <BarnHuntLayer :scale="scale" :showHides="true" :hides="displayHides" :GRID_OFFSET="GRID_OFFSET"
                         :locked="false" :isMobile="true" />
 
 
@@ -310,6 +328,7 @@ function resolveSave(action, newNamePayload) {
                         <TunnelRenderer :scale="scale" />
                     </v-group>
                     <TunnelEditorLayer v-if="store.isTunnelMode" :scale="scale" />
+                    <BlindEditorLayer v-if="store.isBlindMode" :scale="scale" />
                 </v-layer>
 
 
@@ -470,6 +489,7 @@ function resolveSave(action, newNamePayload) {
                 </button>
             </nav>
             <MobileTunnelManager v-if="store.isTunnelMode" @close="store.isTunnelMode = false" />
+            <MobileBlindManager v-if="store.isBlindMode" @close="store.isBlindMode = false" />
             <CourseSettingsModal v-if="showSettingsModal" @close="showSettingsModal = false" />
 
             <AdvancedPrintModal v-if="showAdvancedPrintModal" @close="showAdvancedPrintModal = false"
