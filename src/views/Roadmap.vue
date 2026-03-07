@@ -5,6 +5,18 @@ import AppFooter from '@/components/AppFooter.vue'
 // --- MANAGE YOUR ROADMAP HERE ---
 // [UPDATE] Changed 'desc' string to 'changes' array for bullet points
 const released = ref([
+  {
+    version: 'v1.2', 
+    date: '2026-03-07', 
+    changes: [
+      'Right click on a bale to change its layer',
+      'Right click on a gate to change its size',
+      'Comparison features are added - activate with "Show Changes" checkbox on sidebar',
+      'Added a print button to the dashboard',
+      'Added mobile view optimizations - alpha version. at your own risk!',
+      'Added fluff piles to blind manager'
+    ]
+  },
   { 
     version: 'v1.1.5', 
     date: '2026-02-22', 

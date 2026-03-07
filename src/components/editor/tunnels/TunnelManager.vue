@@ -1,14 +1,18 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 import { useTunnelLogic } from './useTunnelLogic'
+import TunnelHelpModal from '@/components/modals/TunnelHelpModal.vue'
 
 const store = useMapStore()
+const showHelpModal = ref(false)
+
 const {
   deletePath, selectPath,
   tunnelGroups, selectGroup, deleteGroup,
   cancelFreeDraw
 } = useTunnelLogic(store)
+
 const emit = defineEmits(['close'])
 
 const activeTool = computed({
@@ -43,7 +47,10 @@ function isSelected(id) {
   <div class="tunnel-manager-overlay">
     <div class="tunnel-sidebar">
       <div class="sidebar-header">
-        <h3>Tunnel Engineer</h3>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h3>Tunnel Engineer</h3>
+          <button class="btn-help" @click="showHelpModal = true">❔ Help</button>
+        </div>
         <button class="close-icon" @click="handleExit">×</button>
       </div>
       <div v-if="selectedGroup" class="selected-info-panel">
@@ -115,10 +122,26 @@ function isSelected(id) {
       </span>
     </div>
   </div>
+  <TunnelHelpModal v-if="showHelpModal" @close="showHelpModal = false" />
 </template>
 
 <style scoped>
 /* [INSERT] New styles */
+
+.btn-help {
+  background: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #bbdefb;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-help:hover {
+  background: #bbdefb;
+}
 .selected-info-panel {
   padding: 15px;
   background: #e3f2fd;
