@@ -3,6 +3,7 @@ import { computed, ref, watch, onMounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 import { useUserStore } from '@/stores/userStore'
 import { useBlindManager } from './logic/useBlindManager'
+import FluffIcon from '@/assets/icons/fluff-icon.svg?component' 
 
 const emit = defineEmits(['close', 'print', 'save', 'exit-request'])
 const store = useMapStore()
@@ -130,7 +131,7 @@ function handleExit() {
           <button :class="{ active: activeTool === 'rat' }" @click="activeTool = 'rat'">🐀</button>
           <button :class="{ active: activeTool === 'litter' }" @click="activeTool = 'litter'">🍂</button>
           <button :class="{ active: activeTool === 'empty' }" @click="activeTool = 'empty'">⚪</button>
-          <button :class="{ active: activeTool === 'fluff' }" @click="activeTool = 'fluff'" title="Place Fluff">☁️</button>
+          <button :class="{ active: activeTool === 'fluff' }" @click="activeTool = 'fluff'" title="Place Fluff"><FluffIcon class="tool-icon"/></button>
           <button :class="{ active: activeTool === 'eraser' }" @click="activeTool = 'eraser'">❌</button>
         </div>
       </div>
@@ -297,4 +298,12 @@ function handleExit() {
 .btn-clear-num { grid-column: span 5; }
 
 .btn-delete { width: 100%; padding: 10px; background: #ffebee; color: #d32f2f; border: 1px solid #ffcdd2; border-radius: 8px; font-weight: bold; }
+.tool-icon {
+  /* 1em makes it exactly the same height as the text */
+  width: 25px; 
+  height: 25px;
+  stroke-width: 3px;
+  vertical-align: -0.125em;
+
+}
 </style>

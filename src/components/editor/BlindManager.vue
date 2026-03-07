@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 import { useBlindManager } from './logic/useBlindManager'
 import { useUserStore } from '@/stores/userStore'
+import FluffIcon from '@/assets/icons/fluff-icon.svg?component' 
 
 
 const emit = defineEmits(['close', 'print', 'save', 'exit-request'])
@@ -158,11 +159,13 @@ function handleCloseAttempt() {
         <div v-else class="tool-group">
           <label>Tools</label>
           <div class="tool-row">
-            <button :class="{ active: activeTool === 'select' }" @click="activeTool = 'select'" title="Select / Move">↖</button>
             <button :class="{ active: activeTool === 'rat' }" @click="activeTool = 'rat'" title="Place Rat">🐀</button>
             <button :class="{ active: activeTool === 'litter' }" @click="activeTool = 'litter'" title="Place Litter">🍂</button>
             <button :class="{ active: activeTool === 'empty' }" @click="activeTool = 'empty'" title="Place Empty">⚪</button>
-            <button :class="{ active: activeTool === 'fluff' }" @click="activeTool = 'fluff'" title="Place Fluff">☁️</button>
+          </div>
+          <div class="tool-row">
+            <button :class="{ active: activeTool === 'select' }" @click="activeTool = 'select'" title="Select / Move">↖</button>
+            <button :class="{ active: activeTool === 'fluff' }" @click="activeTool = 'fluff'" title="Place Fluff"><FluffIcon class="tool-icon"/></button>
             <button :class="{ active: activeTool === 'eraser' }" @click="activeTool = 'eraser'" title="Eraser">❌</button>
           </div>
           
@@ -307,5 +310,14 @@ function handleCloseAttempt() {
 }
 .btn-done:hover {
   background: #1976d2;
+}
+
+.tool-icon {
+  /* 1em makes it exactly the same height as the text */
+  width: 25px; 
+  height: 25px;
+  stroke-width: 3px;
+  vertical-align: -0.125em;
+
 }
 </style>
