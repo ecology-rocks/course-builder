@@ -83,8 +83,9 @@ const { generatePrintJob } = useUnifiedPrinter(store, userStore, stageRef, scale
 useKeyboardShortcuts(store, handleSaveMap)
 
 const activeDisplayHides = computed(() => {
+  const fluffs = (store.hides || []).filter(h => h.type === 'fluff')
   if (isBlindMode.value && blindManagerRef.value) {
-    return blindManagerRef.value.currentDisplayHides
+    return [...blindManagerRef.value.currentDisplayHides, ...fluffs]
   }
   return store.hides
 })

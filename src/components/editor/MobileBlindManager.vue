@@ -39,7 +39,7 @@ watch(() => store.activeTool, (newVal) => { activeTool.value = newVal })
 const selectedHide = computed(() => {
   if (store.selection.length !== 1) return null
   const id = store.selection[0]
-  return activeBlind.value?.hides.find(h => h.id === id)
+  return activeBlind.value?.hides.find(h => h.id === id) || store.mapData.hides.find(h => h.id === id && h.type === 'fluff')
 })
 
 function updateNumber(num) {
@@ -56,13 +56,25 @@ function toggleElevation() {
   selectedHide.value.elevation = selectedHide.value.elevation === 'under' ? 'regular_over' : 'under'
 }
 
+function openCustomizer() {
+  if (store.selection.length === 1) {
+    store.editingCustomObject = store.selection[0]
+    store.showCustomizationModal = true
+  }
+}
+
 function deleteSelected() {
   if (selectedHide.value) {
-    const newHides = [...activeBlind.value.hides]
-    const idx = newHides.findIndex(h => h.id === selectedHide.value.id)
-    if (idx > -1) {
-        newHides.splice(idx, 1)
-        activeBlind.value.hides = newHides
+    if (selectedHide.value.type === 'fluff') {
+      const idx = store.mapData.hides.findIndex(h => h.id === selectedHide.value.id)
+      if (idx > -1) store.mapData.hides.splice(idx, 1)
+    } else {
+      const newHides = [...activeBlind.value.hides]
+      const idx = newHides.findIndex(h => h.id === selectedHide.value.id)
+      if (idx > -1) {
+          newHides.splice(idx, 1)
+          activeBlind.value.hides = newHides
+      }
     }
     store.clearSelection()
   }
@@ -91,8 +103,11 @@ function handleExit() {
       
       <div v-if="selectedHide" class="properties-panel mb-2">
         <div class="panel-header mb-2">
-          <strong>Edit {{ selectedHide.type === 'rat' ? 'Rat' : 'Hide' }}</strong>
-          <button class="btn-clear text-blue" @click="store.clearSelection()">Deselect</button>
+          <strong>Edit {{ selectedHide.type === 'rat' ? 'Rat' : selectedHide.type === 'fluff' ? 'Fluff' : 'Hide' }}</strong>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <button class="icon-btn" @click="openCustomizer" title="Customize Style">🎨</button>
+            <button class="btn-clear text-blue" @click="store.clearSelection()">Deselect</button>
+          </div>
         </div>
         
         <button class="btn-elevation mb-2" :class="{ 'is-under': selectedHide.elevation === 'under' }" @click="toggleElevation">
@@ -115,6 +130,7 @@ function handleExit() {
           <button :class="{ active: activeTool === 'rat' }" @click="activeTool = 'rat'">🐀</button>
           <button :class="{ active: activeTool === 'litter' }" @click="activeTool = 'litter'">🍂</button>
           <button :class="{ active: activeTool === 'empty' }" @click="activeTool = 'empty'">⚪</button>
+          <button :class="{ active: activeTool === 'fluff' }" @click="activeTool = 'fluff'" title="Place Fluff">☁️</button>
           <button :class="{ active: activeTool === 'eraser' }" @click="activeTool = 'eraser'">❌</button>
         </div>
       </div>

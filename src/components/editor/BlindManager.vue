@@ -29,7 +29,7 @@ defineExpose({ currentDisplayHides, handleCanvasClick })
 const selectedHide = computed(() => {
   if (store.selection.length !== 1) return null
   const id = store.selection[0]
-  return activeBlind.value?.hides.find(h => h.id === id)
+  return activeBlind.value?.hides.find(h => h.id === id) || store.mapData.hides.find(h => h.id === id && h.type === 'fluff')
 })
 
 function updateNumber(num) {
@@ -60,8 +60,17 @@ function toggleElevation() {
 
 function deleteSelected() {
   if (selectedHide.value) {
-    const idx = activeBlind.value.hides.indexOf(selectedHide.value)
-    if (idx > -1) activeBlind.value.hides.splice(idx, 1)
+    if (selectedHide.value.type === 'fluff') {
+      const idx = store.mapData.hides.findIndex(h => h.id === selectedHide.value.id)
+      if (idx > -1) store.mapData.hides.splice(idx, 1)
+    } else {
+      const newHides = [...activeBlind.value.hides]
+      const idx = newHides.findIndex(h => h.id === selectedHide.value.id)
+      if (idx > -1) {
+          newHides.splice(idx, 1)
+          activeBlind.value.hides = newHides
+      }
+    }
     store.clearSelection()
   }
 }
@@ -153,6 +162,7 @@ function handleCloseAttempt() {
             <button :class="{ active: activeTool === 'rat' }" @click="activeTool = 'rat'" title="Place Rat">🐀</button>
             <button :class="{ active: activeTool === 'litter' }" @click="activeTool = 'litter'" title="Place Litter">🍂</button>
             <button :class="{ active: activeTool === 'empty' }" @click="activeTool = 'empty'" title="Place Empty">⚪</button>
+            <button :class="{ active: activeTool === 'fluff' }" @click="activeTool = 'fluff'" title="Place Fluff">☁️</button>
             <button :class="{ active: activeTool === 'eraser' }" @click="activeTool = 'eraser'" title="Eraser">❌</button>
           </div>
           

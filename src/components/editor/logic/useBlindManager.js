@@ -37,7 +37,16 @@ export function useBlindManager(store) {
       const idx = activeBlind.value.hides.findIndex(h => 
         Math.abs(h.x - x) < 0.5 && Math.abs(h.y - y) < 0.5
       )
-      if (idx > -1) activeBlind.value.hides.splice(idx, 1)
+      if (idx > -1) {
+          activeBlind.value.hides.splice(idx, 1)
+      } else {
+          const fIdx = store.mapData.hides.findIndex(h => h.type === 'fluff' && Math.abs(h.x - x) < 0.5 && Math.abs(h.y - y) < 0.5)
+          if (fIdx > -1) store.mapData.hides.splice(fIdx, 1)
+      }
+    } else if (activeTool.value === 'fluff') {
+        store.mapData.hides.push({
+            id: String(Date.now()), x, y, type: 'fluff', location: 'floor'
+        })
     } else {
       // [AUTO-NUMBERING LOGIC]
       let nextNumber = null

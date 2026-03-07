@@ -17,6 +17,7 @@ const fillColor = computed(() => {
     case 'rat': return '#ef5350'    
     case 'litter': return '#ffee58' 
     case 'empty': return '#fff'     
+    case 'fluff': return '#e0e0e0'
     default: return '#fff'
   }
 })
@@ -38,6 +39,14 @@ const strokeColor = computed(() => {
 })
 
 const dimensions = computed(() => {
+  // Force fluff to be a wider oval to fit the full word
+  if (props.hide.type === 'fluff') {
+    return {
+      width: 1.5 * props.scale,
+      height: 0.75 * props.scale
+    }
+  }
+
   const isNumbered = !!props.hide.number
   const defaultW = isNumbered ? 1.0 : 0.75
   const defaultH = 0.75
@@ -64,7 +73,7 @@ const scaledCornerRadius = computed(() => {
 })
 
 const label = computed(() => {
-  const typeMap = { rat: 'R', litter: 'L', empty: 'E' }
+  const typeMap = { rat: 'R', litter: 'L', empty: 'E', fluff: 'Fluff' }
   const typeChar = typeMap[props.hide.type] || '?'
   return props.hide.number ? `${typeChar}${props.hide.number}` : typeChar
 })
@@ -149,6 +158,7 @@ function dragBoundFunc(pos) {
       dragBoundFunc: dragBoundFunc
     }"
     @click="onLeftClick" 
+    @tap="onLeftClick"
     @contextmenu="onRightClick"
     @dragstart="emit('dragstart', $event)" 
     @dragmove="emit('dragmove', $event)"

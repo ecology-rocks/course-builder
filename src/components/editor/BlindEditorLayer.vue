@@ -42,7 +42,14 @@ function handleStageClick(e) {
       const newHides = [...activeBlind.value.hides]
       newHides.splice(idx, 1)
       activeBlind.value.hides = newHides
+    } else {
+      const fIdx = store.mapData.hides.findIndex(h => h.type === 'fluff' && Math.abs(h.x - x) < 0.5 && Math.abs(h.y - y) < 0.5)
+      if (fIdx > -1) store.mapData.hides.splice(fIdx, 1)
     }
+  } else if (store.activeTool === 'fluff') {
+    store.mapData.hides.push({
+      id: String(Date.now()), x, y, type: 'fluff', location: 'floor', elevation: 'regular_over', layer: store.currentLayer || 1
+    })
   } else if (['rat', 'litter', 'empty'].includes(store.activeTool)) {
     let nextNumber = null
     if (store.activeTool === 'rat') {
@@ -70,7 +77,11 @@ function handleStageClick(e) {
 
 <template>
   <v-rect 
-    :config="{ x: -1000, y: -1000, width: 5000, height: 5000, fill: 'rgba(0,0,0,0)' }"
+    :config="{ 
+      x: -1000, y: -1000, width: 5000, height: 5000, 
+      fill: 'rgba(0,0,0,0)',
+      listening: store.activeTool !== 'select' 
+    }"
     @click="handleStageClick"
     @tap="handleStageClick"
     @mousedown="handleStageClick"

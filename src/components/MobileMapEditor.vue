@@ -56,8 +56,10 @@ const { handleSaveMap } = useExportTools(store, stageRef, scale, GRID_OFFSET)
 
 
 const displayHides = computed(() => {
+    const fluffs = (store.hides || []).filter(h => h.type === 'fluff')
     if (store.isBlindMode && store.mapData.blinds && store.mapData.blinds.length > 0) {
-        return store.mapData.blinds[store.activeBlindIndex || 0].hides.map(h => ({...h}))
+        const blindHides = store.mapData.blinds[store.activeBlindIndex || 0].hides.map(h => ({...h}))
+        return [...blindHides, ...fluffs]
     }
     return store.hides
 })
@@ -268,8 +270,8 @@ function resolveSave(action, newNamePayload) {
                 <button @click.stop="fitToScreen">Fit</button>
             </div>
             <v-stage ref="stageRef" :config="stageConfig" 
-                @mousedown="e => { if(!store.isBlindMode) handleStageMouseDown(e) }"
-                @touchstart="e => { if(!store.isBlindMode) handleStageMouseDown(e) }" 
+                @mousedown="e => { if(!store.isBlindMode) handleStageMouseDown(e); else if(store.activeTool === 'select' && e.target === e.target.getStage()) store.clearSelection() }"
+                @touchstart="e => { if(!store.isBlindMode) handleStageMouseDown(e); else if(store.activeTool === 'select' && e.target === e.target.getStage()) store.clearSelection() }" 
                 @mousemove="handleStageMouseMove" 
                 @touchmove="handleStageMouseMove"
                 @mouseup="e => { if(!store.isBlindMode) handleStageMouseUp(e) }" 
@@ -336,7 +338,7 @@ function resolveSave(action, newNamePayload) {
         </main>
 
         <<Transition name="slide-up">
-            <aside v-if="hasSelection" class="mobile-bottom-sheet">
+            <aside v-if="hasSelection && !store.isBlindMode && !store.isTunnelMode" class="mobile-bottom-sheet">
                 <div class="sheet-header">
                     <span class="sheet-title">
                         {{ store.selection.length }} Selected
