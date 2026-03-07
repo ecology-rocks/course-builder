@@ -47,6 +47,28 @@ onMounted(async () => {
   }
 })
 
+function exportUsersCSV() {
+  const headers = ['Judge Name', 'Email', 'Tier']
+  const csvRows = [headers.join(',')]
+  
+  for (const u of users.value) {
+    const row = [
+      `"${u.judgeName || ''}"`,
+      `"${u.email || ''}"`,
+      `"${u.tier || 'free'}"`
+    ]
+    csvRows.push(row.join(','))
+  }
+
+  const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'users_export.csv'
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 // --- LOGIC ---
 function calculateStats(userList) {
   const total = userList.length
@@ -173,7 +195,10 @@ function formatDate(timestamp) {
       
       <div class="panel user-list-panel">
         <div class="panel-header">
-          <h3>Users ({{ filteredUsers.length }})</h3>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0;">Users ({{ filteredUsers.length }})</h3>
+            <button @click="exportUsersCSV" class="btn-action" style="padding: 4px 8px; font-size: 0.8rem;">📥 Export CSV</button>
+          </div>
           <input v-model="searchQuery" type="text" placeholder="Search name, email, uid..." class="search-box" />
         </div>
         
