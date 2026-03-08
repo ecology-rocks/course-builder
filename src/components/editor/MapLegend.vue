@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useMapStore } from '@/stores/mapStore'
 
 const store = useMapStore()
@@ -7,12 +7,76 @@ const store = useMapStore()
 const inventory = computed(() => store.inventory)
 const diffs = computed(() => store.differentials)
 const comparisonName = computed(() => store.comparisonMapName)
+
+// Drag logic
+const position = ref({ x: window.innerWidth - 240, y: 80 })
+const isDragging = ref(false)
+const dragOffset = ref({ x: 0, y: 0 })
+const SIDEBAR_WIDTH = 300
+
+onMounted(() => {
+  const saved = localStorage.getItem('mapLegendPosition')
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved)
+      position.value.x = Math.max(SIDEBAR_WIDTH, Math.min(parsed.x, window.innerWidth - 220))
+      position.value.y = Math.max(0, parsed.y)
+    } catch (e) {}
+  }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('mousemove', onDrag)
+  window.removeEventListener('mouseup', stopDrag)
+  window.removeEventListener('touchmove', onDrag)
+  window.removeEventListener('touchend', stopDrag)
+})
+
+const startDrag = (e) => {
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY
+  isDragging.value = true
+  dragOffset.value = {
+    x: clientX - position.value.x,
+    y: clientY - position.value.y
+  }
+  window.addEventListener('mousemove', onDrag)
+  window.addEventListener('mouseup', stopDrag)
+  window.addEventListener('touchmove', onDrag, { passive: false })
+  window.addEventListener('touchend', stopDrag)
+}
+
+const onDrag = (e) => {
+  if (!isDragging.value) return
+  if (e.touches) e.preventDefault() 
+
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY
+  
+  const newX = clientX - dragOffset.value.x
+  const newY = clientY - dragOffset.value.y
+
+  position.value = {
+    x: Math.max(SIDEBAR_WIDTH, Math.min(newX, window.innerWidth - 200)),
+    y: Math.max(0, newY)
+  }
+}
+
+const stopDrag = () => {
+  isDragging.value = false
+  window.removeEventListener('mousemove', onDrag)
+  window.removeEventListener('mouseup', stopDrag)
+  window.removeEventListener('touchmove', onDrag)
+  window.removeEventListener('touchend', stopDrag)
+  localStorage.setItem('mapLegendPosition', JSON.stringify(position.value))
+}
 </script>
 
 <template>
-  <div class="map-stats-card">
-    <div class="card-header">
+  <div class="map-stats-card" :style="{ left: position.x + 'px', top: position.y + 'px', right: 'auto', position: 'fixed' }">
+    <div class="card-header" @mousedown.stop="startDrag" @touchstart.stop="startDrag" :class="{ dragging: isDragging }">
       <h3>Map Statistics</h3>
+      <span class="drag-icon">⋮⋮</span>
     </div>
     
     <div class="card-body">
@@ -80,6 +144,21 @@ const comparisonName = computed(() => store.comparisonMapName)
   background: #f8f9fa;
   padding: 10px 15px;
   border-bottom: 1px solid #eee;
+  cursor: grab;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.card-header.dragging {
+  cursor: grabbing;
+}
+
+.drag-icon {
+  color: #aaa;
+  font-size: 16px;
+  line-height: 1;
 }
 
 h3 {
@@ -113,7 +192,6 @@ h3 {
 .layer-2 .value { color: #2e7d32; }
 .layer-3 .value { color: #1565c0; }
 
-/* Comparison Section */
 .diff-section {
   margin-top: 8px;
 }
